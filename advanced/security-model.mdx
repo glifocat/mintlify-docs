@@ -58,13 +58,13 @@ Mount permissions are stored at `~/.config/nanoclaw/mount-allowlist.json`, which
 - Container path validation (rejects `..` and absolute paths)
 - `nonMainReadOnly` option forces read-only for non-main groups
 
-See `src/mount-security.ts:1` for the validation implementation.
-
 **Read-only project root**
 
 The main group's project root is mounted read-only. Writable paths the agent needs (group folder, IPC, `.claude/`) are mounted separately. This prevents the agent from modifying host application code (`src/`, `dist/`, `package.json`, etc.) which would bypass the sandbox entirely on next restart.
 
-From `src/container-runner.ts:66`:
+Additionally, the `.env` file is shadowed with `/dev/null` so the agent cannot read secrets from the mounted project root. Credentials are injected exclusively by the credential proxy.
+
+From the `buildVolumeMounts` function in `container-runner.ts`:
 
 ```typescript
 if (isMain) {
@@ -89,7 +89,7 @@ Each group has isolated Claude sessions at `data/sessions/{group}/.claude/`:
 - Session data includes full message history and file contents read
 - Prevents cross-group information disclosure
 
-Sessions are mounted per-group in `src/container-runner.ts:103`:
+Sessions are mounted per-group in `container-runner.ts`:
 
 ```typescript
 const groupSessionsDir = path.join(
@@ -114,7 +114,7 @@ Messages and task operations are verified against group identity. The IPC system
 | View all tasks | ✓ | Own only |
 | Manage other groups | ✓ | ✗ |
 
-Authorization is enforced in `src/ipc.ts:76`:
+Authorization is enforced in the IPC watcher's message processing loop:
 
 ```typescript
 // Authorization: verify this group can send to this chatJid
@@ -142,8 +142,7 @@ if (
 - Runs on the host as an HTTP proxy (default port 3001)
 - Containers send API requests to the proxy with a placeholder token
 - Proxy injects real credentials (API key or OAuth token) on every outbound request
-- Supports hot-swapping between API key and OAuth modes (reads `.env` per request)
-- For OAuth, auto-refreshes tokens from `~/.claude/.credentials.json`
+- Two auth modes: API key (injects `x-api-key` on every request) and OAuth (replaces placeholder Bearer token with real OAuth token on exchange requests)
 
 **NOT mounted:**
 - Channel sessions (e.g., `store/auth/` for WhatsApp) - host only
@@ -151,7 +150,7 @@ if (
 - Real API keys or OAuth tokens - injected by proxy, never in containers
 - Any credentials matching blocked patterns
 
-**Container environment** (from `src/container-runner.ts`):
+**Container environment:**
 
 ```typescript
 // Containers get a placeholder token and proxy URL — never real credentials

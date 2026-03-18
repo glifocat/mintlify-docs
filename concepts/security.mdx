@@ -98,16 +98,19 @@ The mount allowlist is the security control that prevents agents from accessing 
 - **Container path validation** (rejects `..` and absolute paths)
 - **`nonMainReadOnly` option** forces read-only for non-main groups
 
-Example allowlist entry:
+Example allowlist:
 
 ```json
 {
-  "/Users/you/projects/website": {
-    "reason": "Website deployment tasks",
-    "addedBy": "main",
-    "addedAt": "2026-02-28T10:30:00Z",
-    "nonMainReadOnly": true
-  }
+  "allowedRoots": [
+    {
+      "path": "~/projects/website",
+      "allowReadWrite": false,
+      "description": "Website deployment tasks"
+    }
+  ],
+  "blockedPatterns": [],
+  "nonMainReadOnly": true
 }
 ```
 
@@ -174,9 +177,10 @@ IPC operations from non-main groups are silently rejected if unauthorized. This 
 
 ### 5. Credential handling
 
-#### Mounted credentials
+#### Credential proxy
 
-- Claude auth tokens (filtered from `.env`, read-only)
+- Containers receive a placeholder token and the proxy URL (`ANTHROPIC_BASE_URL`)
+- Real credentials are injected by the credential proxy on the host, never exposed to containers
 
 #### NOT mounted
 
@@ -194,7 +198,7 @@ ANTHROPIC_BASE_URL=http://host.docker.internal:3001  // → proxy
 CLAUDE_CODE_OAUTH_TOKEN=placeholder                   // → replaced by proxy
 ```
 
-The proxy reads credentials from `.env` on each request (supports hot-swapping between API key and OAuth modes without restart). For OAuth, it auto-refreshes tokens from `~/.claude/.credentials.json`.
+The proxy reads credentials from `.env` at startup and supports two authentication modes: API key (injects `x-api-key` on every request) and OAuth (replaces placeholder Bearer token with the real OAuth token on exchange requests).
 
 <Warning>
 The credential proxy prevents credential exposure to containers. However, the proxy URL is accessible from within the container's network. The container cannot extract the real credentials, but it can make authenticated API requests through the proxy.

@@ -64,11 +64,16 @@ Repeat every N milliseconds:
 
 **Next run calculation:**
 
-```typescript
-const nextRun = new Date(lastRun + intervalMs).toISOString();
-```
+Intervals are **anchored to the scheduled time**, not the current time. This prevents cumulative drift. If an interval is missed, the scheduler skips forward to the next future occurrence:
 
-Intervals are calculated from the **completion time** of the previous run, not the scheduled time. This prevents overlap if a task takes longer than the interval.
+```typescript
+// Anchor to the scheduled time, not now, to prevent drift.
+// Skip past any missed intervals so we always land in the future.
+let next = new Date(task.next_run).getTime() + ms;
+while (next <= now) {
+  next += ms;
+}
+```
 
 ### One-time
 
@@ -131,7 +136,7 @@ sequenceDiagram
 6. Container spawned with `isScheduledTask: true` flag
 7. Agent executes task prompt
 8. Results optionally sent via `send_message` MCP tool
-9. Run logged to `task_runs` table with duration and result
+9. Run logged to `task_run_logs` table with duration and result
 10. `next_run` recalculated based on schedule type
 11. Container closes after 10-second grace period
 
@@ -143,7 +148,7 @@ Tasks respect the same concurrency limits as interactive messages. If all 5 cont
 
 After a task completes:
 
-1. **Run logged**: Duration, result summary, error (if any) written to `task_runs` table
+1. **Run logged**: Duration, result summary, error (if any) written to `task_run_logs` table
 2. **Next run calculated**: 
    - Cron: Next matching time according to cron expression
    - Interval: Current time + interval milliseconds
@@ -301,19 +306,18 @@ If a task doesn't call `send_message`, it completes silently:
 - Useful for background data collection or status checks
 
 <Info>
-Task results are always logged to the database, whether or not they send a message. Check `task_runs` table for execution history.
+Task results are always logged to the database, whether or not they send a message. Check `task_run_logs` table for execution history.
 </Info>
 
 ## Task run history
 
-All task executions are logged to `task_runs` table:
+All task executions are logged to the `task_run_logs` table:
 
 ```typescript
-interface TaskRun {
-  id: string;         // Auto-generated UUID
-  task_id: string;    // References tasks.id
-  run_at: string;     // ISO timestamp
-  duration_ms: number; // Execution time
+interface TaskRunLog {
+  task_id: string;      // References scheduled_tasks.id
+  run_at: string;       // ISO timestamp
+  duration_ms: number;  // Execution time
   status: 'success' | 'error';
   result: string | null;  // Output or null
   error: string | null;   // Error message or null
@@ -324,13 +328,13 @@ interface TaskRun {
 
 ```sql
 -- Last 10 runs for a task
-SELECT * FROM task_runs 
+SELECT * FROM task_run_logs 
 WHERE task_id = 'abc123' 
 ORDER BY run_at DESC 
 LIMIT 10;
 
 -- Failed runs in the last 24 hours
-SELECT * FROM task_runs 
+SELECT * FROM task_run_logs 
 WHERE status = 'error' 
 AND run_at > datetime('now', '-1 day')
 ORDER BY run_at DESC;
@@ -361,7 +365,7 @@ Task privileges match the group's general privilege model. Main group can manage
 3. **Start with isolated context**: Add group context only if needed
 4. **Include error handling**: Tasks should handle failures gracefully
 5. **Use descriptive prompts**: "Check website uptime" not "check status"
-6. **Monitor task_runs**: Failed tasks may indicate issues
+6. **Monitor task_run_logs**: Failed tasks may indicate issues
 7. **Avoid very short intervals**: Respect container startup overhead (minimum ~5s)
 8. **Clean up completed one-time tasks**: Cancel or pause them to reduce clutter
 
@@ -416,7 +420,7 @@ await claudeCode.tools.schedule_task({
 Task errors are logged but don't stop the schedule:
 
 1. Task fails during execution
-2. Error logged to `task_runs` with `status: 'error'`
+2. Error logged to `task_run_logs` with `status: 'error'`
 3. `last_result` updated with error summary
 4. `next_run` still calculated (task will retry on next schedule)
 5. No message sent to chat (unless task explicitly sends before error)
@@ -425,7 +429,7 @@ Task errors are logged but don't stop the schedule:
 
 If a task fails repeatedly:
 
-- Check `task_runs` for error messages
+- Check `task_run_logs` for error messages
 - Review container logs at `groups/{folder}/logs/`
 - Pause the task to stop the retry loop
 - Fix the underlying issue (permissions, network, etc.)

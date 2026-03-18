@@ -166,26 +166,45 @@ mounts = [
 Notice that non-main groups do NOT have `/workspace/project` mounted. They cannot access the NanoClaw source code or other groups' folders.
 </Warning>
 
+### .env shadowing
+
+The main group gets the project root mounted read-only, but the `.env` file is shadowed with `/dev/null` to prevent the agent from reading secrets:
+
+```typescript
+// Shadow .env so the agent cannot read secrets from the mounted project root.
+// Credentials are injected by the credential proxy, never exposed to containers.
+if (fs.existsSync(envFile)) {
+  mounts.push({
+    hostPath: '/dev/null',
+    containerPath: '/workspace/project/.env',
+    readonly: true,
+  });
+}
+```
+
 ### Mount security
 
-All mounts are validated against the allowlist at `~/.config/nanoclaw/mount-allowlist.json`:
+All additional mounts are validated against the allowlist at `~/.config/nanoclaw/mount-allowlist.json`:
 
 ```json
 {
-  "/Users/you/projects/website": {
-    "reason": "Website deployment tasks",
-    "addedBy": "main",
-    "addedAt": "2026-02-28T10:30:00Z",
-    "nonMainReadOnly": true
-  }
+  "allowedRoots": [
+    {
+      "path": "~/projects/website",
+      "allowReadWrite": false,
+      "description": "Website deployment tasks"
+    }
+  ],
+  "blockedPatterns": [".ssh", ".gnupg", ".env"],
+  "nonMainReadOnly": true
 }
 ```
 
 **Validation steps:**
 
 1. Resolve symlinks to real path
-2. Check against blocked patterns (`.ssh`, `.env`, etc.)
-3. Verify path is in allowlist (for additional mounts)
+2. Check against blocked patterns (`.ssh`, `.env`, etc.) — custom patterns are merged with built-in defaults
+3. Verify path falls under an `allowedRoots` entry
 4. Enforce `nonMainReadOnly` for non-main groups
 5. Reject container paths with `..` or absolute paths
 
@@ -217,11 +236,12 @@ This ensures bind-mounted files are accessible (same uid on both sides).
 
 ### Execute
 
-1. **Secrets passed**: Via stdin JSON, never written to disk
-2. **Stdout streaming**: Parsed for output markers in real-time
-3. **Stderr logging**: Logged at debug level (SDK writes lots of debug info)
-4. **Timeout tracking**: Hard timeout with activity-based reset
-5. **Graceful shutdown**: `docker stop` (SIGTERM) before `SIGKILL`
+1. **Input passed**: Container input (prompt, group info) via stdin JSON
+2. **Credentials routed**: API traffic goes through the host's credential proxy — containers get a placeholder token and proxy URL, never real credentials
+3. **Stdout streaming**: Parsed for output markers in real-time
+4. **Stderr logging**: Logged at debug level (SDK writes lots of debug info)
+5. **Timeout tracking**: Hard timeout with activity-based reset
+6. **Graceful shutdown**: `docker stop` (SIGTERM) before `SIGKILL`
 
 ### Cleanup
 

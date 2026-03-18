@@ -30,9 +30,7 @@ data/ipc/
 
 ### Starting the IPC watcher
 
-The IPC watcher starts at application launch and runs continuously, polling for new files at `IPC_POLL_INTERVAL` (default: 500ms).
-
-From `src/ipc.ts:34`:
+The IPC watcher starts at application launch and runs continuously, polling for new files at `IPC_POLL_INTERVAL` (default: 1000ms).
 
 ```typescript
 export function startIpcWatcher(deps: IpcDeps): void {
@@ -92,7 +90,6 @@ export function startIpcWatcher(deps: IpcDeps): void {
   <Step title="Authorization check">
     The host determines the source group from the directory path (`{group}`) and verifies the operation is authorized.
     
-    From `src/ipc.ts:76`:
     ```typescript
     // Authorization: verify this group can send to this chatJid
     const targetGroup = registeredGroups[data.chatJid];
@@ -168,8 +165,6 @@ Creates a scheduled task that runs at specified intervals.
 - Main group can schedule tasks for any group
 - Non-main groups can only schedule tasks for themselves
 
-From `src/ipc.ts:202`:
-
 ```typescript
 // Authorization: non-main groups can only schedule for themselves
 if (!isMain && targetFolder !== sourceGroup) {
@@ -217,6 +212,25 @@ Deletes a task permanently.
 }
 ```
 
+### Update task
+
+Updates an existing task's prompt, schedule type, or schedule value. Recomputes `next_run` if the schedule changes.
+
+**Format:**
+```json
+{
+  "type": "update_task",
+  "taskId": "task-1234567890-abc123",
+  "prompt": "Updated prompt",
+  "schedule_type": "cron",
+  "schedule_value": "0 10 * * *"
+}
+```
+
+**Authorization:**
+- Main group can update any task
+- Non-main groups can only update their own tasks
+
 ### Refresh groups
 
 Forces a refresh of group metadata. **Main group only.**
@@ -228,25 +242,7 @@ Forces a refresh of group metadata. **Main group only.**
 }
 ```
 
-From `src/ipc.ts:327`:
-
-```typescript
-case 'refresh_groups':
-  // Only main group can request a refresh
-  if (isMain) {
-    logger.info(
-      { sourceGroup },
-      'Group metadata refresh requested via IPC',
-    );
-    await deps.syncGroupMetadata(true);
-  } else {
-    logger.warn(
-      { sourceGroup },
-      'Unauthorized refresh_groups attempt blocked',
-    );
-  }
-  break;
-```
+After refreshing, the host writes an updated groups snapshot to the requesting group's IPC directory.
 
 ### Register group
 
@@ -272,15 +268,17 @@ Registers a new group for agent access. **Main group only.**
 
 ### Identity verification
 
-The source group identity is determined by the directory path, not the file contents. This prevents impersonation attacks.
-
-From `src/ipc.ts:60`:
+The source group identity is determined by the directory path, not the file contents. This prevents impersonation attacks. The `isMain` flag is looked up from the registered groups database, not derived from the folder name.
 
 ```typescript
+// Build folder→isMain lookup from registered groups
+const folderIsMain = new Map<string, boolean>();
+for (const group of Object.values(registeredGroups)) {
+  if (group.isMain) folderIsMain.set(group.folder, true);
+}
+
 for (const sourceGroup of groupFolders) {
-  const isMain = sourceGroup === MAIN_GROUP_FOLDER;
-  const messagesDir = path.join(ipcBaseDir, sourceGroup, 'messages');
-  const tasksDir = path.join(ipcBaseDir, sourceGroup, 'tasks');
+  const isMain = folderIsMain.get(sourceGroup) === true;
   // Process files with verified identity
 }
 ```
@@ -292,7 +290,7 @@ Each container can only write to its own IPC namespace:
 - Main group: `/workspace/ipc` → `data/ipc/main/`
 - Other groups: `/workspace/ipc` → `data/ipc/{group}/`
 
-This is enforced at mount time in `src/container-runner.ts:155`:
+This is enforced at mount time in `container-runner.ts`:
 
 ```typescript
 // Per-group IPC namespace: each group gets its own IPC directory
@@ -312,7 +310,7 @@ mounts.push({
 
 Failed IPC operations are moved to `data/ipc/errors/` with a prefix identifying the source group:
 
-From `src/ipc.ts:100`:
+From the IPC error handler:
 
 ```typescript
 const errorDir = path.join(ipcBaseDir, 'errors');
@@ -365,7 +363,7 @@ fs.renameSync(
 ## Performance considerations
 
 <Tip>
-  The IPC poll interval is configurable via `IPC_POLL_INTERVAL` in `src/config.ts`. The default is 500ms. Lowering it reduces latency but increases CPU usage. Raising it saves resources but increases response time.
+  The IPC poll interval is configurable via `IPC_POLL_INTERVAL` in `config.ts`. The default is 1000ms (1 second). Lowering it reduces latency but increases CPU usage. Raising it saves resources but increases response time.
 </Tip>
 
 <Warning>

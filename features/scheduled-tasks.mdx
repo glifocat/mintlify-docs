@@ -87,7 +87,7 @@ Only the main channel can create tasks for other groups. Non-main groups can onl
 The scheduler runs as a background loop:
 
 ```typescript
-// From src/task-scheduler.ts:217-250
+// Scheduler loop in task-scheduler.ts
 export function startSchedulerLoop(deps: SchedulerDependencies): void {
   schedulerRunning = true;
   logger.info('Scheduler loop started');
@@ -176,7 +176,7 @@ context_mode: 'group'
 ### Next run calculation
 
 ```typescript
-// From src/task-scheduler.ts:196-205
+// Next run computation in ipc.ts (schedule_task handler)
 let nextRun: string | null = null;
 if (task.schedule_type === 'cron') {
   const interval = CronExpressionParser.parse(task.schedule_value, {
@@ -265,7 +265,7 @@ Each task runs in its own container with:
 - A 10-second close delay after completion (vs 30-minute idle timeout for conversations)
 
 ```typescript
-// From src/task-scheduler.ts:124-133
+// Task close delay in task-scheduler.ts
 const TASK_CLOSE_DELAY_MS = 10000;
 let closeTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -283,7 +283,7 @@ const scheduleClose = () => {
 All task runs are logged in SQLite:
 
 ```typescript
-// From src/task-scheduler.ts:186-193
+// Task run logging in task-scheduler.ts
 logTaskRun({
   task_id: task.id,
   run_at: new Date().toISOString(),
@@ -297,7 +297,7 @@ logTaskRun({
 Query task history:
 
 ```sql
-SELECT * FROM task_runs 
+SELECT * FROM task_run_logs 
 WHERE task_id = 'task-1234567890-abc123'
 ORDER BY run_at DESC;
 ```
@@ -340,13 +340,13 @@ Schedule: `2026-03-01T14:00:00Z` (once)
 
 If a task fails:
 
-1. The error is logged in `task_runs` table
+1. The error is logged in `task_run_logs` table
 2. For recurring tasks, the next run is still scheduled (no automatic pause)
 3. For one-time tasks, the task is marked complete even if it failed
 4. If a group folder is invalid, the task is automatically paused to prevent retry churn
 
 ```typescript
-// From src/task-scheduler.ts:48-66
+// Invalid group folder handling in task-scheduler.ts
 try {
   groupDir = resolveGroupFolderPath(task.group_folder);
 } catch (err) {

@@ -34,9 +34,7 @@ The main group is special:
 
 **Identifying main group:**
 
-```typescript
-const isMain = group.folder === 'main';
-```
+The main group is identified by the `isMain` flag in the database (`registered_groups.is_main` column), not by folder name convention.
 
 ### Non-main groups
 
@@ -261,9 +259,9 @@ Groups can have extra directories mounted via `containerConfig.additionalMounts`
 
 ```typescript
 interface AdditionalMount {
-  hostPath: string;        // Absolute path on host
-  containerPath: string;   // Path inside container (relative, no ..)
-  readonly?: boolean;      // Force read-only (default: false)
+  hostPath: string;        // Absolute path on host (supports ~ for home)
+  containerPath?: string;  // Optional — defaults to basename of hostPath. Mounted at /workspace/extra/{value}
+  readonly?: boolean;      // Default: true for safety
 }
 ```
 
