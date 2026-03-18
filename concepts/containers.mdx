@@ -108,6 +108,12 @@ mounts = [
     readonly: true
   },
   {
+    // .env shadowed with /dev/null so agents cannot read secrets
+    hostPath: '/dev/null',
+    containerPath: '/workspace/project/.env',
+    readonly: true
+  },
+  {
     hostPath: '/path/to/nanoclaw/groups/main',
     containerPath: '/workspace/group',
     readonly: false
@@ -129,6 +135,10 @@ mounts = [
   }
 ]
 ```
+
+<Note>
+The `.env` file is shadowed with `/dev/null` in the project root mount. This prevents the agent from reading secrets directly — credentials are injected by the [credential proxy](/advanced/security-model#credential-handling) instead.
+</Note>
 
 ### Non-main group mounts
 
@@ -172,21 +182,21 @@ All mounts are validated against the allowlist at `~/.config/nanoclaw/mount-allo
 
 ```json
 {
-  "/Users/you/projects/website": {
-    "reason": "Website deployment tasks",
-    "addedBy": "main",
-    "addedAt": "2026-02-28T10:30:00Z",
-    "nonMainReadOnly": true
-  }
+  "allowedRoots": [
+    { "path": "~/projects", "allowReadWrite": true, "description": "Project files" },
+    { "path": "~/Documents/work", "allowReadWrite": false, "description": "Reference docs" }
+  ],
+  "blockedPatterns": ["password", "secret", "token"],
+  "nonMainReadOnly": true
 }
 ```
 
 **Validation steps:**
 
 1. Resolve symlinks to real path
-2. Check against blocked patterns (`.ssh`, `.env`, etc.)
-3. Verify path is in allowlist (for additional mounts)
-4. Enforce `nonMainReadOnly` for non-main groups
+2. Check against blocked patterns (`.ssh`, `.env`, `.gpg`, `.pypirc`, etc.)
+3. Verify real path falls under an `allowedRoots` entry
+4. Enforce read-only unless root has `allowReadWrite: true` and group is main (or `nonMainReadOnly` is false)
 5. Reject container paths with `..` or absolute paths
 
 ## Container lifecycle

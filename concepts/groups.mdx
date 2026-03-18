@@ -261,9 +261,9 @@ Groups can have extra directories mounted via `containerConfig.additionalMounts`
 
 ```typescript
 interface AdditionalMount {
-  hostPath: string;        // Absolute path on host
-  containerPath: string;   // Path inside container (relative, no ..)
-  readonly?: boolean;      // Force read-only (default: false)
+  hostPath: string;        // Absolute path on host (supports ~)
+  containerPath?: string;  // Path inside container (defaults to basename, mounted at /workspace/extra/<value>)
+  readonly?: boolean;      // Default: true for safety
 }
 ```
 

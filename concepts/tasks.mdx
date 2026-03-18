@@ -64,11 +64,15 @@ Repeat every N milliseconds:
 
 **Next run calculation:**
 
-```typescript
-const nextRun = new Date(lastRun + intervalMs).toISOString();
-```
+Intervals are anchored to the **scheduled time** (not the completion time) to prevent cumulative drift. If any intervals were missed while the task was running, they are skipped so the next run always lands in the future.
 
-Intervals are calculated from the **completion time** of the previous run, not the scheduled time. This prevents overlap if a task takes longer than the interval.
+```typescript
+// Anchor to the scheduled time, skip past missed intervals
+let next = previousScheduledTime + intervalMs;
+while (next <= now) {
+  next += intervalMs;
+}
+```
 
 ### One-time
 
@@ -80,12 +84,9 @@ Run once at a specific ISO 8601 timestamp:
 **After execution:**
 
 - `next_run` set to `null`
-- Task remains in database with `status: active`
-- Will not run again unless `next_run` is manually updated
-
-<Accordion title="Why not auto-pause one-time tasks?">
-One-time tasks remain `active` after running so they appear in task lists with their execution history. You can manually pause them if desired, or leave them for reference.
-</Accordion>
+- Task status set to `completed`
+- Task remains in database with execution history
+- Will not run again unless status and `next_run` are manually updated
 
 ## Task lifecycle
 

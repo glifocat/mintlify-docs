@@ -310,10 +310,10 @@ Runs every N milliseconds from the last run time.
 
 ```typescript
 schedule_type: 'once'
-schedule_value: ''  // Ignored
+schedule_value: '2026-03-01T14:30:00-08:00'  // ISO timestamp (local time)
 ```
 
-Runs once and then sets `status = 'completed'`.
+Runs once at the specified time and then sets `status = 'completed'` (with `next_run` set to `null`).
 
 ## Context modes
 

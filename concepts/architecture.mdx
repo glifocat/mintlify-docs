@@ -136,20 +136,20 @@ The IPC watcher (`src/ipc.ts`) enables container-to-host communication:
 
 **Available operations:**
 - `send_message`: Send message to group chat (own chat only for non-main)
-- `schedule_task`, `pause_task`, `resume_task`, `cancel_task`: Task management
-- `register_group`, `sync_groups`: Group management (main only)
+- `schedule_task`, `pause_task`, `resume_task`, `cancel_task`, `update_task`: Task management
+- `register_group`, `refresh_groups`: Group management (main only)
 
 ### Database
 
 SQLite database (`store/messages.db`) stores:
 
-- **messages**: All messages with timestamps
-- **chats**: Chat metadata (name, last activity, is_group)
+- **messages**: All messages with timestamps and bot message flags
+- **chats**: Chat metadata (name, last activity, channel, is_group)
 - **sessions**: Claude session IDs per group folder
-- **registered_groups**: Active groups configuration
+- **registered_groups**: Active groups configuration (including `is_main` flag)
 - **router_state**: Message cursors and last processed timestamps
-- **tasks**: Scheduled task definitions
-- **task_runs**: Task execution history with duration and results
+- **scheduled_tasks**: Scheduled task definitions with context mode
+- **task_run_logs**: Task execution history with duration and results
 
 <Warning>
 The database is the source of truth for message history. If you delete it, agents lose access to conversation context.
@@ -218,7 +218,6 @@ nanoclaw/
 │   │   └── logs/           # Container logs
 │   └── {group-name}/       # Other registered groups
 ├── data/
-│   ├── nanoclaw.db         # SQLite database
 │   ├── sessions/
 │   │   └── {group}/
 │   │       ├── .claude/    # Claude session data
@@ -229,6 +228,7 @@ nanoclaw/
 │           ├── tasks/      # Task operation queue
 │           └── input/      # Container input (follow-ups)
 └── store/
+    ├── messages.db         # SQLite database
     └── auth/               # Channel sessions (not mounted)
 ```
 
@@ -285,15 +285,17 @@ The agent runner is the TypeScript code that wraps Claude Agent SDK. It handles 
 ## Startup sequence
 
 1. **Container system check**: Ensure Docker is running, clean up orphaned containers
-2. **Database initialization**: Create tables if needed, load schema
+2. **Database initialization**: Create tables if needed, run migrations
 3. **State loading**: Restore message cursors, sessions, registered groups
-4. **Channel connection**: Connect to messaging channels, authenticate if needed
-5. **Subsystem startup**: 
+4. **Remote control restore**: Re-establish any active remote control sessions
+5. **Credential proxy**: Start HTTP proxy for credential injection
+6. **Channel connection**: Connect to messaging channels, authenticate if needed
+7. **Subsystem startup**: 
    - Task scheduler loop (60s interval)
    - IPC watcher (1s poll interval)
    - Message loop (2s poll interval)
-6. **Recovery**: Check for unprocessed messages from previous crash
-7. **Ready**: System begins processing messages and tasks
+8. **Recovery**: Check for unprocessed messages from previous crash
+9. **Ready**: System begins processing messages and tasks
 
 ## Graceful shutdown
 

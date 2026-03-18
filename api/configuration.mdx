@@ -37,6 +37,10 @@ Configuration is read from `.env` file or `process.env`.
   Maximum number of concurrent agent containers.
 </ParamField>
 
+<ParamField path="CREDENTIAL_PROXY_PORT" type="number" default="3001">
+  Port for the credential injection proxy that containers connect to.
+</ParamField>
+
 <ParamField path="TZ" type="string" default="system timezone">
   Timezone for scheduled tasks (cron expressions). Uses `Intl.DateTimeFormat().resolvedOptions().timeZone` by default.
 </ParamField>
@@ -69,6 +73,10 @@ All paths are absolute and resolved from the project root:
 
 <ResponseField name="MOUNT_ALLOWLIST_PATH" type="string">
   `~/.config/nanoclaw/mount-allowlist.json` - Mount security allowlist (never mounted into containers)
+</ResponseField>
+
+<ResponseField name="SENDER_ALLOWLIST_PATH" type="string">
+  `~/.config/nanoclaw/sender-allowlist.json` - Sender allowlist for message filtering
 </ResponseField>
 
 <ResponseField name="MAIN_GROUP_FOLDER" type="string">
@@ -112,6 +120,6 @@ TZ=America/Los_Angeles
 ## Security notes
 
 - **Secrets** (API keys, credentials) are NOT read in `config.ts`
-- Secrets stay on disk and are loaded only where needed (`container-runner.ts`)
+- Secrets are read from `.env` only by `credential-proxy.ts` at startup and `container-runner.ts` for auth mode detection
 - This prevents leaking secrets to child processes
 - Mount allowlist is stored OUTSIDE project root and never mounted into containers
