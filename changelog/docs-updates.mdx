@@ -19,7 +19,71 @@ icon: "file-pen"
 <Update label="2026-03-19" description="Logging and container docs" tags={["Updated"]}>
   ## Logging and container updates
 
-  - Updated error log examples to show prompt redaction (input metadata only)
+  - Updated error log examples to show prompt redaction — input metadata only, no full prompt content
   - Added log privacy section to security docs
   - Corrected `docker stop` grace period from 15s to 1 second across all references
+</Update>
+
+<Update label="2026-03-19" description="Source sync and remote control" tags={["Updated"]}>
+  ## Source sync and remote control
+
+  - Fixed remote-control commands documentation
+  - Deduplicated IPC docs
+  - Added `update_task` to auth tables in API reference
+</Update>
+
+<Update label="2026-03-18" description="Sidebar tags and Tree components" tags={["New", "Updated"]}>
+  ## Sidebar tags and component improvements
+
+  - Added automatic sidebar tag management via Mintlify workflows (`UPDATED` and `NEW` tags)
+  - Replaced all ASCII directory trees with Mintlify `<Tree>` component across the site
+  - Tags auto-clean after 2 weeks via weekly audit workflow
+</Update>
+
+<Update label="2026-03-18" description="Rendering fixes and issue reports" tags={["Fixed"]}>
+  ## Rendering fixes
+
+  Fixed rendering issues and remaining WhatsApp-as-default framing reported in issues #14–#18.
+</Update>
+
+<Update label="2026-03-18" description="v1.2.17 source sync and new skill pages" tags={["New", "Updated"]}>
+  ## Source sync and new skill pages
+
+  - Documented `/capabilities` and `/status` container-agent skills as new pages
+  - Synced docs with source code v1.2.17 — corrected mount allowlist format, interval drift handling, credential proxy behavior, and IPC config
+  - Documented IPC task snapshot refresh and `update_task` operation
+</Update>
+
+<Update label="2026-03-16" description="Credential proxy and task lifecycle fixes" tags={["Fixed"]}>
+  ## Credential proxy and task lifecycle
+
+  Fixed stale documentation for credential proxy, database path, mount allowlist, and task lifecycle to match current source code.
+</Update>
+
+<Update label="2026-03-16" description="Mintlify workflows" tags={["New"]}>
+  ## Automation workflows
+
+  - Added Mintlify workflow to sync docs automatically on upstream code changes
+  - Added weekly docs audit and skill branch documentation workflows
+</Update>
+
+<Update label="2026-03-16" description="Branding and UX improvements" tags={["Updated"]}>
+  ## Portal branding and UX
+
+  - Applied NanoClaw branding with custom theme colors, fonts, and SEO metadata
+  - Switched theme from Aspen to Mint for better sidebar typography
+  - Cleaned up introduction page, footer, and removed callout CSS override
+</Update>
+
+<Update label="2026-03-15" description="Initial docs portal launch" tags={["New"]}>
+  ## Documentation portal launch
+
+  Launched docs.nanoclaw.dev — the NanoClaw documentation site built with Mintlify.
+
+  - Audited all content against v1.2.14 codebase
+  - Added Remote Control and Docker Sandboxes pages
+  - Made quickstart channel-agnostic (removed WhatsApp-as-default bias)
+  - Updated skills documentation to reflect git-branch architecture
+  - Fixed navigation structure with logical page ordering
+  - Added Mintlify skill for consistent docs development
 </Update>

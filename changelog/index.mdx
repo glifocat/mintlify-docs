@@ -4,24 +4,28 @@ description: "NanoClaw release history and changelog."
 icon: "tag"
 ---
 
-<Update label="2026-03-02" description="v1.2.0" tags={["Feature", "Breaking"]}>
+<Update label="2026-03-02" description="v1.2.0" tags={["Feature", "Breaking", "Channel"]}>
   ## NanoClaw v1.2.0
 
-  Major release introducing credential proxy architecture and container security improvements.
+  Major release introducing pluggable multi-channel architecture. WhatsApp is no longer hardcoded — all channels (WhatsApp, Telegram, Discord, Slack, Gmail) now self-register via a channel registry.
 
-  - **Credential proxy**: API keys are injected at runtime via a local proxy instead of being passed through stdin or environment variables
-  - **Prompt redaction**: Error logs now include only input metadata (prompt length and session ID), not full prompt content
-  - **Docker stop timeout**: Reduced from 10s to 1s (`-t 1` flag) since containers are stateless
-  - **.env shadow mount**: Project root `.env` is shadowed with `/dev/null` inside containers to prevent accidental credential exposure
-  - **Breaking**: Containers no longer receive secrets via stdin — channels must use the credential proxy
+  ### Features
+  - **Channel registry**: Channels self-register at module load time via `registerChannel()` factory pattern
+  - **`isMain` flag**: Explicit boolean replaces folder-name-based main group detection
+  - **Channel-prefixed group folders**: Groups now use `whatsapp_main`, `telegram_family-chat` convention to prevent cross-channel collisions
+  - **Unconfigured channel warnings**: Channels with missing credentials emit WARN logs naming the exact missing variable instead of being silently skipped
+
+  ### Breaking changes
+  - **WhatsApp moved to skill**: WhatsApp is no longer part of core — apply it with `/add-whatsapp`
+  - **`ENABLED_CHANNELS` removed**: The orchestrator now uses `getRegisteredChannelNames()` from the channel registry; channels are detected by credential presence
+  - **All channel skills simplified**: Discord, Slack, Gmail, Telegram skills now use the same self-registration pattern — no more `*_ONLY` flags
+
+  ### Migration
+  Existing WhatsApp users: run `/add-whatsapp` in Claude Code CLI after updating to re-apply the WhatsApp channel as a skill.
 </Update>
 
-<Update label="2026-03-02" description="v1.1.6" tags={["Fix", "Performance"]}>
+<Update label="2026-03-02" description="v1.1.6" tags={["Feature"]}>
   ## NanoClaw v1.1.6
 
-  Stability and performance improvements.
-
-  - Bug fixes for container lifecycle management
-  - Improved IPC reliability between host and containers
-  - `syncGroups` method replaces deprecated `syncGroupMetadata`
+  - **Breaking change detection on update**: The `update-nanoclaw` skill now diffs `CHANGELOG.md` against the backup tag to detect `[BREAKING]` entries after validation, showing each breaking change and offering to run the referenced migration skill
 </Update>
