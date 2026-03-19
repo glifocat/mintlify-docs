@@ -1,6 +1,7 @@
 ---
 title: Container isolation
 description: How containers provide security isolation for agent execution
+tag: "UPDATED"
 ---
 
 NanoClaw runs all agents inside containers (lightweight Linux VMs) to provide true OS-level isolation. This is the primary security boundary that makes Bash access and code execution safe.
@@ -31,9 +32,8 @@ FROM node:22-slim
 # System dependencies for Chromium
 RUN apt-get update && apt-get install -y \
     chromium \
-    fonts-liberation \
-    fonts-noto-color-emoji \
-    # ... other dependencies
+    fonts-liberation fonts-noto-cjk fonts-noto-color-emoji \
+    # ... Chromium libraries, curl, git
     && rm -rf /var/lib/apt/lists/*
 
 # Browser executable paths
@@ -108,6 +108,12 @@ mounts = [
     readonly: true
   },
   {
+    // Shadow .env so the agent cannot read secrets from the mounted project root
+    hostPath: '/dev/null',
+    containerPath: '/workspace/project/.env',
+    readonly: true
+  },
+  {
     hostPath: '/path/to/nanoclaw/groups/main',
     containerPath: '/workspace/group',
     readonly: false
@@ -129,6 +135,10 @@ mounts = [
   }
 ]
 ```
+
+<Note>
+The `.env` file is explicitly shadowed by mounting `/dev/null` over it. This prevents agents from reading API keys or other secrets from the project root, even though the project is mounted read-only. Credentials are injected by the credential proxy instead.
+</Note>
 
 ### Non-main group mounts
 
@@ -380,27 +390,15 @@ NanoClaw detects and uses the available container runtime:
 
 ```typescript
 // src/container-runtime.ts
-export const CONTAINER_RUNTIME_BIN = 
-  fs.existsSync('/usr/local/bin/orb') ? 'orb' :  // Apple Container
-  fs.existsSync('/usr/local/bin/docker') ? 'docker' :  // Docker (macOS)
-  'docker';  // Default (Linux, Windows)
+export const CONTAINER_RUNTIME_BIN = 'docker';
 ```
 
 **Supported runtimes:**
 
 - **Docker** (default): Cross-platform, well-tested
-- **Apple Container** (macOS): Lightweight, native virtualization
+- **Apple Container** (macOS): Available via the `/convert-to-apple-container` skill
 
-**Runtime-specific commands:**
-
-```typescript
-// Read-only mount args
-if (runtime === 'orb') {
-  return ['-v', `${hostPath}:${containerPath}:ro`];
-} else {
-  return ['-v', `${hostPath}:${containerPath}:ro`];
-}
-```
+On Linux, the container runner automatically adds `--add-host=host.docker.internal:host-gateway` so containers can reach the host's credential proxy.
 
 ## Skills and MCP servers
 
@@ -473,7 +471,7 @@ agent-browser pdf https://example.com output.pdf
 
 - **Network access**: Agents have full network access (can exfiltrate data)
 - **Mounted directory tampering**: Agents can modify anything in mounted directories
-- **Credential exposure**: Mounted credentials (Claude tokens) are readable
+- **Credential exposure**: While `.env` is shadowed via `/dev/null`, the proxy URL is accessible from within the container's network
 - **Resource exhaustion**: No CPU/memory limits (can DoS host)
 
 <Warning>

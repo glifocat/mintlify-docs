@@ -2,7 +2,7 @@
 title: Security overview
 description: Understanding NanoClaw's security boundaries and trust model
 tag: "UPDATED"
-keywords: ["security", "container isolation", "trust model"]
+keywords: ["security", "container isolation", "trust model", "credential proxy"]
 ---
 
 NanoClaw's security model is built on **true isolation** at the OS level rather than application-level permission checks. Agents run in actual Linux containers and can only access what's explicitly mounted.
@@ -123,11 +123,14 @@ The main group's project root is mounted read-only. Writable paths the agent nee
 // Main group mounts (simplified)
 mounts = [
   { host: '/path/to/nanoclaw', container: '/workspace/project', readonly: true },
+  { host: '/dev/null', container: '/workspace/project/.env', readonly: true },  // Shadow secrets
   { host: '/path/to/nanoclaw/groups/main', container: '/workspace/group', readonly: false },
   { host: '/path/to/nanoclaw/data/sessions/main/.claude', container: '/home/node/.claude', readonly: false },
   { host: '/path/to/nanoclaw/data/ipc/main', container: '/workspace/ipc', readonly: false }
 ]
 ```
+
+The `.env` file is shadowed by mounting `/dev/null` over it, preventing agents from reading API keys even though the project root is mounted read-only.
 
 ### 3. Session isolation
 
@@ -180,10 +183,6 @@ IPC operations from non-main groups are silently rejected if unauthorized. This 
 
 ### 5. Credential handling
 
-#### Mounted credentials
-
-- Claude auth tokens (filtered from `.env`, read-only)
-
 #### NOT mounted
 
 - Channel sessions (e.g., `store/auth/` for WhatsApp) - host only
@@ -200,7 +199,9 @@ ANTHROPIC_BASE_URL=http://host.docker.internal:3001  // → proxy
 CLAUDE_CODE_OAUTH_TOKEN=placeholder                   // → replaced by proxy
 ```
 
-The proxy reads credentials from `.env` on each request (supports hot-swapping between API key and OAuth modes without restart). For OAuth, it auto-refreshes tokens from `~/.claude/.credentials.json`.
+Two auth modes are supported:
+- **API key mode**: Proxy injects `x-api-key` header on every request
+- **OAuth mode**: Container CLI exchanges its placeholder token for a temporary API key via the Anthropic OAuth endpoint; proxy injects the real OAuth token on that exchange request
 
 <Warning>
 The credential proxy prevents credential exposure to containers. However, the proxy URL is accessible from within the container's network. The container cannot extract the real credentials, but it can make authenticated API requests through the proxy.

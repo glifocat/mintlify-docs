@@ -1,6 +1,7 @@
 ---
 title: Configuration
 description: Configuration options for NanoClaw
+tag: "UPDATED"
 ---
 
 NanoClaw configuration is managed through environment variables and the `config.ts` module.
@@ -39,6 +40,10 @@ Configuration is read from `.env` file or `process.env`.
 
 <ParamField path="MAX_CONCURRENT_CONTAINERS" type="number" default="5">
   Maximum number of concurrent agent containers.
+</ParamField>
+
+<ParamField path="CREDENTIAL_PROXY_HOST" type="string" default="auto-detected">
+  Override the bind address for the credential proxy. Auto-detected based on platform: `127.0.0.1` on macOS/WSL, `docker0` bridge IP on Linux, `0.0.0.0` as fallback.
 </ParamField>
 
 <ParamField path="TZ" type="string" default="system timezone">

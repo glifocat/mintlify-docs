@@ -69,18 +69,25 @@ From `src/container-runner.ts`:
 
 ```typescript
 if (isMain) {
-  // Main gets the project root read-only. Writable paths the agent needs
-  // (group folder, IPC, .claude/) are mounted separately below.
-  // Read-only prevents the agent from modifying host application code
-  // (src/, dist/, package.json, etc.) which would bypass the sandbox
-  // entirely on next restart.
+  // Main gets the project root read-only
   mounts.push({
     hostPath: projectRoot,
     containerPath: '/workspace/project',
     readonly: true,
   });
+
+  // Shadow .env so the agent cannot read secrets from the mounted project root
+  if (fs.existsSync(path.join(projectRoot, '.env'))) {
+    mounts.push({
+      hostPath: '/dev/null',
+      containerPath: '/workspace/project/.env',
+      readonly: true,
+    });
+  }
 }
 ```
+
+The `.env` file is explicitly shadowed by mounting `/dev/null` over it, preventing agents from reading API keys or secrets even though the project root is mounted.
 
 ### Session isolation
 
@@ -144,9 +151,10 @@ if (
 **Credential proxy** (`src/credential-proxy.ts`):
 - Runs on the host as an HTTP proxy (default port 3001)
 - Containers send API requests to the proxy with a placeholder token
-- Proxy injects real credentials (API key or OAuth token) on every outbound request
-- Supports hot-swapping between API key and OAuth modes (reads `.env` per request)
-- For OAuth, auto-refreshes tokens from `~/.claude/.credentials.json`
+- Proxy injects real credentials on every outbound request
+- Two auth modes:
+  - **API key**: Proxy injects `x-api-key` header on every request
+  - **OAuth**: Container CLI exchanges its placeholder token for a temporary API key via the Anthropic OAuth endpoint; proxy injects the real OAuth token on that exchange request
 
 **NOT mounted:**
 - Channel sessions (e.g., `store/auth/` for WhatsApp) - host only

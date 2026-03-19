@@ -1,6 +1,7 @@
 ---
 title: Troubleshooting
 description: Common issues and solutions for NanoClaw
+tag: "UPDATED"
 keywords: ["troubleshooting", "debugging", "common issues"]
 ---
 
@@ -78,10 +79,10 @@ Messages sent to the agent receive no response.
   Verify the trigger word in your message matches the configured trigger:
   
   ```bash
-  sqlite3 store/messages.db "SELECT name, trigger FROM registered_groups;"
+  sqlite3 store/messages.db "SELECT name, trigger_pattern FROM registered_groups;"
   ```
   
-  The trigger is case-sensitive and must appear at the start of the message.
+  The trigger is case-insensitive and must appear at the start of the message.
 </Accordion>
 
 <Accordion title="Container runtime not available">
@@ -187,7 +188,7 @@ cat groups/{group}/logs/container-{timestamp}.log
 **Workaround:** Monitor `lastAgentTimestamp` in the database and manually reset if needed:
 
 ```sql
-UPDATE state 
+UPDATE router_state 
 SET value = '{timestamp}' 
 WHERE key = 'lastAgentTimestamp:{jid}';
 ```
