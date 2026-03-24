@@ -1,6 +1,7 @@
 ---
 title: Integrations overview
 description: Connect NanoClaw to your favorite messaging platforms and services
+tag: "UPDATED"
 keywords: ["integrations", "whatsapp", "telegram", "discord", "slack"]
 ---
 
@@ -8,15 +9,15 @@ NanoClaw supports multiple communication channels and integrations, allowing you
 
 ## Available channels
 
-All channels are installed via the [skills system](/integrations/skills-system). During `/setup`, you choose which platforms to connect — pick one or many:
+Telegram is included on `main` as a core channel. Other channels are installed via the [skills system](/integrations/skills-system). During `/setup`, you choose which platforms to connect — pick one or many:
 
 <CardGroup cols={2}>
-  <Card title="WhatsApp" icon="message" href="/integrations/whatsapp">
-    Add WhatsApp with `/add-whatsapp`. Uses the Baileys library for WhatsApp Web API.
+  <Card title="Telegram" icon="paper-plane" href="/integrations/telegram">
+    Core channel — available by default. Uses the grammy framework.
   </Card>
 
-  <Card title="Telegram" icon="paper-plane" href="/integrations/telegram">
-    Add Telegram with `/add-telegram`. Uses the grammy framework.
+  <Card title="WhatsApp" icon="message" href="/integrations/whatsapp">
+    Add WhatsApp with `/add-whatsapp`. Uses the Baileys library for WhatsApp Web API.
   </Card>
 
   <Card title="Discord" icon="comments" href="/integrations/discord">
@@ -55,11 +56,10 @@ All channel integrations support:
 
 ## Adding an integration
 
-To add an integration, use the corresponding skill command in Claude Code:
+Telegram is available by default — just configure a bot token during `/setup`. For other channels, use the corresponding skill command in Claude Code:
 
 ```bash
 /add-whatsapp    # Add WhatsApp
-/add-telegram    # Add Telegram
 /add-discord     # Add Discord
 /add-slack       # Add Slack
 /add-gmail       # Add Gmail
@@ -79,7 +79,7 @@ Each skill will:
 
 ## Choosing your channels
 
-There is no default channel — you choose what you need during `/setup`. You can run a single platform or combine several simultaneously. All channels are peers; none is privileged over the others.
+Telegram is the default channel and ships on `main`. You can add additional channels during `/setup` or later. All channels are peers — you can run one or several simultaneously.
 
 ## Next steps
 

@@ -40,7 +40,7 @@ graph TB
 
 ### Channel factory
 
-NanoClaw uses a factory registry pattern for messaging channels. Each channel (WhatsApp, Telegram, Discord, Slack, Gmail) self-registers at startup. Channels with missing credentials emit a warning and are skipped — no configuration file is needed to enable or disable channels.
+NanoClaw uses a factory registry pattern for messaging channels. Telegram ships on `main` as a core channel; other channels (WhatsApp, Discord, Slack, Gmail) are added via skills. Each channel self-registers at startup. Channels with missing credentials emit a warning and are skipped — no configuration file is needed to enable or disable channels.
 
 All channels implement a common `Channel` interface for message handling and sending, allowing the rest of the system to be channel-agnostic.
 

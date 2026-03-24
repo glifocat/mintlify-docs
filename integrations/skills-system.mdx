@@ -15,7 +15,7 @@ From the NanoClaw README:
 
 This approach means:
 
-- The base NanoClaw codebase stays small (~39.8k tokens)
+- The base NanoClaw codebase stays small (~34.9k tokens)
 - Each installation is customized to your exact needs
 - No configuration sprawl or unused features
 - The code remains understandable and modifiable
@@ -38,19 +38,27 @@ The upstream repo (`qwibitai/nanoclaw`) maintains skill branches for features th
 
 Each skill branch contains **all** the code changes for that skill: new files, modified source files, updated `package.json` dependencies, `.env.example` additions — everything.
 
-### Channel fork architecture
+### Channel architecture
 
-Channels (WhatsApp, Telegram, Discord, Slack, Gmail) live in **separate fork repositories**, not as skill branches on upstream. Each channel fork is a complete NanoClaw installation with the channel code already merged in.
+Telegram ships on `main` as a core channel. Other channels (WhatsApp, Discord, Slack, Gmail) live in **separate fork repositories** and are added via skills.
 
-| Fork repo | Channel | Library |
-|-----------|---------|---------|
-| `qwibitai/nanoclaw-whatsapp` | WhatsApp | @whiskeysockets/baileys |
-| `qwibitai/nanoclaw-telegram` | Telegram | grammy |
-| `qwibitai/nanoclaw-discord` | Discord | discord.js |
-| `qwibitai/nanoclaw-slack` | Slack | @slack/bolt (Socket Mode) |
-| `qwibitai/nanoclaw-gmail` | Gmail | googleapis |
+| Channel | Location | Library | How to add |
+|---------|----------|---------|------------|
+| Telegram | `main` (core) | grammy | Available by default |
+| WhatsApp | `qwibitai/nanoclaw-whatsapp` | @whiskeysockets/baileys | `/add-whatsapp` |
+| Discord | `qwibitai/nanoclaw-discord` | discord.js | `/add-discord` |
+| Slack | `qwibitai/nanoclaw-slack` | @slack/bolt (Socket Mode) | `/add-slack` |
+| Gmail | `qwibitai/nanoclaw-gmail` | googleapis | `/add-gmail` |
 
 Channels self-register at startup using the channel registry (`src/channels/registry.ts`). Each channel module calls `registerChannel()` with a factory function — the host process discovers available channels dynamically via `getRegisteredChannelNames()`.
+
+Docker sandbox forks are also maintained as part of the ecosystem:
+
+| Fork repo | Purpose |
+|-----------|---------|
+| `qwibitai/nanoclaw-docker-sandboxes` | Docker sandbox setup |
+| `qwibitai/nanoclaw-docker-sandbox` | Single Docker sandbox |
+| `qwibitai/nanoclaw-docker-sandbox-windows` | Docker sandbox for Windows |
 
 **Channel-specific skills** also live on the channel fork, not upstream:
 
@@ -64,7 +72,7 @@ Channels self-register at startup using the channel registry (`src/channels/regi
 | `/add-telegram-swarm` | nanoclaw-telegram | Agent swarm for Telegram |
 
 <Info>
-The channel fork architecture keeps the upstream `main` branch minimal. Core NanoClaw has no channel code at all — you add exactly the channels you need by merging from the appropriate fork.
+Telegram is the only channel bundled on `main`. All other channels are added by merging from the appropriate fork repository, keeping the base codebase minimal.
 </Info>
 
 ### Four categories of skills
@@ -185,15 +193,15 @@ Dependencies are implicit in git history — no separate dependency file is need
 
 ## Available integration skills
 
-### Channels (from fork repos)
+### Channels
 
-| Channel | Command | Fork repo | Library |
-|---------|---------|-----------|---------|
-| WhatsApp | `/add-whatsapp` | `nanoclaw-whatsapp` | @whiskeysockets/baileys |
-| Telegram | `/add-telegram` | `nanoclaw-telegram` | grammy |
-| Discord | `/add-discord` | `nanoclaw-discord` | discord.js |
-| Slack | `/add-slack` | `nanoclaw-slack` | @slack/bolt (Socket Mode) |
-| Gmail | `/add-gmail` | `nanoclaw-gmail` | googleapis |
+| Channel | Command | Source | Library |
+|---------|---------|--------|---------|
+| Telegram | Built-in | `main` (core) | grammy |
+| WhatsApp | `/add-whatsapp` | `nanoclaw-whatsapp` fork | @whiskeysockets/baileys |
+| Discord | `/add-discord` | `nanoclaw-discord` fork | discord.js |
+| Slack | `/add-slack` | `nanoclaw-slack` fork | @slack/bolt (Socket Mode) |
+| Gmail | `/add-gmail` | `nanoclaw-gmail` fork | googleapis |
 
 ### Upstream skills (from skill branches)
 
@@ -281,6 +289,12 @@ A GitHub Action runs on every push to `main`:
 3. Runs build and tests on the merged result
 4. Pushes the updated skill branch if tests pass
 5. Opens a GitHub issue for any skill that fails
+
+Channel forks also have a sync workflow that pulls upstream `main` and auto-resolves common conflicts:
+
+- **`package-lock.json`**, **`package.json`**, **`repo-tokens/badge.svg`**, **`.github/workflows/*`**: always take upstream's version
+- **`.env.example`**: keep the fork's version (preserves channel-specific environment variables)
+- Non-trivial conflicts abort the merge and create an issue
 
 <Note>
   Merge-forward (not rebase) preserves history for users who already merged the skill. No force-push needed.

@@ -37,13 +37,13 @@ Channel (WA/TG/DC/Slack/Gmail) → SQLite → Polling loop → Container (Claude
 ### Multi-messenger support
 
 Message NanoClaw from any connected platform:
+- **Telegram** (core channel, available by default)
 - **WhatsApp** (via `/add-whatsapp`)
-- **Telegram** (via `/add-telegram`)
 - **Discord** (via `/add-discord`)
 - **Slack** (via `/add-slack`)
 - **Gmail** (via `/add-gmail`)
 
-All channels are installed via [skills](/integrations/skills-system) — pick the ones you need during `/setup`.
+Telegram ships on `main`. Other channels are added via [skills](/integrations/skills-system) — pick the ones you need during `/setup`.
 
 ### Isolated group context
 
@@ -107,7 +107,7 @@ NanoClaw is built with simplicity in mind:
 - **IPC via filesystem** - Simple, reliable inter-process communication
 
 <Info>
-**Codebase size**: ~39.8k tokens (20% of Claude's context window). Small enough to understand completely.
+**Codebase size**: ~34.9k tokens (17% of Claude's context window). Small enough to understand completely.
 </Info>
 
 ## Key source files

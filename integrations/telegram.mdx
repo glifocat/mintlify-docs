@@ -1,12 +1,13 @@
 ---
 title: Telegram integration
-description: Add Telegram support using the /add-telegram skill
+description: Telegram is NanoClaw's core channel, available on main by default
+tag: "UPDATED"
 ---
 
 import SyncEnv from "/snippets/sync-env.mdx";
 import RestartService from "/snippets/restart-service.mdx";
 
-Add Telegram as a messaging channel for NanoClaw. Telegram can run alongside existing channels or replace them entirely.
+Telegram is NanoClaw's core channel, bundled on `main` and available by default. It can run alongside other channels added via skills.
 
 ## Overview
 
@@ -20,32 +21,11 @@ The Telegram integration uses the [grammy](https://grammy.dev/) library to conne
 - **Concurrent chats** - Handle multiple conversations simultaneously
 - **Flexible deployment** - Run alongside existing channels or as the only channel
 
-## Adding Telegram
+## Setting up Telegram
 
-Use the `/add-telegram` skill to add Telegram support:
+Telegram ships on `main` — no skill merge is needed. During `/setup`, you configure your bot token and register chats:
 
 <Steps>
-  <Step title="Run the skill">
-    ```bash
-    claude
-    /add-telegram
-    ```
-  </Step>
-  
-  <Step title="Choose deployment mode">
-    - **Replace existing channels** - Telegram becomes the only channel
-    - **Alongside** - Add Telegram alongside existing channels
-  </Step>
-  
-  <Step title="Apply code changes">
-    The skill merges the `skill/telegram` branch which adds:
-    - `src/channels/telegram.ts` (TelegramChannel implementation)
-    - `src/channels/telegram.test.ts` (46 unit tests)
-    - Multi-channel support in `src/index.ts`
-    - Telegram config in `src/config.ts`
-    - The `grammy` NPM package
-  </Step>
-  
   <Step title="Create Telegram bot">
     If you don't have a bot token yet, create one through @BotFather
   </Step>
@@ -58,6 +38,10 @@ Use the `/add-telegram` skill to add Telegram support:
     Use the `/chatid` command to get chat IDs and register them
   </Step>
 </Steps>
+
+<Note>
+Telegram was previously a skill-based channel (`/add-telegram`). It was promoted to a core channel and now ships on `main` with the `grammy` library included in the base dependencies.
+</Note>
 
 ## Creating a Telegram bot
 
@@ -359,45 +343,18 @@ The swarm skill has a 14KB SKILL.md with detailed setup instructions. Running `/
 
 See [Agent swarms](/features/agent-swarms) for general swarm concepts.
 
-## Removing Telegram
+## Disabling Telegram
 
-Since Telegram was added via a git merge, you remove it by reverting the merge commit:
+Since Telegram is a core channel on `main`, it cannot be removed via a skill revert. To disable it, remove the `TELEGRAM_BOT_TOKEN` variable from `.env` — the channel will emit a warning at startup and be skipped.
 
-<Steps>
-  <Step title="Find the merge commit">
-    ```bash
-    git log --merges --oneline | grep telegram
-    ```
+To fully remove the Telegram code, delete `src/channels/telegram.ts` and remove its import from `src/channels/index.ts`, then rebuild:
 
-    Look for a commit like `abc1234 Merge remote-tracking branch 'upstream/skill/telegram'`.
-  </Step>
-
-  <Step title="Revert the merge">
-    ```bash
-    git revert -m 1 <merge-commit>
-    ```
-
-    This creates a new commit that undoes all of Telegram's code changes.
-  </Step>
-
-  <Step title="Remove registrations">
-    ```bash
-    sqlite3 store/messages.db "DELETE FROM registered_groups WHERE jid LIKE 'tg:%'"
-    ```
-  </Step>
-
-  <Step title="Rebuild and restart">
-    ```bash
-    npm install
-    npm run build
-    launchctl kickstart -k gui/$(id -u)/com.nanoclaw  # macOS
-    # or: systemctl --user restart nanoclaw (Linux)
-    ```
-  </Step>
-</Steps>
+```bash
+npm run build
+```
 
 <Warning>
-  If you later want to re-apply Telegram after reverting, you must revert the revert first — git treats reverted changes as "already applied and undone". Claude handles this automatically when you run `/add-telegram` again.
+Removing Telegram from the source may cause merge conflicts when updating from upstream. Disabling via the environment variable is the recommended approach.
 </Warning>
 
 ## Next steps
