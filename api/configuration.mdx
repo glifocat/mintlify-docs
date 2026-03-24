@@ -34,8 +34,8 @@ Configuration is read from `.env` file or `process.env`.
   How long to keep container alive after last result in milliseconds (default: 30 minutes).
 </ParamField>
 
-<ParamField path="CREDENTIAL_PROXY_PORT" type="number" default="3001">
-  Port for the credential proxy that containers route API calls through.
+<ParamField path="ONECLI_URL" type="string" default="http://localhost:10254">
+  URL for the OneCLI gateway that handles credential injection into containers.
 </ParamField>
 
 <ParamField path="MAX_CONCURRENT_CONTAINERS" type="number" default="5">
@@ -111,12 +111,13 @@ ASSISTANT_NAME=Andy
 ASSISTANT_HAS_OWN_NUMBER=false
 CONTAINER_TIMEOUT=1800000
 MAX_CONCURRENT_CONTAINERS=5
+ONECLI_URL=http://localhost:10254
 TZ=America/Los_Angeles
 ```
 
 ## Credential environment variables
 
-The credential proxy reads these from `.env` at startup (never exposed to containers):
+The OneCLI gateway reads these from `.env` at startup (never exposed to containers):
 
 <ParamField path="ANTHROPIC_API_KEY" type="string">
   Anthropic API key. If set, the proxy uses API key mode.
@@ -131,7 +132,7 @@ The credential proxy reads these from `.env` at startup (never exposed to contai
 </ParamField>
 
 <ParamField path="ANTHROPIC_BASE_URL" type="string">
-  Upstream API URL for the credential proxy to forward requests to. Defaults to the Anthropic API endpoint. Set this to use third-party Anthropic-compatible endpoints (Together AI, Fireworks, custom deployments). See [Ollama integration](/integrations/ollama#third-party-model-endpoints).
+  Upstream API URL for the OneCLI gateway to forward requests to. Defaults to the Anthropic API endpoint. Set this to use third-party Anthropic-compatible endpoints (Together AI, Fireworks, custom deployments). See [Ollama integration](/integrations/ollama#third-party-model-endpoints).
 </ParamField>
 
 <ParamField path="OLLAMA_HOST" type="string" default="http://host.docker.internal:11434">
@@ -141,6 +142,6 @@ The credential proxy reads these from `.env` at startup (never exposed to contai
 ## Security notes
 
 - **Secrets** (API keys, credentials) are NOT read in `config.ts`
-- Secrets are loaded only by the credential proxy (`credential-proxy.ts`) once at startup, never exposed to containers
+- Secrets are managed by the OneCLI gateway (`@onecli-sh/sdk`), never exposed to containers
 - This prevents leaking secrets to child processes
 - Mount allowlist is stored OUTSIDE project root and never mounted into containers

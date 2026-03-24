@@ -211,7 +211,7 @@ export async function runContainerAgent(
     container.stdin.end();
     ```
     
-    The input JSON contains the prompt, session ID, group folder, and metadata. Credentials are handled by the credential proxy — never passed via stdin or mounted as files.
+    The input JSON contains the prompt, session ID, group folder, and metadata. Credentials are handled by the OneCLI gateway — never passed via stdin or mounted as files.
   </Step>
   
   <Step title="Stream output">
@@ -228,25 +228,22 @@ export async function runContainerAgent(
 From the `buildContainerArgs` function in `src/container-runner.ts`:
 
 ```typescript
-function buildContainerArgs(
+async function buildContainerArgs(
   mounts: VolumeMount[],
   containerName: string,
-): string[] {
+  agentIdentifier?: string,
+): Promise<string[]> {
   const args: string[] = ['run', '-i', '--rm', '--name', containerName];
 
   // Pass host timezone so container's local time matches the user's
   args.push('-e', `TZ=${TIMEZONE}`);
 
-  // Route API traffic through the credential proxy
-  args.push('-e', `ANTHROPIC_BASE_URL=http://${CONTAINER_HOST_GATEWAY}:${CREDENTIAL_PROXY_PORT}`);
-
-  // Mirror the host's auth method with a placeholder value
-  const authMode = detectAuthMode();
-  if (authMode === 'api-key') {
-    args.push('-e', 'ANTHROPIC_API_KEY=placeholder');
-  } else {
-    args.push('-e', 'CLAUDE_CODE_OAUTH_TOKEN=placeholder');
-  }
+  // OneCLI gateway handles credential injection — containers never see real secrets.
+  // The gateway intercepts HTTPS traffic and injects API keys or OAuth tokens.
+  const onecliApplied = await onecli.applyContainerConfig(args, {
+    addHostMapping: false, // NanoClaw already handles host gateway
+    agent: agentIdentifier,
+  });
 
   // Run as host user so bind-mounted files are accessible
   const hostUid = process.getuid?.();
@@ -274,8 +271,7 @@ function buildContainerArgs(
 - `--rm` - Remove container after exit (ephemeral)
 - `--name` - Unique container name for management
 - `--user` - Run as host UID/GID for file permissions
-- `-e ANTHROPIC_BASE_URL` - Routes API calls through the credential proxy
-- `-e ANTHROPIC_API_KEY` or `-e CLAUDE_CODE_OAUTH_TOKEN` - Placeholder credential (replaced by proxy)
+- OneCLI gateway config - Injected via `applyContainerConfig()`, handles credential routing transparently
 
 ### Volume mounts
 

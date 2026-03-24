@@ -193,32 +193,31 @@ The sender allowlist complements container isolation. Containers protect against
 
 ### Credential handling
 
-**Credential proxy** (`src/credential-proxy.ts`):
-- Runs on the host as an HTTP proxy (default port 3001, configurable via `CREDENTIAL_PROXY_PORT`)
-- Containers send API requests to the proxy with a placeholder token
-- Reads credentials from `.env` once at startup
-- Supports API key mode (`ANTHROPIC_API_KEY`) and OAuth mode (`CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_AUTH_TOKEN`)
-
-**Credential injection behavior differs by auth mode:**
-- **API key mode**: The proxy replaces the `x-api-key` header on every outbound request
-- **OAuth mode**: The proxy replaces the `Authorization` header only on requests that include one (during the initial token exchange). The Claude CLI exchanges the placeholder token for a temporary API key, and subsequent requests use that key directly without further injection
+**OneCLI gateway** (`@onecli-sh/sdk`):
+- Runs on the host (default URL `http://localhost:10254`, configurable via `ONECLI_URL`)
+- Intercepts HTTPS traffic and injects API keys or OAuth tokens into container API requests
+- Container arguments are configured at spawn time via `onecli.applyContainerConfig(args)`
+- Each non-main group gets its own OneCLI agent identifier for credential scoping
 
 **NOT mounted:**
 - Channel sessions (e.g., `store/auth/` for WhatsApp) - host only
 - Mount allowlist - external, never mounted
-- Real API keys or OAuth tokens - injected by proxy, never in containers
+- Real API keys or OAuth tokens - injected by gateway, never in containers
 - Any credentials matching blocked patterns
 
-**Container environment** (from `src/container-runner.ts`):
+**Container credential injection** (from `src/container-runner.ts`):
 
 ```typescript
-// Containers get a placeholder token and proxy URL — never real credentials
-ANTHROPIC_BASE_URL=http://${CONTAINER_HOST_GATEWAY}:${CREDENTIAL_PROXY_PORT}
-CLAUDE_CODE_OAUTH_TOKEN=placeholder
+// OneCLI gateway handles credential injection — containers never see real secrets.
+// The gateway intercepts HTTPS traffic and injects API keys or OAuth tokens.
+const onecliApplied = await onecli.applyContainerConfig(args, {
+  addHostMapping: false, // NanoClaw already handles host gateway
+  agent: agentIdentifier,
+});
 ```
 
 <Note>
-Containers cannot extract real credentials. The credential proxy intercepts all API requests and replaces the placeholder token with real authentication before forwarding to `api.anthropic.com`.
+Containers cannot extract real credentials. The OneCLI gateway intercepts API requests and injects authentication transparently. If the gateway is not reachable, containers will have no credentials and API calls will fail.
 </Note>
 
 ## Privilege comparison
@@ -247,7 +246,7 @@ Containers cannot extract real credentials. The credential proxy intercepts all 
 │  • IPC authorization                                              │
 │  • Mount validation (external allowlist)                          │
 │  • Container lifecycle                                            │
-│  • Credential proxy                                                │
+│  • OneCLI gateway                                                  │
 └────────────────────────────────┬─────────────────────────────────┘
                                  │
                                  ▼ Explicit mounts only
