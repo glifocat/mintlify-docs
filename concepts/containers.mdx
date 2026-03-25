@@ -93,7 +93,7 @@ The entrypoint script (`/app/entrypoint.sh`):
 4. **Container exits**: Cleaned up automatically via `--rm` flag
 
 <Note>
-The agent-runner is recompiled on every container start from `/app/src` (mounted from `data/sessions/{group}/agent-runner-src/`). This allows agents to modify their own tools and behavior by editing their agent-runner source. The agent-runner source is copied once when the group is first created — subsequent changes to `container/agent-runner/src/` are not automatically propagated to existing groups.
+The agent-runner is recompiled on every container start from `/app/src` (mounted from `data/sessions/{group}/agent-runner-src/`). This allows agents to modify their own tools and behavior by editing their agent-runner source. The agent-runner source is automatically refreshed when the upstream source (`container/agent-runner/src/`) is newer than the group's cached copy (based on file modification time). This means container image rebuilds propagate agent-runner updates to all groups on the next container spawn.
 </Note>
 
 ## Volume mounts
@@ -457,7 +457,7 @@ Directories mounted at `/workspace/extra/*` (via additional mounts) are automati
 **MCP servers:**
 
 - Configured in agent-runner source (`container/agent-runner/src/index.ts`)
-- Built-in: `nanoclaw` MCP server (8 tools: `send_message`, `schedule_task`, `list_tasks`, `pause_task`, `resume_task`, `cancel_task`, `update_task`, `register_group`)
+- Built-in: `nanoclaw` MCP server (8 tools: `send_message`, `schedule_task`, `list_tasks`, `pause_task`, `resume_task`, `cancel_task`, `update_task`, `register_group`). The `schedule_task` and `update_task` tools accept an optional `script` parameter for pre-execution gating.
 - Custom: Add by modifying agent-runner code
 
 <Accordion title="Adding a custom MCP server">

@@ -83,6 +83,75 @@ When you request a scheduled task, the agent:
 Only the main channel can create tasks for other groups. Non-main groups can only schedule tasks for themselves.
 </Note>
 
+## Task scripts
+
+For tasks that check a condition before acting (new PRs, website changes, API status), add a `script` parameter. The script runs first as bash inside the container — if there's nothing to do, the agent never starts.
+
+### How scripts work
+
+1. You provide a bash `script` alongside the `prompt` when scheduling a task
+2. When the task fires, the script runs first (30-second timeout)
+3. The script prints JSON on the last line of stdout: `{ "wakeAgent": true/false, "data": {...} }`
+4. If `wakeAgent: false` — nothing happens, the task waits for the next scheduled run
+5. If `wakeAgent: true` — the agent wakes up and receives the script's data along with the original prompt
+
+```json
+{
+  "type": "schedule_task",
+  "prompt": "Review these new PRs and summarize them",
+  "script": "curl -s https://api.github.com/repos/owner/repo/pulls?state=open | node -e \"const d=require('fs').readFileSync('/dev/stdin','utf8');const prs=JSON.parse(d);console.log(JSON.stringify({wakeAgent:prs.length>0,data:prs.slice(0,5)}))\"",
+  "schedule_type": "interval",
+  "schedule_value": "300000",
+  "context_mode": "isolated"
+}
+```
+
+<Note>
+Scripts are only executed for scheduled tasks (`isScheduledTask: true`). The `script` parameter is ignored for interactive messages.
+</Note>
+
+### Script output format
+
+The script must print valid JSON on the **last line** of stdout:
+
+```json
+{ "wakeAgent": true, "data": { "items": ["a", "b"] } }
+```
+
+- `wakeAgent` (required, boolean) — whether to start the agent
+- `data` (optional) — arbitrary data passed to the agent's prompt
+
+If the script fails, produces no output, or returns invalid JSON, the agent is **not** woken (fail-safe behavior).
+
+### When to use scripts
+
+Scripts are ideal for **frequent polling** tasks (every 1–10 minutes) where most runs have nothing to report:
+
+- GitHub PR monitoring
+- Website change detection
+- API status checks
+- RSS feed polling
+
+For tasks that require the agent's judgment every time (daily briefings, reminders, reports), skip the script and use a regular prompt.
+
+<Warning>
+Each agent wake-up uses API credits. For tasks running more than a few times per day, use a script to gate wake-ups and avoid unnecessary API costs.
+</Warning>
+
+### Updating a task's script
+
+Use `update_task` to add, change, or remove a script:
+
+```json
+{
+  "type": "update_task",
+  "taskId": "task-1234567890-abc123",
+  "script": "echo '{\"wakeAgent\": true}'"
+}
+```
+
+Set `script` to an empty string to remove the script from a task.
+
 ## Task execution
 
 The scheduler runs as a background loop:
@@ -161,8 +230,12 @@ context_mode: 'group'
     When `next_run` is in the past and status is `active`, the task is enqueued
   </Step>
   
+  <Step title="Script phase (if configured)">
+    If the task has a `script`, it runs first inside the container. If the script returns `wakeAgent: false`, the container exits without starting the agent.
+  </Step>
+  
   <Step title="Agent executes">
-    The agent runs in an isolated container with the task prompt
+    The agent runs in an isolated container with the task prompt (enriched with script data if applicable)
   </Step>
   
   <Step title="Results sent">
@@ -235,6 +308,7 @@ Tasks are managed through IPC messages written to `data/ipc/{group}/tasks/`:
   "schedule_type": "cron",
   "schedule_value": "0 9 * * *",
   "context_mode": "isolated",
+  "script": "optional bash script (see Task scripts section)",
   "targetJid": "user@s.whatsapp.net or tg:12345 or similar"
 }
 ```
@@ -265,6 +339,7 @@ Tasks are managed through IPC messages written to `data/ipc/{group}/tasks/`:
   "type": "update_task",
   "taskId": "task-1234567890-abc123",
   "prompt": "Updated prompt",
+  "script": "optional new script (empty string to remove)",
   "schedule_type": "interval",
   "schedule_value": "7200000"
 }
@@ -339,6 +414,10 @@ Schedule: `0 9 * * 1-5` (cron)
 ```
 
 Schedule: `3600000` (interval - 1 hour)
+
+<Tip>
+For high-frequency PR monitoring (every 5–10 minutes), add a script that checks the GitHub API first. The agent only wakes up when there are new PRs to review, saving API credits.
+</Tip>
 
 ### Weekly report
 
