@@ -234,6 +234,7 @@ interface ScheduledTask {
   group_folder: string;                 // Group folder name
   chat_jid: string;                     // Chat to send results to
   prompt: string;                       // Agent prompt
+  script?: string | null;               // Optional script to run instead of prompt
   schedule_type: 'cron' | 'interval' | 'once';
   schedule_value: string;               // Cron expression, interval ms, or ISO timestamp
   context_mode: 'group' | 'isolated';   // Session mode
@@ -340,8 +341,8 @@ Starts with no session, providing a fresh context for each execution.
 // Scheduler poll interval (1 minute)
 export const SCHEDULER_POLL_INTERVAL = 60000;
 
-// Timezone for cron expressions
-export const TIMEZONE = process.env.TZ || Intl.DateTimeFormat().resolvedOptions().timeZone;
+// Timezone for cron expressions (validated as real IANA identifier, falls back to UTC)
+export const TIMEZONE = resolveConfigTimezone();
 
 // Container close delay after task result (10 seconds)
 const TASK_CLOSE_DELAY_MS = 10000;

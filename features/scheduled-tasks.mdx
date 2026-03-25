@@ -201,9 +201,17 @@ if (task.schedule_type === 'cron') {
 Tasks use the system timezone by default:
 
 ```typescript
-// From src/config.ts
-export const TIMEZONE =
-  process.env.TZ || Intl.DateTimeFormat().resolvedOptions().timeZone;
+// From src/config.ts — resolveConfigTimezone()
+const candidates = [
+  process.env.TZ,
+  envConfig.TZ,
+  Intl.DateTimeFormat().resolvedOptions().timeZone,
+];
+// Each candidate is validated as a real IANA identifier before accepting
+for (const tz of candidates) {
+  if (tz && isValidTimezone(tz)) return tz;
+}
+return 'UTC';
 ```
 
 To override, set the `TZ` environment variable:

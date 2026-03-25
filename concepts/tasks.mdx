@@ -47,7 +47,7 @@ Standard cron syntax with timezone support:
 
 **Timezone:**
 
-- Defaults to system timezone (`process.env.TZ` or `Intl.DateTimeFormat().resolvedOptions().timeZone`)
+- Resolved from `process.env.TZ`, `.env` file `TZ`, or system timezone — each validated as a real IANA identifier before accepting, with `UTC` as final fallback
 - Configurable via `TZ` environment variable
 - Uses `cron-parser` with timezone support
 
@@ -210,6 +210,7 @@ Tasks can run in two context modes:
 ```typescript
 interface ScheduledTask {
   context_mode: 'isolated' | 'group';
+  script?: string | null; // Optional script to run instead of prompt
   // ... other fields
 }
 ```
