@@ -128,7 +128,7 @@ Handles crash recovery by detecting messages that were stored in the database bu
 interface RegisteredGroup {
   name: string;                    // Display name
   folder: string;                  // Folder name (alphanumeric + hyphens/underscores)
-  trigger: string;                 // Trigger pattern regex
+  trigger: string;                 // Per-group trigger (e.g., "@Claw"); falls back to default @{ASSISTANT_NAME} if empty
   added_at: string;                // ISO timestamp of registration
   containerConfig?: ContainerConfig; // Optional container configuration
   requiresTrigger?: boolean;       // Whether trigger is required (default: true)

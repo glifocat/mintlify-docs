@@ -50,12 +50,12 @@ The router (`src/index.ts`) is the central orchestrator:
 
 - Polls SQLite database every 2 seconds for new messages
 - Filters messages by registered groups only
-- Checks for trigger pattern (`@{ASSISTANT_NAME}`)
+- Checks for trigger pattern (per-group trigger, or default `@{ASSISTANT_NAME}`)
 - Maintains cursor state to track processed messages
 - Routes messages to the appropriate group queue
 
 <Info>
-The main group (typically your self-chat) doesn't require a trigger - all messages are processed automatically.
+The main group (typically your self-chat) doesn't require a trigger - all messages are processed automatically. Non-main groups can define a custom trigger that overrides the default.
 </Info>
 
 ### Group queue
@@ -147,7 +147,7 @@ SQLite database (`store/messages.db`) stores:
 - **messages**: All messages with timestamps, sender info, and bot-message flag (queries capped at 200 per invocation)
 - **chats**: Chat metadata (name, last activity, channel, is_group)
 - **sessions**: Claude session IDs per group folder
-- **registered_groups**: Active groups with folder, trigger, container config, is_main flag
+- **registered_groups**: Active groups with folder, per-group trigger, container config, is_main flag
 - **router_state**: Message cursors and last processed timestamps
 - **scheduled_tasks**: Task definitions with schedule, context_mode (`group` or `isolated`), and status
 - **task_run_logs**: Task execution history with duration and results

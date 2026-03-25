@@ -76,13 +76,13 @@ Messages sent to the agent receive no response.
 ### Solutions
 
 <Accordion title="Trigger word not matching">
-  Verify the trigger word in your message matches the configured trigger:
+  Each group can have its own trigger. Verify the trigger word in your message matches the group's configured trigger:
   
   ```bash
   sqlite3 store/messages.db "SELECT name, trigger FROM registered_groups;"
   ```
   
-  The trigger is case-insensitive and must appear at the start of the message.
+  The trigger is case-insensitive and must appear at the start of the message. If a group has a custom trigger (e.g., `@Claw`), the default `@{ASSISTANT_NAME}` trigger will not activate that group.
 </Accordion>
 
 <Accordion title="Container runtime not available">

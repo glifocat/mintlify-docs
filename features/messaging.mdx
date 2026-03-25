@@ -34,15 +34,19 @@ NanoClaw processes messages through a polling-based architecture that connects m
 
 ## Trigger patterns
 
-Trigger patterns determine when the agent should respond. The default trigger is `@{ASSISTANT_NAME}` at the start of a message.
+Trigger patterns determine when the agent should respond. Each group can define its own trigger, with a fallback to the default `@{ASSISTANT_NAME}`.
 
 ```typescript
 // From src/config.ts
-export const TRIGGER_PATTERN = new RegExp(
-  `^@${escapeRegex(ASSISTANT_NAME)}\\b`,
-  'i',
-);
+export const DEFAULT_TRIGGER = `@${ASSISTANT_NAME}`;
+
+export function getTriggerPattern(trigger?: string): RegExp {
+  const normalizedTrigger = trigger?.trim();
+  return buildTriggerPattern(normalizedTrigger || DEFAULT_TRIGGER);
+}
 ```
+
+When processing messages for a non-main group, NanoClaw uses the group's `trigger` field to build the regex. If no per-group trigger is set, it falls back to the default (`@{ASSISTANT_NAME}`).
 
 ### Usage examples
 
@@ -50,6 +54,7 @@ export const TRIGGER_PATTERN = new RegExp(
 @Andy what's on my calendar today?
 @Andy search for recent AI developments
 @ANDY help me debug this error (case-insensitive)
+@Claw do something (custom per-group trigger)
 ```
 
 <Note>

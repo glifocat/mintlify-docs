@@ -157,10 +157,9 @@ The main configuration file:
 ```typescript
 // Trigger pattern
 export const ASSISTANT_NAME = 'Andy';
-export const TRIGGER_PATTERN = new RegExp(
-  `^@${escapeRegex(ASSISTANT_NAME)}\\b`,
-  'i',
-);
+export const DEFAULT_TRIGGER = `@${ASSISTANT_NAME}`;
+export const TRIGGER_PATTERN = buildTriggerPattern(DEFAULT_TRIGGER);
+// Per-group triggers: getTriggerPattern(group.trigger) falls back to DEFAULT_TRIGGER
 
 // Polling intervals
 export const POLL_INTERVAL = 2000;

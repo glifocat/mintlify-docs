@@ -67,7 +67,7 @@ Groups must be registered before the agent will respond to messages.
 interface RegisteredGroup {
   name: string;              // Display name
   folder: string;            // Filesystem folder name (alphanumeric + dash/underscore)
-  trigger: string;           // Trigger pattern regex
+  trigger: string;           // Per-group trigger (e.g., "@Claw"); overrides default @{ASSISTANT_NAME}
   added_at: string;          // ISO timestamp of registration
   requiresTrigger?: boolean; // Default: true (false for main)
   isMain?: boolean;          // True for the main control group
@@ -243,9 +243,12 @@ When a group's container is already active, new messages are piped directly to t
 Non-main groups require a trigger pattern to activate:
 
 - **Default pattern**: `@{ASSISTANT_NAME}` (case insensitive)
-- **Configured via**: `ASSISTANT_NAME` environment variable
-- **Example**: `@Andy` if `ASSISTANT_NAME=Andy`
+- **Per-group override**: Each group can set a custom `trigger` field (e.g., `@Claw`) that takes precedence over the default
+- **Configured via**: `ASSISTANT_NAME` environment variable (for the default), or the group's `trigger` field at registration
+- **Example**: `@Andy` if `ASSISTANT_NAME=Andy`, or `@Claw` if the group's trigger is set to `@Claw`
 - **Can be disabled**: Set `requiresTrigger: false` in group config
+
+When a custom per-group trigger is set, only that trigger activates the agent for that group — the default `@{ASSISTANT_NAME}` trigger will not match.
 
 **Why triggers are required:**
 
