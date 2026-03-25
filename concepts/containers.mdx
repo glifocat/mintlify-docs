@@ -27,7 +27,7 @@ NanoClaw uses Docker by default for cross-platform compatibility. On macOS, you 
 The container is built from `container/Dockerfile`:
 
 ```dockerfile
-FROM node:24-slim
+FROM node:22-slim
 
 # System dependencies for Chromium
 RUN apt-get update && apt-get install -y \
@@ -70,7 +70,7 @@ ENTRYPOINT ["/app/entrypoint.sh"]
 
 **Key components:**
 
-- **Base**: `node:24-slim` (Debian-based, minimal)
+- **Base**: `node:22-slim` (Debian-based, minimal)
 - **Browser**: Chromium with all dependencies
 - **Tools**: `agent-browser` for browser automation
 - **Runtime**: `@anthropic-ai/claude-code` (Claude Agent SDK)
@@ -93,7 +93,7 @@ The entrypoint script (`/app/entrypoint.sh`):
 4. **Container exits**: Cleaned up automatically via `--rm` flag
 
 <Note>
-The agent-runner is recompiled on every container start from `/app/src` (mounted from `data/sessions/{group}/agent-runner-src/`). This allows agents to modify their own tools and behavior by editing their agent-runner source. The agent-runner source is copied once when the group is first created — subsequent changes to `container/agent-runner/src/` are not automatically propagated to existing groups.
+The agent-runner is recompiled on every container start from `/app/src` (mounted from `data/sessions/{group}/agent-runner-src/`). This allows agents to modify their own tools and behavior by editing their agent-runner source. The agent-runner source is copied from `container/agent-runner/src/` when the upstream `index.ts` is newer than the group's cached copy — so upstream changes propagate automatically on the next container spawn, but per-group customizations are preserved until the upstream source is updated.
 </Note>
 
 ## Volume mounts
@@ -413,7 +413,7 @@ Skills synced to each container:
 
 1. **Copy from project**: Skills from `container/skills/` are synced to `data/sessions/{group}/.claude/skills/` on every container spawn (overwriting existing files)
 2. **Available to agent**: Claude Agent SDK loads from `.claude/skills/`
-3. **Per-group customization**: Each group gets a copy, but changes are overwritten on next container spawn (unlike agent-runner source, which is copied once)
+3. **Per-group customization**: Each group gets a copy, but changes are overwritten on next container spawn (unlike agent-runner source, which only updates when the upstream source is newer)
 
 ### Built-in container skills
 
