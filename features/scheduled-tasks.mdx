@@ -198,19 +198,42 @@ if (task.schedule_type === 'cron') {
 
 ## Timezone configuration
 
-Tasks use the system timezone by default:
+Tasks use the system timezone by default, with validation to ensure it's a real IANA identifier:
 
 ```typescript
-// From src/config.ts
-export const TIMEZONE =
-  process.env.TZ || Intl.DateTimeFormat().resolvedOptions().timeZone;
+// From src/config.ts — cascading fallback with validation
+const candidates = [process.env.TZ, envConfig.TZ, Intl.DateTimeFormat().resolvedOptions().timeZone];
+// First valid IANA timezone wins; falls back to 'UTC'
 ```
 
-To override, set the `TZ` environment variable:
+To override, set the `TZ` environment variable in `.env`:
 
 ```bash
-export TZ="America/New_York"
+TZ=America/New_York
 ```
+
+Invalid timezone values (e.g., typos like `Amercia/New_York`) are silently skipped in favor of the next candidate.
+
+## Task scripts
+
+Tasks support an optional `script` parameter — a bash script that runs before the agent wakes up. If the script outputs `{ "wakeAgent": false }`, the agent is not invoked. This saves API credits for condition-based tasks.
+
+```
+@Andy every hour, check if there are new open PRs on owner/repo. 
+Use a script to call the GitHub API. Only wake up if there are new PRs, 
+then summarize them for me.
+```
+
+The agent will create a task with both a `prompt` and a `script`. On each run:
+
+1. Script runs first (30-second timeout)
+2. Script prints JSON: `{ "wakeAgent": true/false, "data": {...} }`
+3. If `wakeAgent: true`, the agent receives the data and prompt
+4. If `wakeAgent: false` or the script fails, the task completes silently
+
+<Note>
+Scripts run inside the container with full Bash access. Always test scripts in the sandbox before scheduling.
+</Note>
 
 ## Task management
 
@@ -232,6 +255,7 @@ Tasks are managed through IPC messages written to `data/ipc/{group}/tasks/`:
 {
   "type": "schedule_task",
   "prompt": "Send me a summary of today's events",
+  "script": "optional bash script that runs before waking agent",
   "schedule_type": "cron",
   "schedule_value": "0 9 * * *",
   "context_mode": "isolated",
@@ -265,6 +289,7 @@ Tasks are managed through IPC messages written to `data/ipc/{group}/tasks/`:
   "type": "update_task",
   "taskId": "task-1234567890-abc123",
   "prompt": "Updated prompt",
+  "script": "optional updated script",
   "schedule_type": "interval",
   "schedule_value": "7200000"
 }

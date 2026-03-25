@@ -218,6 +218,43 @@ interface ScheduledTask {
 Group context tasks share the session with interactive messages. This means the task's actions (files read, tools used) become part of the group's conversation history.
 </Note>
 
+## Task scripts
+
+Tasks can include an optional `script` — a bash script that runs before the agent wakes up. This is useful for condition-based tasks that only need the agent when a specific check returns true (e.g., new PRs, website changes, API errors).
+
+### How scripts work
+
+1. You provide a `script` alongside the `prompt` when scheduling a task
+2. When the task fires, the script runs first inside the container (30-second timeout)
+3. The script prints JSON to stdout: `{ "wakeAgent": true/false, "data": {...} }`
+4. If `wakeAgent: false` — the container exits silently, no agent invocation
+5. If `wakeAgent: true` — the agent wakes up and receives the script's `data` enriched into the prompt
+
+```typescript
+await claudeCode.tools.schedule_task({
+  prompt: "Review these new PRs and summarize them",
+  script: 'node --input-type=module -e "\n  const r = await fetch(\"https://api.github.com/repos/owner/repo/pulls?state=open\");\n  const prs = await r.json();\n  console.log(JSON.stringify({ wakeAgent: prs.length > 0, data: prs.slice(0, 5) }));\n"',
+  schedule_type: "interval",
+  schedule_value: "3600000",
+  context_mode: "isolated"
+});
+```
+
+### When to use scripts
+
+- **Condition checks**: Only wake the agent when there's something to act on
+- **Cost savings**: Avoid agent invocations (and API credits) for no-op runs
+- **High-frequency polling**: Check every few minutes without waking the agent each time
+
+### When NOT to use scripts
+
+- **Daily briefings or reminders**: The agent should run every time
+- **Tasks requiring judgment**: If you need the LLM to evaluate data, skip the script
+
+<Note>
+Scripts run inside the container with full Bash access. If the script fails, times out, or produces invalid JSON, the agent is not woken and the task completes silently.
+</Note>
+
 ## Task management operations
 
 Tasks are managed via MCP tools (available in `container/skills/nanoclaw.md`):

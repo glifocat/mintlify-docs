@@ -38,10 +38,16 @@ Trigger patterns determine when the agent should respond. The default trigger is
 
 ```typescript
 // From src/config.ts
-export const TRIGGER_PATTERN = new RegExp(
-  `^@${escapeRegex(ASSISTANT_NAME)}\\b`,
-  'i',
-);
+export const DEFAULT_TRIGGER = `@${ASSISTANT_NAME}`;
+export const TRIGGER_PATTERN = buildTriggerPattern(DEFAULT_TRIGGER);
+```
+
+Individual groups can override the trigger via their `trigger` field. When a group has a custom trigger set, only that trigger activates the agent — the default is ignored for that group:
+
+```typescript
+// Per-group trigger resolution
+const triggerPattern = getTriggerPattern(group.trigger);
+// Falls back to DEFAULT_TRIGGER when group.trigger is undefined
 ```
 
 ### Usage examples
@@ -50,6 +56,7 @@ export const TRIGGER_PATTERN = new RegExp(
 @Andy what's on my calendar today?
 @Andy search for recent AI developments
 @ANDY help me debug this error (case-insensitive)
+@Claw summarize this thread (custom per-group trigger)
 ```
 
 <Note>
@@ -225,13 +232,15 @@ Messages are polled every 2 seconds by default. This can be adjusted by modifyin
 
 ### Trigger customization
 
-To change the trigger word, ask Claude Code to modify it:
+To change the default trigger word for all groups, ask Claude Code to modify `ASSISTANT_NAME`:
 
 ```
 Change the trigger word to @Bob
 ```
 
 This updates `ASSISTANT_NAME` in `src/config.ts` and `.env`.
+
+To set a custom trigger for a specific group, update the group's `trigger` field during registration. Groups with custom triggers ignore the default — only their specific trigger word activates the agent.
 
 ## Group registration
 
