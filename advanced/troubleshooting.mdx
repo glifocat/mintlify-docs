@@ -204,6 +204,76 @@ If containers are consistently hitting the hard timeout, consider lowering `IDLE
 
 **Fix:** Already fixed. The agent runner now passes `resumeSessionAt` with the last assistant message UUID to explicitly anchor each resume.
 
+## OneCLI gateway issues
+
+### Symptoms
+- Logs show `OneCLI gateway not reachable -- container will have no credentials`
+- Agent responds with authentication errors or refuses to work
+- Containers start but cannot make API calls
+
+### Diagnosis
+
+```bash
+# Check if the gateway is running
+curl -sf http://127.0.0.1:10254/health
+
+# Check if OneCLI is installed
+onecli version
+
+# Verify secrets are registered
+onecli secrets list
+
+# Check ONECLI_URL in .env
+grep ONECLI_URL .env
+```
+
+### Solutions
+
+<Accordion title="Gateway not running">
+  Start the OneCLI gateway:
+
+  ```bash
+  onecli start
+  ```
+
+  If `onecli` is not found, it may be installed to `~/.local/bin/`. Add it to your PATH or run the full install:
+
+  ```bash
+  curl -fsSL onecli.sh/install | sh
+  curl -fsSL onecli.sh/cli/install | sh
+  ```
+</Accordion>
+
+<Accordion title="No credentials in the vault">
+  If `onecli secrets list` shows no Anthropic secret, register one:
+
+  ```bash
+  # For an API key
+  onecli secrets create --name Anthropic --type anthropic \
+    --value YOUR_KEY --host-pattern api.anthropic.com
+
+  # For a Claude subscription token
+  onecli secrets create --name Anthropic --type anthropic \
+    --value YOUR_TOKEN --host-pattern api.anthropic.com
+  ```
+
+  Or open the dashboard at `http://127.0.0.1:10254` to add secrets via the UI.
+</Accordion>
+
+<Accordion title="Migrating from .env credentials">
+  If you upgraded to v1.2.35+ and still have credentials in `.env`, run `/init-onecli` in Claude Code to migrate them to the vault automatically. This installs OneCLI, moves your credentials, and removes the raw keys from `.env`.
+</Accordion>
+
+<Accordion title="Port 10254 already in use">
+  Another OneCLI instance may be running:
+
+  ```bash
+  lsof -i :10254
+  ```
+
+  Kill the old process, or configure a different port and update `ONECLI_URL` in `.env` to match.
+</Accordion>
+
 ## WhatsApp authentication issues
 
 ### Symptoms

@@ -5,6 +5,12 @@ icon: "tag"
 rss: true
 ---
 
+<Update label="v1.2.35" description="2026-03-26" tags={["Breaking", "Skill"]}>
+  - **[BREAKING]** OneCLI Agent Vault replaces the built-in credential proxy — existing `.env` credentials must be migrated to the vault
+  - Added `/init-onecli` skill — installs OneCLI, configures the Agent Vault gateway, and migrates `.env` credentials into the vault
+  - Run `/init-onecli` after updating, or use `/use-native-credential-proxy` to opt back into the legacy `.env`-based proxy
+</Update>
+
 <Update label="v1.2.23" description="2026-03-24" tags={["Maintenance", "Skill"]}>
   - Added `/use-native-credential-proxy` skill — opt-in restoration of the built-in `.env`-based credential proxy for users who prefer it over OneCLI
   - Removed dead `src/credential-proxy.ts` code (unused since v1.2.22)
