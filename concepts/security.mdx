@@ -238,9 +238,10 @@ For the full file format and API details, see the [security deep dive](/advanced
 
 <Tabs>
   <Tab title="OneCLI Gateway (v1.2.22+)">
-    NanoClaw uses the [OneCLI](https://onecli.sh) gateway for centralized secret management. API keys are never stored in `.env` or exposed to containers — the gateway intercepts outbound API traffic from containers and injects credentials at request time.
+    NanoClaw uses the [OneCLI](https://onecli.sh) gateway for centralized secret management. Container-facing API keys (Anthropic, OpenAI, Parallel, etc.) are managed by the gateway, which intercepts outbound API traffic from containers and injects credentials at request time.
 
     - Secrets are registered once via `onecli secrets create` (CLI or dashboard)
+    - Channel tokens (Telegram, Slack, Discord) remain in `.env` — they are used by the host process, not by containers
     - The host's `.env` file is shadowed with `/dev/null` when the project root is mounted, preventing containers from reading any residual secrets
     - Each non-main group gets its own OneCLI agent identifier, enabling per-group credential scoping
     - If the OneCLI gateway is unreachable, the container starts with no credentials and logs a warning
