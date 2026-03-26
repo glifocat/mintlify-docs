@@ -5,6 +5,14 @@ icon: "tag"
 rss: true
 ---
 
+<Update label="v1.2.35" description="2026-03-26" tags={["Breaking", "Security"]}>
+  **Breaking:** OneCLI Agent Vault is now the sole credential management system. The built-in credential proxy has been fully removed from the codebase.
+
+  - Existing `.env` credentials (`ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_AUTH_TOKEN`) must be migrated to the OneCLI vault
+  - Run `/init-onecli` to install OneCLI and migrate credentials automatically
+  - The `/use-native-credential-proxy` skill remains available as an opt-in alternative (merges `skill/native-credential-proxy` branch)
+</Update>
+
 <Update label="v1.2.34" description="2026-03-25" tags={["Fix", "Skill", "Channel"]}>
   - Added `/add-emacs` channel skill (contributed by @kenbolton)
   - Fixed mount-allowlist preservation — `/setup` no longer overwrites existing `mount-allowlist.json` (contributed by @akasha-scheuermann)

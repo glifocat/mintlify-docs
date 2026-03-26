@@ -193,8 +193,12 @@ The sender allowlist complements container isolation. Containers protect against
 
 ### Credential handling
 
+<Warning>
+**Breaking change (v1.2.35):** OneCLI Agent Vault is now the sole credential management system. The built-in credential proxy has been removed. Run `/init-onecli` to migrate existing `.env` credentials.
+</Warning>
+
 <Tabs>
-  <Tab title="OneCLI Gateway (v1.2.22+)">
+  <Tab title="OneCLI Gateway (default)">
     NanoClaw delegates all credential management to the [OneCLI](https://onecli.sh) gateway. The host process never reads API keys — secrets are registered with OneCLI and injected into container traffic by the gateway.
 
     **How it works:**
@@ -218,8 +222,10 @@ The sender allowlist complements container isolation. Containers protect against
     </Note>
   </Tab>
 
-  <Tab title="Credential Proxy (legacy)">
-    **Credential proxy** (restored via the `/use-native-credential-proxy` skill):
+  <Tab title="Credential Proxy (opt-in skill)">
+    The built-in credential proxy was removed in v1.2.35. To restore it, apply the `/use-native-credential-proxy` skill, which merges the `skill/native-credential-proxy` branch.
+
+    **Credential proxy** (when restored):
     - Runs on the host as an HTTP proxy (default port 3001, configurable via `CREDENTIAL_PROXY_PORT`)
     - Containers send API requests to the proxy with a placeholder token
     - Reads credentials from `.env` once at startup
@@ -229,7 +235,7 @@ The sender allowlist complements container isolation. Containers protect against
     - **API key mode**: The proxy replaces the `x-api-key` header on every outbound request
     - **OAuth mode**: The proxy replaces the `Authorization` header only on requests that include one (during the initial token exchange). The Claude CLI exchanges the placeholder token for a temporary API key, and subsequent requests use that key directly without further injection
 
-    **Container environment** (from `src/container-runner.ts`):
+    **Container environment** (when credential proxy is active):
 
     ```typescript
     // Containers get a placeholder token and proxy URL — never real credentials
@@ -275,7 +281,7 @@ The sender allowlist complements container isolation. Containers protect against
 │  • IPC authorization                                              │
 │  • Mount validation (external allowlist)                          │
 │  • Container lifecycle                                            │
-│  • Secret injection (OneCLI or credential proxy)                  │
+│  • Secret injection (OneCLI gateway)                              │
 └────────────────────────────────┬─────────────────────────────────┘
                                  │
                                  ▼ Explicit mounts only

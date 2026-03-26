@@ -142,11 +142,11 @@ Here's what Claude Code does when you run `/setup`:
   - Tests that containers can run successfully
 </Accordion>
 
-<Accordion title="3. Claude authentication">
+<Accordion title="3. Claude authentication and OneCLI setup">
   - Asks if you have a Claude subscription (Pro/Max) or Anthropic API key
-  - **Subscription**: Guides you to run `claude setup-token` and add token to `.env`
-  - **API key**: Guides you to add `ANTHROPIC_API_KEY` to `.env`
-  - These credentials allow agents to authenticate with Claude Code
+  - Installs and configures the [OneCLI](https://onecli.sh) Agent Vault for secure credential management
+  - Credentials are stored in the OneCLI vault (not in `.env`) and injected into containers at request time
+  - Run `/init-onecli` later if you need to migrate existing `.env` credentials
 </Accordion>
 
 <Accordion title="4. Upstream remote and marketplace">

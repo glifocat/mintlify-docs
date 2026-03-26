@@ -34,19 +34,13 @@ Configuration is read from `.env` file or `process.env`.
   How long to keep container alive after last result in milliseconds (default: 30 minutes).
 </ParamField>
 
-<Tabs>
-  <Tab title="OneCLI Gateway (v1.2.22+)">
-    <ParamField path="ONECLI_URL" type="string" default="http://localhost:10254">
-      URL for the OneCLI gateway that handles credential injection for containers.
-    </ParamField>
-  </Tab>
+<ParamField path="ONECLI_URL" type="string" default="http://localhost:10254">
+  URL for the OneCLI gateway that handles credential injection for containers. OneCLI is the sole credential management system as of v1.2.35. Run `/init-onecli` to install and configure.
+</ParamField>
 
-  <Tab title="Credential Proxy (legacy)">
-    <ParamField path="CREDENTIAL_PROXY_PORT" type="number" default="3001">
-      Port for the credential proxy that containers route API calls through.
-    </ParamField>
-  </Tab>
-</Tabs>
+<Note>
+The built-in credential proxy was removed in v1.2.35. To restore it, apply the `/use-native-credential-proxy` skill (adds `CREDENTIAL_PROXY_PORT` configuration).
+</Note>
 
 <ParamField path="MAX_CONCURRENT_CONTAINERS" type="number" default="5">
   Maximum number of concurrent agent containers.
@@ -133,67 +127,53 @@ Each candidate is validated as a real IANA timezone identifier before being acce
 
 ## Example .env file
 
-<Tabs>
-  <Tab title="OneCLI Gateway (v1.2.22+)">
-    ```bash
-    ASSISTANT_NAME=Andy
-    ASSISTANT_HAS_OWN_NUMBER=false
-    CONTAINER_TIMEOUT=1800000
-    MAX_CONCURRENT_CONTAINERS=5
-    TZ=America/Los_Angeles
-    ONECLI_URL=http://127.0.0.1:10254
-    ```
+```bash
+ASSISTANT_NAME=Andy
+ASSISTANT_HAS_OWN_NUMBER=false
+CONTAINER_TIMEOUT=1800000
+MAX_CONCURRENT_CONTAINERS=5
+TZ=America/Los_Angeles
+ONECLI_URL=http://127.0.0.1:10254
+```
 
-    <Note>
-    With the OneCLI gateway, API keys and OAuth tokens are no longer stored in `.env`. Secrets are managed via `onecli secrets create` and injected by the gateway at request time. The only credential-related variable is `ONECLI_URL`.
-    </Note>
-  </Tab>
-
-  <Tab title="Credential Proxy (legacy)">
-    ```bash
-    ASSISTANT_NAME=Andy
-    ASSISTANT_HAS_OWN_NUMBER=false
-    CONTAINER_TIMEOUT=1800000
-    MAX_CONCURRENT_CONTAINERS=5
-    TZ=America/Los_Angeles
-    ```
-  </Tab>
-</Tabs>
+<Note>
+API keys and OAuth tokens are no longer stored in `.env`. Secrets are managed via `onecli secrets create` and injected by the OneCLI gateway at request time. The only credential-related variable is `ONECLI_URL`.
+</Note>
 
 ## Credential environment variables
 
-<Tabs>
-  <Tab title="OneCLI Gateway (v1.2.22+)">
-    Credentials are managed externally via OneCLI — no credential environment variables are needed in `.env`.
+Credentials are managed externally via OneCLI — no credential environment variables are needed in `.env`.
 
-    Register secrets with OneCLI using the CLI or dashboard:
-    ```bash
-    onecli secrets create --name Anthropic --type anthropic --value YOUR_KEY --host-pattern api.anthropic.com
-    ```
+Register secrets with OneCLI using the CLI or dashboard:
+```bash
+onecli secrets create --name Anthropic --type anthropic --value YOUR_KEY --host-pattern api.anthropic.com
+```
 
-    See `onecli secrets list` to verify registered secrets. Run `onecli --help` for the full list of available commands.
-  </Tab>
+See `onecli secrets list` to verify registered secrets. Run `onecli --help` for the full list of available commands.
 
-  <Tab title="Credential Proxy (legacy)">
-    The credential proxy reads these from `.env` at startup (never exposed to containers):
+<Accordion title="Credential proxy variables (opt-in skill only)">
+  These variables only apply if you've installed the `/use-native-credential-proxy` skill. They are not part of core NanoClaw as of v1.2.35.
 
-    <ParamField path="ANTHROPIC_API_KEY" type="string">
-      Anthropic API key. If set, the proxy uses API key mode.
-    </ParamField>
+  <ParamField path="ANTHROPIC_API_KEY" type="string">
+    Anthropic API key. If set, the proxy uses API key mode.
+  </ParamField>
 
-    <ParamField path="CLAUDE_CODE_OAUTH_TOKEN" type="string">
-      OAuth token for Claude Code authentication. Used when `ANTHROPIC_API_KEY` is not set.
-    </ParamField>
+  <ParamField path="CREDENTIAL_PROXY_PORT" type="number" default="3001">
+    Port for the credential proxy that containers route API calls through.
+  </ParamField>
 
-    <ParamField path="ANTHROPIC_AUTH_TOKEN" type="string">
-      Fallback OAuth token. Used when neither `ANTHROPIC_API_KEY` nor `CLAUDE_CODE_OAUTH_TOKEN` is set.
-    </ParamField>
+  <ParamField path="CLAUDE_CODE_OAUTH_TOKEN" type="string">
+    OAuth token for Claude Code authentication. Used when `ANTHROPIC_API_KEY` is not set.
+  </ParamField>
 
-    <ParamField path="ANTHROPIC_BASE_URL" type="string">
-      Upstream API URL for the credential proxy to forward requests to. Defaults to the Anthropic API endpoint. Set this to use third-party Anthropic-compatible endpoints (Together AI, Fireworks, custom deployments). See [Ollama integration](/integrations/ollama#third-party-model-endpoints).
-    </ParamField>
-  </Tab>
-</Tabs>
+  <ParamField path="ANTHROPIC_AUTH_TOKEN" type="string">
+    Fallback OAuth token. Used when neither `ANTHROPIC_API_KEY` nor `CLAUDE_CODE_OAUTH_TOKEN` is set.
+  </ParamField>
+
+  <ParamField path="ANTHROPIC_BASE_URL" type="string">
+    Upstream API URL for the credential proxy to forward requests to. Defaults to the Anthropic API endpoint. Set this to use third-party Anthropic-compatible endpoints (Together AI, Fireworks, custom deployments). See [Ollama integration](/integrations/ollama#third-party-model-endpoints).
+  </ParamField>
+</Accordion>
 
 <ParamField path="OLLAMA_HOST" type="string" default="http://host.docker.internal:11434">
   Ollama API endpoint. Only used when the `/add-ollama-tool` skill is installed. The MCP server inside the container uses this to reach the host's Ollama instance. Falls back to `localhost` if `host.docker.internal` fails.
@@ -201,18 +181,7 @@ Each candidate is validated as a real IANA timezone identifier before being acce
 
 ## Security notes
 
-<Tabs>
-  <Tab title="OneCLI Gateway (v1.2.22+)">
-    - **Secrets** are never read by NanoClaw — OneCLI manages them externally
-    - The OneCLI gateway injects credentials into container API traffic at request time
-    - Containers cannot extract real credentials from the gateway
-    - Mount allowlist is stored OUTSIDE project root and never mounted into containers
-  </Tab>
-
-  <Tab title="Credential Proxy (legacy)">
-    - **Secrets** (API keys, credentials) are NOT read in `config.ts`
-    - Secrets are loaded only by the credential proxy once at startup, never exposed to containers
-    - This prevents leaking secrets to child processes
-    - Mount allowlist is stored OUTSIDE project root and never mounted into containers
-  </Tab>
-</Tabs>
+- **Secrets** are never read by NanoClaw — OneCLI manages them externally
+- The OneCLI gateway injects credentials into container API traffic at request time
+- Containers cannot extract real credentials from the gateway
+- Mount allowlist is stored OUTSIDE project root and never mounted into containers

@@ -236,8 +236,12 @@ For the full file format and API details, see the [security deep dive](/advanced
 
 ### 6. Credential handling
 
+<Warning>
+**Breaking change (v1.2.35):** OneCLI Agent Vault is now the sole credential management system. The built-in credential proxy has been removed from the codebase. If you have credentials in `.env`, run `/init-onecli` to migrate them to the vault.
+</Warning>
+
 <Tabs>
-  <Tab title="OneCLI Gateway (v1.2.22+)">
+  <Tab title="OneCLI Gateway (default)">
     NanoClaw uses the [OneCLI](https://onecli.sh) gateway for centralized secret management. API keys are never stored in `.env` or exposed to containers — the gateway intercepts outbound API traffic from containers and injects credentials at request time.
 
     - Secrets are registered once via `onecli secrets create` (CLI or dashboard)
@@ -250,11 +254,11 @@ For the full file format and API details, see the [security deep dive](/advanced
     </Warning>
   </Tab>
 
-  <Tab title="Credential Proxy (legacy)">
+  <Tab title="Credential Proxy (opt-in skill)">
+    The built-in credential proxy was removed in v1.2.35. To restore it, apply the `/use-native-credential-proxy` skill, which merges the `skill/native-credential-proxy` branch.
+
     - Containers receive a placeholder token and a proxy URL — never real credentials
     - The host's `.env` file is shadowed with `/dev/null` when the project root is mounted, preventing containers from reading secrets
-
-    Containers never see real credentials. A credential proxy runs on the host and injects authentication on every outbound API request. To restore the built-in credential proxy, apply the `/use-native-credential-proxy` skill.
 
     ```typescript
     // Container has a placeholder token — real credentials injected by proxy
@@ -369,7 +373,7 @@ Even with restrictions, non-main groups have full agent capabilities (MCP tools,
 │  • IPC authorization                                              │
 │  • Mount validation (external allowlist)                          │
 │  • Container lifecycle                                            │
-│  • Secret injection (OneCLI or credential proxy)                    │
+│  • Secret injection (OneCLI gateway)                                │
 └────────────────────────────────┬─────────────────────────────────┘
                                  │
                                  ▼ Explicit mounts only
