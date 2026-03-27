@@ -194,8 +194,8 @@ The sender allowlist complements container isolation. Containers protect against
 ### Credential handling
 
 <Tabs>
-  <Tab title="OneCLI Gateway (v1.2.22+)">
-    NanoClaw delegates all credential management to the [OneCLI](https://onecli.sh) gateway. The host process never reads API keys — secrets are registered with OneCLI and injected into container traffic by the gateway.
+  <Tab title="OneCLI Agent Vault (v1.2.35+)">
+    NanoClaw delegates all credential management to the [OneCLI](https://onecli.sh) Agent Vault. The host process never reads API keys — secrets are registered with OneCLI and injected into container traffic by the vault.
 
     **How it works:**
     - The `@onecli-sh/sdk` package's `applyContainerConfig()` configures each container's network to route through the gateway
@@ -214,7 +214,7 @@ The sender allowlist complements container isolation. Containers protect against
     ```
 
     <Note>
-    If the OneCLI gateway is unreachable at container start, the container launches with no credentials. The agent will fail on API calls, and a warning is logged. Re-run after ensuring OneCLI is running (`curl http://127.0.0.1:10254/api/health`).
+    If the OneCLI Agent Vault is unreachable at container start, the container launches with no credentials. The agent will fail on API calls, and a warning is logged. Re-run after ensuring OneCLI is running (`curl http://127.0.0.1:10254/api/health`). Use `/init-onecli` to set up the vault if not yet configured.
     </Note>
   </Tab>
 

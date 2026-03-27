@@ -35,9 +35,9 @@ Configuration is read from `.env` file or `process.env`.
 </ParamField>
 
 <Tabs>
-  <Tab title="OneCLI Gateway (v1.2.22+)">
+  <Tab title="OneCLI Agent Vault (v1.2.35+)">
     <ParamField path="ONECLI_URL" type="string" default="http://localhost:10254">
-      URL for the OneCLI gateway that handles credential injection for containers.
+      URL for the OneCLI Agent Vault gateway that handles credential injection for containers. Run `/init-onecli` to set up.
     </ParamField>
   </Tab>
 
@@ -134,7 +134,7 @@ Each candidate is validated as a real IANA timezone identifier before being acce
 ## Example .env file
 
 <Tabs>
-  <Tab title="OneCLI Gateway (v1.2.22+)">
+  <Tab title="OneCLI Agent Vault (v1.2.35+)">
     ```bash
     ASSISTANT_NAME=Andy
     ASSISTANT_HAS_OWN_NUMBER=false
@@ -145,7 +145,7 @@ Each candidate is validated as a real IANA timezone identifier before being acce
     ```
 
     <Note>
-    With the OneCLI gateway, API keys and OAuth tokens are no longer stored in `.env`. Secrets are managed via `onecli secrets create` and injected by the gateway at request time. The only credential-related variable is `ONECLI_URL`.
+    With the OneCLI Agent Vault, API keys and OAuth tokens are no longer stored in `.env`. Secrets are managed via `onecli secrets create` and injected by the vault at request time. The only credential-related variable is `ONECLI_URL`. Run `/init-onecli` to migrate existing credentials.
     </Note>
   </Tab>
 
@@ -163,15 +163,15 @@ Each candidate is validated as a real IANA timezone identifier before being acce
 ## Credential environment variables
 
 <Tabs>
-  <Tab title="OneCLI Gateway (v1.2.22+)">
-    Credentials are managed externally via OneCLI — no credential environment variables are needed in `.env`.
+  <Tab title="OneCLI Agent Vault (v1.2.35+)">
+    Credentials are managed externally via OneCLI Agent Vault — no credential environment variables are needed in `.env`.
 
     Register secrets with OneCLI using the CLI or dashboard:
     ```bash
     onecli secrets create --name Anthropic --type anthropic --value YOUR_KEY --host-pattern api.anthropic.com
     ```
 
-    See `onecli secrets list` to verify registered secrets. Run `onecli --help` for the full list of available commands.
+    See `onecli secrets list` to verify registered secrets. Run `onecli --help` for the full list of available commands. Use `/init-onecli` to set up the vault and migrate existing `.env` credentials.
   </Tab>
 
   <Tab title="Credential Proxy (legacy)">
@@ -202,10 +202,10 @@ Each candidate is validated as a real IANA timezone identifier before being acce
 ## Security notes
 
 <Tabs>
-  <Tab title="OneCLI Gateway (v1.2.22+)">
-    - **Secrets** are never read by NanoClaw — OneCLI manages them externally
-    - The OneCLI gateway injects credentials into container API traffic at request time
-    - Containers cannot extract real credentials from the gateway
+  <Tab title="OneCLI Agent Vault (v1.2.35+)">
+    - **Secrets** are never read by NanoClaw — OneCLI Agent Vault manages them externally
+    - The vault injects credentials into container API traffic at request time
+    - Containers cannot extract real credentials from the vault
     - Mount allowlist is stored OUTSIDE project root and never mounted into containers
   </Tab>
 

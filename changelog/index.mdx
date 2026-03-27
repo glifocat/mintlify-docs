@@ -5,6 +5,19 @@ icon: "tag"
 rss: true
 ---
 
+<Update label="v1.2.36" description="2026-03-27" tags={["Fix"]}>
+  - Fixed `.env` parser crash on single-character values — quote stripping no longer silently drops values like `KEY=a` (contributed by @foxsky)
+</Update>
+
+<Update label="v1.2.35" description="2026-03-26" tags={["Breaking", "Security"]}>
+  **Breaking:** OneCLI Agent Vault replaces the built-in credential proxy. Existing `.env` credentials must be migrated to the vault.
+
+  - Run `/init-onecli` to install OneCLI and migrate credentials automatically
+  - API keys and OAuth tokens are no longer stored in `.env` — the vault manages all secrets
+  - Per-agent credential policies and rate limits are now available via the vault
+  - To restore the legacy `.env`-based proxy, apply the `/use-native-credential-proxy` skill
+</Update>
+
 <Update label="v1.2.34" description="2026-03-25" tags={["Fix", "Skill", "Channel"]}>
   - Added `/add-emacs` channel skill (contributed by @kenbolton)
   - Fixed mount-allowlist preservation — `/setup` no longer overwrites existing `mount-allowlist.json` (contributed by @akasha-scheuermann)
