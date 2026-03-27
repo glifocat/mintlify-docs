@@ -52,6 +52,10 @@ Configuration is read from `.env` file or `process.env`.
   Maximum number of concurrent agent containers.
 </ParamField>
 
+<ParamField path="MAX_MESSAGES_PER_PROMPT" type="number" default="10">
+  Maximum number of recent messages included in each agent prompt. Capped at a minimum of 1.
+</ParamField>
+
 <ParamField path="TZ" type="string" default="system timezone">
   Timezone for scheduled tasks (cron expressions). Uses `Intl.DateTimeFormat().resolvedOptions().timeZone` by default.
 </ParamField>

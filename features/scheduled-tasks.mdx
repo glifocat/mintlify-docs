@@ -198,18 +198,12 @@ if (task.schedule_type === 'cron') {
 
 ## Timezone configuration
 
-Tasks use the system timezone by default:
+Tasks use the system timezone by default. The timezone is resolved by cascading through `process.env.TZ`, `.env TZ`, and `Intl.DateTimeFormat`, falling back to `UTC`. Each candidate is validated as a real IANA timezone identifier before being accepted.
 
-```typescript
-// From src/config.ts
-export const TIMEZONE =
-  process.env.TZ || Intl.DateTimeFormat().resolvedOptions().timeZone;
-```
-
-To override, set the `TZ` environment variable:
+To override, set the `TZ` environment variable in `.env`:
 
 ```bash
-export TZ="America/New_York"
+TZ=America/New_York
 ```
 
 ## Task management
