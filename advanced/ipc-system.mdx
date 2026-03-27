@@ -279,6 +279,8 @@ case 'refresh_groups':
 
 Registers a new group for agent access. **Main group only.**
 
+When the target group already exists, the handler preserves the existing `isMain` flag so that configuration updates (such as adding `additionalMounts`) don't strip the flag and break volume mounts like `/workspace/project`.
+
 **Format:**
 ```json
 {

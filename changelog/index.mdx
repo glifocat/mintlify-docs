@@ -5,6 +5,10 @@ icon: "tag"
 rss: true
 ---
 
+<Update label="v1.2.35" description="2026-03-27" tags={["Fix"]}>
+  - Fixed `isMain` flag being stripped on IPC `register_group` updates — previously, when the agent issued a `register_group` IPC call (e.g. to add mounts), the `isMain` flag was lost, causing missing volume mounts like `/workspace/project` (contributed by @snw35)
+</Update>
+
 <Update label="v1.2.34" description="2026-03-25" tags={["Fix", "Skill", "Channel"]}>
   - Added `/add-emacs` channel skill (contributed by @kenbolton)
   - Fixed mount-allowlist preservation — `/setup` no longer overwrites existing `mount-allowlist.json` (contributed by @akasha-scheuermann)
