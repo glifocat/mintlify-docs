@@ -9,12 +9,25 @@ NanoClaw can delegate tasks to local models running on [Ollama](https://ollama.c
 
 ## How it works
 
-The `/add-ollama-tool` skill adds a stdio-based MCP server inside the agent container. The MCP server exposes two tools:
+The `/add-ollama-tool` skill adds a stdio-based MCP server inside the agent container. The MCP server exposes core inference tools (always available) and optional model management tools.
+
+### Core tools
 
 | Tool | Description |
 |------|-------------|
-| `ollama_list_models` | Lists all locally installed Ollama models |
+| `ollama_list_models` | Lists all locally installed Ollama models with name, size, and family |
 | `ollama_generate` | Sends a prompt to a specified model and returns the response |
+
+### Model management tools (opt-in)
+
+These tools are available when `OLLAMA_ADMIN_TOOLS=true` is set in `.env`:
+
+| Tool | Description |
+|------|-------------|
+| `ollama_pull_model` | Pull (download) a model from the Ollama registry |
+| `ollama_delete_model` | Delete a locally installed model to free disk space |
+| `ollama_show_model` | Show model details: modelfile, parameters, and architecture info |
+| `ollama_list_running` | List models currently loaded in memory with memory usage and processor type |
 
 The container agent reaches Ollama on the host via `host.docker.internal:11434`. Claude decides when to use local models based on task complexity — you don't need to configure routing rules.
 
@@ -94,6 +107,14 @@ OLLAMA_HOST=http://host.docker.internal:11434
 ```
 
 The MCP server automatically falls back to `localhost` if `host.docker.internal` fails.
+
+To enable model management tools (pull, delete, inspect, list running), add to `.env`:
+
+```bash
+OLLAMA_ADMIN_TOOLS=true
+```
+
+Without this variable, the agent can only list installed models and generate responses — you manage models yourself on the host.
 
 <Note>
 Ollama must be running on the host before starting NanoClaw. The MCP server writes status to `/workspace/ipc/ollama_status.json` so the host process can surface connection issues in logs.

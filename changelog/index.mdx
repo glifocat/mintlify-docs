@@ -5,6 +5,21 @@ icon: "tag"
 rss: true
 ---
 
+<Update label="v1.2.36" description="2026-03-27" tags={["Maintenance", "Feature"]}>
+  - Replaced `pino` / `pino-pretty` with a built-in ~70-line logger (drops 23 transitive dependencies)
+  - Removed unused `yaml`, `zod`, and `@vitest/coverage-v8` dependencies
+  - Added opt-in model management tools to `/add-ollama-tool` skill (`OLLAMA_ADMIN_TOOLS=true`)
+  - Updated token count to 42.0k tokens (21% of context window)
+</Update>
+
+<Update label="v1.2.35" description="2026-03-26" tags={["Feature", "Fix", "Skill"]}>
+  - Added `/init-onecli` skill for OneCLI Agent Vault setup and credential migration
+  - Added `/add-macos-statusbar` skill for macOS menu bar status indicator
+  - Improved task scripts agent instructions and intro wording
+  - Added auth credentials guidance to main group CLAUDE.md
+  - Fixed text-style formatting in `/channel-formatting` skill for Telegram link behaviour
+</Update>
+
 <Update label="v1.2.34" description="2026-03-25" tags={["Fix", "Skill", "Channel"]}>
   - Added `/add-emacs` channel skill (contributed by @kenbolton)
   - Fixed mount-allowlist preservation — `/setup` no longer overwrites existing `mount-allowlist.json` (contributed by @akasha-scheuermann)

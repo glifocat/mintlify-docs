@@ -5,6 +5,14 @@ icon: "file-pen"
 rss: true
 ---
 
+<Update label="v1.2.36 source sync" description="2026-03-27" tags={["Updated"]}>
+  - **Installation**: Removed `pino`, `pino-pretty`, `yaml`, `zod` from dependency listing — replaced by built-in logger and cleaned up unused deps
+  - **Ollama integration**: Added model management tools section (`ollama_pull_model`, `ollama_delete_model`, `ollama_show_model`, `ollama_list_running`) with `OLLAMA_ADMIN_TOOLS` configuration
+  - **Configuration**: Added `OLLAMA_ADMIN_TOOLS` environment variable reference
+  - **Token count**: Updated from ~41.3k to ~42.0k in introduction and skills system pages
+  - **Product changelog**: Added entries for v1.2.35 and v1.2.36
+</Update>
+
 <Update label="Automated PR triage: v1.2.24–v1.2.34 sync" description="2026-03-26" tags={["New", "Updated", "Fixed"]}>
   Reviewed and triaged 43 automated Mintlify PRs (#86–#128). Merged 8, closed 30 (superseded or inaccurate), kept 5 pending v1.2.35 release. Validated all changes against upstream source code at v1.2.34.
 
