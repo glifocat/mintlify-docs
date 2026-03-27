@@ -5,6 +5,35 @@ icon: "tag"
 rss: true
 ---
 
+<Update label="v1.2.39" description="2026-03-27" tags={["Security", "Fix"]}>
+  - Fixed command injection vulnerability in `stopContainer` — container names are now validated against a strict pattern before passing to shell commands (contributed by @foxsky)
+  - Fixed mount path injection — container paths containing `:` are now rejected to prevent Docker `-v` option injection (contributed by @foxsky)
+  - Mount allowlist "file not found" is no longer permanently cached, allowing the file to be created after service start
+</Update>
+
+<Update label="v1.2.38" description="2026-03-27" tags={["Fix"]}>
+  - Fixed `isMain` flag being lost during IPC `register_group` updates — existing `isMain` value is now preserved when agents update group configuration (contributed by @snw35)
+</Update>
+
+<Update label="v1.2.37" description="2026-03-27" tags={["Fix"]}>
+  - Fixed `.env` parser crash on single-character values — `KEY=a` no longer produces an empty string (contributed by @foxsky)
+</Update>
+
+<Update label="v1.2.36" description="2026-03-27" tags={["Maintenance", "Skill"]}>
+  - Replaced pino/pino-pretty with a built-in logger (removes external dependency)
+  - Removed unused dependencies (yaml, zod, @vitest/coverage-v8)
+  - Added opt-in model management tools to Ollama skill setup
+  - Fixed channel-formatting skill: Telegram link preservation, tighter code-block regex, trailing newline after code blocks (contributed by @kenbolton)
+</Update>
+
+<Update label="v1.2.35" description="2026-03-26" tags={["Breaking"]}>
+  **Breaking:** OneCLI Agent Vault replaces the built-in credential proxy. Existing `.env` credentials must be migrated to the vault.
+
+  - Run `/init-onecli` to install OneCLI and migrate credentials
+  - The built-in credential proxy is still available via `/use-native-credential-proxy`
+  - Refined task scripts introduction wording
+</Update>
+
 <Update label="v1.2.34" description="2026-03-25" tags={["Fix", "Skill", "Channel"]}>
   - Added `/add-emacs` channel skill (contributed by @kenbolton)
   - Fixed mount-allowlist preservation — `/setup` no longer overwrites existing `mount-allowlist.json` (contributed by @akasha-scheuermann)
