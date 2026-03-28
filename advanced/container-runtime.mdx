@@ -240,13 +240,13 @@ From the `buildContainerArgs` function in `src/container-runner.ts`:
       // Pass host timezone so container's local time matches the user's
       args.push('-e', `TZ=${TIMEZONE}`);
 
-      // OneCLI Agent Vault handles credential injection
+      // OneCLI gateway handles credential injection
       const onecliApplied = await onecli.applyContainerConfig(args, {
         addHostMapping: false,
         agent: agentIdentifier,
       });
       if (!onecliApplied) {
-        logger.warn({ containerName }, 'OneCLI Agent Vault not reachable');
+        logger.warn({ containerName }, 'OneCLI gateway not reachable');
       }
 
       // Run as host user so bind-mounted files are accessible
