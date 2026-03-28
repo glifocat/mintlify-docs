@@ -251,11 +251,11 @@ For the full file format and API details, see the [security deep dive](/advanced
     </Warning>
   </Tab>
 
-  <Tab title="Credential Proxy (legacy)">
+  <Tab title="Credential Proxy (legacy / Apple Container)">
     - Containers receive a placeholder token and a proxy URL — never real credentials
     - The host's `.env` file is shadowed with `/dev/null` when the project root is mounted, preventing containers from reading secrets
 
-    Containers never see real credentials. A credential proxy runs on the host and injects authentication on every outbound API request. To restore the built-in credential proxy, apply the `/use-native-credential-proxy` skill.
+    Containers never see real credentials. A credential proxy runs on the host and injects authentication on every outbound API request. For Docker users, apply the `/use-native-credential-proxy` skill to restore the built-in credential proxy. Apple Container users get this automatically — the `apple-container` branch already includes the credential proxy code, so `/use-native-credential-proxy` must not be applied on top.
 
     ```typescript
     // Container has a placeholder token — real credentials injected by proxy

@@ -48,7 +48,12 @@ Apple Container is Apple's native virtualization framework (macOS 15+). It runs 
 | Health check | `docker info` | `container system status` |
 | Orphan cleanup | Parses `docker ps --format` JSON | Parses `container ls --format json` |
 | Host gateway | Built-in on macOS, `--add-host` on Linux | Built-in (`host.docker.internal`) |
+| Credential handling | OneCLI gateway (default) or credential proxy via `/use-native-credential-proxy` | Built-in credential proxy (`.env`-based) — included in the `apple-container` branch |
 | Platform | macOS, Linux, Windows (WSL2) | macOS 15+ only |
+
+<Warning>
+The `/use-native-credential-proxy` skill must not be applied when using Apple Container. The `apple-container` branch already includes the credential proxy code — applying the skill on top would create conflicts. During `/setup`, credential collection is handled inline with `.env`-based configuration.
+</Warning>
 
 ### Switching runtimes
 
@@ -278,7 +283,7 @@ From the `buildContainerArgs` function in `src/container-runner.ts`:
     - OneCLI SDK configures container networking for credential injection (no explicit env vars)
   </Tab>
 
-  <Tab title="Credential Proxy (legacy)">
+  <Tab title="Credential Proxy (legacy / Apple Container)">
     ```typescript
     function buildContainerArgs(
       mounts: VolumeMount[],
@@ -328,6 +333,10 @@ From the `buildContainerArgs` function in `src/container-runner.ts`:
     - `--user` - Run as host UID/GID for file permissions
     - `-e ANTHROPIC_BASE_URL` - Routes API calls through the credential proxy
     - `-e ANTHROPIC_API_KEY` or `-e CLAUDE_CODE_OAUTH_TOKEN` - Placeholder credential (replaced by proxy)
+
+    <Note>
+    Apple Container includes the credential proxy automatically via the `apple-container` branch. Docker users can restore this behavior with the `/use-native-credential-proxy` skill. Do not apply `/use-native-credential-proxy` on an Apple Container installation — it would conflict with the already-included credential proxy code.
+    </Note>
   </Tab>
 </Tabs>
 

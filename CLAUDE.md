@@ -36,7 +36,7 @@ When editing docs, keep these architectural facts current:
 - **Channel forks:** Channels live in separate fork repos (`nanoclaw-whatsapp`, `nanoclaw-telegram`, etc.). Channel-specific skills (image-vision, voice-transcription, reactions, pdf-reader) live on the channel fork, not upstream.
 - **Removing a skill:** `git revert -m 1 <merge-commit>`, not manual file deletion.
 - **Source of truth for NanoClaw code:** https://github.com/qwibitai/nanoclaw
-- **Credential management (v1.2.22+):** OneCLI gateway is the default. The built-in credential proxy is available as an opt-in skill (`/use-native-credential-proxy`). Legacy tabs in docs cover both methods.
+- **Credential management (v1.2.22+):** OneCLI gateway is the default for Docker. The built-in credential proxy is available as an opt-in skill (`/use-native-credential-proxy`) for Docker users. Apple Container includes the credential proxy automatically — do not apply `/use-native-credential-proxy` on Apple Container installations. Legacy/Apple Container tabs in docs cover both methods.
 
 ## PR Workflow
 

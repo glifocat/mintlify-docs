@@ -41,9 +41,9 @@ Configuration is read from `.env` file or `process.env`.
     </ParamField>
   </Tab>
 
-  <Tab title="Credential Proxy (legacy)">
+  <Tab title="Credential Proxy (legacy / Apple Container)">
     <ParamField path="CREDENTIAL_PROXY_PORT" type="number" default="3001">
-      Port for the credential proxy that containers route API calls through.
+      Port for the credential proxy that containers route API calls through. Used by the `/use-native-credential-proxy` skill (Docker) or included automatically with Apple Container.
     </ParamField>
   </Tab>
 </Tabs>
@@ -149,13 +149,18 @@ Each candidate is validated as a real IANA timezone identifier before being acce
     </Note>
   </Tab>
 
-  <Tab title="Credential Proxy (legacy)">
+  <Tab title="Credential Proxy (legacy / Apple Container)">
     ```bash
     ASSISTANT_NAME=Andy
     ASSISTANT_HAS_OWN_NUMBER=false
     CONTAINER_TIMEOUT=1800000
     MAX_CONCURRENT_CONTAINERS=5
     TZ=America/Los_Angeles
+
+    # One of these is required:
+    ANTHROPIC_API_KEY=sk-ant-...
+    # or
+    CLAUDE_CODE_OAUTH_TOKEN=<token from claude setup-token>
     ```
   </Tab>
 </Tabs>
@@ -174,8 +179,8 @@ Each candidate is validated as a real IANA timezone identifier before being acce
     See `onecli secrets list` to verify registered secrets. Run `onecli --help` for the full list of available commands.
   </Tab>
 
-  <Tab title="Credential Proxy (legacy)">
-    The credential proxy reads these from `.env` at startup (never exposed to containers):
+  <Tab title="Credential Proxy (legacy / Apple Container)">
+    The credential proxy reads these from `.env` at startup (never exposed to containers). Apple Container users get this behavior by default; Docker users can restore it with the `/use-native-credential-proxy` skill.
 
     <ParamField path="ANTHROPIC_API_KEY" type="string">
       Anthropic API key. If set, the proxy uses API key mode.
@@ -209,7 +214,7 @@ Each candidate is validated as a real IANA timezone identifier before being acce
     - Mount allowlist is stored OUTSIDE project root and never mounted into containers
   </Tab>
 
-  <Tab title="Credential Proxy (legacy)">
+  <Tab title="Credential Proxy (legacy / Apple Container)">
     - **Secrets** (API keys, credentials) are NOT read in `config.ts`
     - Secrets are loaded only by the credential proxy once at startup, never exposed to containers
     - This prevents leaking secrets to child processes

@@ -144,9 +144,10 @@ Here's what Claude Code does when you run `/setup`:
 
 <Accordion title="3. Claude authentication">
   - Asks if you have a Claude subscription (Pro/Max) or Anthropic API key
-  - **Subscription**: Guides you to run `claude setup-token` and add the long-lived token to `.env` as `CLAUDE_CODE_OAUTH_TOKEN`
-  - **API key**: Guides you to add `ANTHROPIC_API_KEY` to `.env`
-  - These credentials allow agents to authenticate with Claude Code
+  - **Docker runtime**: Credentials are registered with OneCLI (`onecli secrets create`) and injected by the gateway at request time — no secrets in `.env`
+  - **Apple Container runtime**: Credentials are stored directly in `.env` (`CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY`) — the apple-container branch includes a built-in credential proxy that reads from `.env`
+  - **Subscription**: Guides you to run `claude setup-token` to get a long-lived token
+  - **API key**: Guides you to get a key from console.anthropic.com
 
   <Warning>
   Do not copy tokens from `~/.claude/.credentials.json` — these are short-lived keychain tokens that expire within hours and will cause container 401 errors. Always use `claude setup-token` for OAuth.

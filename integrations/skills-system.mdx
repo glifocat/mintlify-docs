@@ -203,7 +203,7 @@ Dependencies are implicit in git history — no separate dependency file is need
 - **`/add-parallel`** — Parallel AI MCP servers for web research
 - **`/channel-formatting`** — Channel-aware Markdown-to-native text conversion for outbound messages (WhatsApp, Telegram, Slack, Signal)
 - **`/convert-to-apple-container`** — Switch from Docker to Apple Container on macOS
-- **`/use-native-credential-proxy`** — Replace OneCLI gateway with built-in `.env`-based credential proxy
+- **`/use-native-credential-proxy`** — Replace OneCLI gateway with built-in `.env`-based credential proxy (Docker only — Apple Container already includes credential proxy code, so this skill must not be applied on top of `/convert-to-apple-container`)
 
 ### Channel-specific skills (from channel fork branches)
 
