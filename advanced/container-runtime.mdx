@@ -70,7 +70,8 @@ The agent container is built from `container/Dockerfile` and includes:
 
 - **Node.js 22** - Runtime for the agent runner
 - **Chromium** - Browser automation via agent-browser
-- **Claude Code SDK** - Installed globally as `@anthropic-ai/claude-code`
+- **Claude Code CLI** - `@anthropic-ai/claude-code` installed globally
+- **Claude Agent SDK** - `@anthropic-ai/claude-agent-sdk` used by agent runner
 - **System fonts** - Emoji and international character support
 
 ### Dockerfile breakdown
@@ -368,11 +369,15 @@ const killOnTimeout = () => {
     { group: group.name, containerName },
     'Container timeout, stopping gracefully',
   );
-  exec(stopContainer(containerName), { timeout: 15000 }, (err) => {
-    if (err) {
-      container.kill('SIGKILL');
-    }
-  });
+  try {
+    stopContainer(containerName);
+  } catch (err) {
+    logger.warn(
+      { group: group.name, containerName, err },
+      'Graceful stop failed, force killing',
+    );
+    container.kill('SIGKILL');
+  }
 };
 
 let timeout = setTimeout(killOnTimeout, timeoutMs);
