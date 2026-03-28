@@ -5,6 +5,21 @@ icon: "tag"
 rss: true
 ---
 
+<Update label="v1.2.42" description="2026-03-28" tags={["Feature"]}>
+  - Setup skill now routes credential system by container runtime: Docker uses OneCLI Agent Vault, Apple Container uses native credential proxy
+  - Marked Apple Container as experimental
+</Update>
+
+<Update label="v1.2.41" description="2026-03-28" tags={["Fix", "Maintenance"]}>
+  - Migrated `x-integration` host.ts from pino to built-in logger (follow-up to v1.2.36 cleanup)
+  - Fixed `stopContainer()` test compatibility — mocked container-runtime so tests don't require Docker
+  - Cleared stale Telegram token from `.env.example`
+</Update>
+
+<Update label="v1.2.40" description="2026-03-27" tags={["Fix"]}>
+  - Fixed message history overflow: when `lastAgentTimestamp` was missing, all 200 messages were sent to the agent instead of respecting `MAX_MESSAGES_PER_PROMPT` (default 10). Added cursor recovery from last bot reply.
+</Update>
+
 <Update label="v1.2.39" description="2026-03-27" tags={["Fix", "Security"]}>
   - Security fixes: command injection prevention in `stopContainer` (name validation), mount path colon rejection, allowlist caching fix (contributed by @foxsky)
 </Update>
