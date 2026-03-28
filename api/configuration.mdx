@@ -48,6 +48,10 @@ Configuration is read from `.env` file or `process.env`.
   </Tab>
 </Tabs>
 
+<ParamField path="MAX_MESSAGES_PER_PROMPT" type="number" default="10">
+  Maximum number of messages included per agent prompt. Controls how many recent messages are gathered as context when the agent is invoked. The database query cap is 200, but this setting limits the actual messages sent to the agent.
+</ParamField>
+
 <ParamField path="MAX_CONCURRENT_CONTAINERS" type="number" default="5">
   Maximum number of concurrent agent containers.
 </ParamField>

@@ -236,16 +236,17 @@ function storeMessage(msg: NewMessage): void {
 ### Message retrieval
 
 ```typescript
-// Get messages since a specific timestamp (default limit: 200)
+// Get messages since a specific timestamp
 const messages = getMessagesSince(
   chatJid,
   lastTimestamp,
-  ASSISTANT_NAME
+  ASSISTANT_NAME,
+  MAX_MESSAGES_PER_PROMPT
 );
 ```
 
 <Note>
-Both `getNewMessages` and `getMessagesSince` cap results at **200 messages** by default. The agent only sees the most recent 200 messages per invocation — older messages remain in the database but are not included in the agent's prompt. This prevents unbounded result sets and out-of-memory crashes in active groups.
+The agent sees at most `MAX_MESSAGES_PER_PROMPT` messages per invocation (default: **10**). The underlying database queries cap at 200 rows, but `MAX_MESSAGES_PER_PROMPT` limits how many are actually included in the agent's prompt. Older messages remain in the database but are not sent to the agent. Configure this via the `MAX_MESSAGES_PER_PROMPT` environment variable.
 </Note>
 
 ## Configuration
