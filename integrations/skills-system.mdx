@@ -225,6 +225,10 @@ git push origin main
 
 Skill and channel changes are already in your git history, so `git merge upstream/main` just works. No skill replay step needed.
 
+<Warning>
+Always build and test after every merge. Auto-merged code can be silently wrong (e.g. referencing a renamed function or using a removed parameter) even when git reports no conflicts. Small frequent merges produce trivial conflicts; large infrequent merges are painful and error-prone.
+</Warning>
+
 ### Updating channels
 
 Channel forks track upstream, so pulling from a channel fork also brings in the latest core changes:
