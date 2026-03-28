@@ -48,6 +48,10 @@ Configuration is read from `.env` file or `process.env`.
   </Tab>
 </Tabs>
 
+<ParamField path="MAX_MESSAGES_PER_PROMPT" type="number" default="10">
+  Maximum number of messages included in a single agent prompt. Messages are selected from the most recent, ordered chronologically.
+</ParamField>
+
 <ParamField path="MAX_CONCURRENT_CONTAINERS" type="number" default="5">
   Maximum number of concurrent agent containers.
 </ParamField>

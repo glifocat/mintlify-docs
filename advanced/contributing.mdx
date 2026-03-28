@@ -1,6 +1,7 @@
 ---
 title: Contributing
 description: Guidelines for contributing to NanoClaw, including PR requirements, skill types, and code standards
+tag: "UPDATED"
 ---
 
 NanoClaw is designed to stay small and minimal. Contributions should prioritize reducing code, not adding features.
@@ -335,7 +336,7 @@ When contributing source code:
 - Prefer explicit over implicit
 
 <Note>
-NanoClaw doesn't use a linter or formatter. Code style is enforced through review. The goal is readability and simplicity, not stylistic uniformity.
+NanoClaw uses ESLint for linting and Prettier for formatting. Run `npm run lint` and `npm run format:check` before submitting. The goal is readability and simplicity.
 </Note>
 
 ## Getting help
@@ -351,6 +352,10 @@ If you're working on a contribution and need help:
 ## License
 
 By contributing to NanoClaw, you agree that your contributions will be licensed under the MIT License.
+
+## Branch and fork maintenance
+
+NanoClaw maintains skill branches and channel forks that must stay in sync with `main`. For detailed forward-merge procedures, conflict resolution patterns, and fork setup guidelines, see the [branch and fork maintenance guide](https://github.com/qwibitai/nanoclaw/blob/main/docs/BRANCH-FORK-MAINTENANCE.md) in the source repository.
 
 ## Related pages
 
