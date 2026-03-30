@@ -467,6 +467,43 @@ ls -la data/ipc/family-chat/
   ```
 </Accordion>
 
+## Stale session recovery
+
+### Symptoms
+- Agent fails with "no conversation found" or "session not found" errors
+- Container exits with code 1 and errors referencing a missing `.jsonl` file
+- Repeated failures on the same group until the service is restarted
+
+### Cause
+
+The session JSONL file can go missing after a crash mid-write, manual deletion, or disk-full event. When NanoClaw tries to resume the session, the Claude Code SDK can't find the conversation file and returns an error.
+
+### Automatic recovery
+
+NanoClaw automatically detects stale sessions and clears them. When a container exits with an error matching one of these patterns:
+
+- `no conversation found`
+- `ENOENT` referencing a `.jsonl` file
+- `session...not found`
+
+The session ID is deleted from the database, so the next retry (handled by the group queue's exponential backoff) starts a fresh session instead of trying to resume the broken one.
+
+You can confirm this happened by checking the logs:
+
+```bash
+grep 'Stale session detected' logs/nanoclaw.log | tail -5
+```
+
+### Manual recovery
+
+If auto-recovery doesn't trigger (e.g., the error message doesn't match the expected patterns), you can manually clear a stale session:
+
+```bash
+sqlite3 store/messages.db "DELETE FROM sessions WHERE group_folder = '{group-folder}';"
+```
+
+Then restart the service or wait for the next retry.
+
 ## Session branching issues
 
 ### Symptoms
