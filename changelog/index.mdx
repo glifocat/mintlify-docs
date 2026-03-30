@@ -5,6 +5,12 @@ icon: "tag"
 rss: true
 ---
 
+<Update label="v1.2.43" description="2026-03-30" tags={["Fix"]}>
+  - Simplified stale session recovery: instead of immediately retrying with a fresh session, the broken session ID is cleared and the existing exponential backoff in GroupQueue handles the retry. This avoids double container spawns on transient errors.
+  - Expanded stale session detection to catch `no conversation found` errors in addition to `ENOENT` and `session not found`
+  - npm audit dependency fixes
+</Update>
+
 <Update label="v1.2.42" description="2026-03-28" tags={["Feature"]}>
   - Setup skill now routes credential system by container runtime: Docker uses OneCLI Agent Vault, Apple Container uses native credential proxy
   - Marked Apple Container as experimental

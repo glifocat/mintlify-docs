@@ -258,6 +258,14 @@ grep -E "image found|image NOT found|image missing" logs/nanoclaw.log
 
 If you need Kubernetes enabled, set `CONTAINER_IMAGE` to an image stored in a registry that the kubelet won't garbage-collect, or raise the kubelet's GC thresholds.
 
+### Stale session auto-recovery
+
+**Issue:** A group's session transcript (`.jsonl`) can go missing after a crash mid-write, manual deletion, or disk-full condition. When the agent tries to resume, it fails with errors like `no conversation found`, `ENOENT` on the `.jsonl` file, or `session not found`.
+
+**Behavior:** NanoClaw automatically detects these stale sessions, clears the broken session ID from both memory and the database, and lets the existing exponential backoff in GroupQueue retry with a fresh session. No manual intervention is needed.
+
+If you see repeated `Stale session detected — clearing for next retry` warnings in the logs and the agent never recovers, check for underlying issues (disk full, permissions) that may prevent new sessions from being created.
+
 ### Resume branches from stale tree position
 
 **Issue:** When agent teams spawns subagent CLI processes, they write to the same session JSONL. On subsequent `query()` resumes, the CLI reads the JSONL but may pick a stale branch tip, causing responses to land on a branch the host never receives.
