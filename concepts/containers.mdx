@@ -110,6 +110,11 @@ mounts = [
     readonly: true
   },
   {
+    hostPath: '/path/to/nanoclaw/store',
+    containerPath: '/workspace/project/store',
+    readonly: false
+  },
+  {
     hostPath: '/path/to/nanoclaw/groups/main',
     containerPath: '/workspace/group',
     readonly: false
@@ -131,6 +136,8 @@ mounts = [
   }
 ]
 ```
+
+The main group gets writable access to the store directory (`/workspace/project/store`) so agents can query and write to the SQLite database directly. The rest of the project root remains read-only.
 
 When the project root is mounted for the main group and a `.env` file exists on the host, it is shadowed with `/dev/null` to prevent agents from reading secrets:
 

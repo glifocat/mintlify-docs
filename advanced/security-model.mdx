@@ -256,6 +256,7 @@ The sender allowlist complements container isolation. Containers protect against
 | Capability | Main Group | Non-Main Group |
 |------------|------------|----------------|
 | Project root access | `/workspace/project` (ro) | None |
+| Store (SQLite DB) | `/workspace/project/store` (rw) | None |
 | Group folder | `/workspace/group` (rw) | `/workspace/group` (rw) |
 | Global memory | Via project mount | `/workspace/global` (ro, if exists) |
 | Additional mounts | Configurable | Read-only unless allowed |
