@@ -124,11 +124,16 @@ The main group's project root is mounted read-only. Writable paths the agent nee
 // Main group mounts (simplified)
 mounts = [
   { host: '/path/to/nanoclaw', container: '/workspace/project', readonly: true },
+  { host: '/path/to/nanoclaw/store', container: '/workspace/project/store', readonly: false },
   { host: '/path/to/nanoclaw/groups/main', container: '/workspace/group', readonly: false },
   { host: '/path/to/nanoclaw/data/sessions/main/.claude', container: '/home/node/.claude', readonly: false },
   { host: '/path/to/nanoclaw/data/ipc/main', container: '/workspace/ipc', readonly: false }
 ]
 ```
+
+<Note>
+The `store/` directory is mounted separately as read-write, overlaying the read-only project root. This gives the main agent direct access to the SQLite database for queries and writes.
+</Note>
 
 ### 3. Session isolation
 
