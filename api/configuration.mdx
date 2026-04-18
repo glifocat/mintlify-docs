@@ -154,10 +154,11 @@ Each candidate is validated as a real IANA timezone identifier before being acce
     MAX_CONCURRENT_CONTAINERS=5
     TZ=America/Los_Angeles
     ONECLI_URL=http://127.0.0.1:10254
+    # ONECLI_API_KEY=your-key-here  # only if your OneCLI instance requires authentication
     ```
 
     <Note>
-    With the OneCLI Agent Vault, API keys and OAuth tokens are no longer stored in `.env`. Secrets are managed via `onecli secrets create` and injected by the vault at request time. The only credential-related variable is `ONECLI_URL`.
+    With the OneCLI Agent Vault, API keys and OAuth tokens are no longer stored in `.env`. Secrets are managed via `onecli secrets create` and injected by the vault at request time. The only credential-related variables are `ONECLI_URL` and optionally `ONECLI_API_KEY`.
     </Note>
   </Tab>
 
