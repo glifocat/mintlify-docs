@@ -1,85 +1,36 @@
-<div align="center">
-  <h1>NanoClaw Docs</h1>
-  <p>
-    Documentation for <a href="https://github.com/qwibitai/nanoclaw">NanoClaw</a> — a lightweight, secure AI assistant that runs Claude agents in isolated containers and connects to your messaging platforms.
-  </p>
-</div>
+# NanoClaw v1 Documentation (archived)
 
-<p align="center">
-  <a href="https://github.com/qwibitai/nanoclaw/blob/main/LICENSE"><img src="https://img.shields.io/github/license/qwibitai/nanoclaw?style=flat-square" alt="License"></a>
-  <a href="https://github.com/qwibitai/nanoclaw"><img src="https://img.shields.io/github/stars/qwibitai/nanoclaw?style=flat-square" alt="Stars"></a>
-  <a href="https://discord.gg/VDdww8qS42"><img src="https://img.shields.io/discord/1470188214710046894?style=flat-square&label=Discord&color=5865F2" alt="Discord"></a>
-  <a href="https://www.mintlify.com/oss-program"><img src="https://img.shields.io/badge/Docs_by-Mintlify-18181B?style=flat-square" alt="Mintlify"></a>
-</p>
+This branch is a frozen snapshot of the NanoClaw documentation for **v1.x**. It is kept available as a reference for forks still running v1 while they migrate.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/WhatsApp-25D366?style=flat-square&logo=whatsapp&logoColor=white" alt="WhatsApp">
-  <img src="https://img.shields.io/badge/Telegram-2CA5E0?style=flat-square&logo=telegram&logoColor=white" alt="Telegram">
-  <img src="https://img.shields.io/badge/Discord-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord">
-  <img src="https://img.shields.io/badge/Slack-4A154B?style=flat-square&logo=slack&logoColor=white" alt="Slack">
-  <img src="https://img.shields.io/badge/Gmail-EA4335?style=flat-square&logo=gmail&logoColor=white" alt="Gmail">
-  <img src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker">
-  <img src="https://img.shields.io/badge/Claude-CC785C?style=flat-square&logo=anthropic&logoColor=white" alt="Claude">
-</p>
+**No new content is added to this branch.** If you find an issue here, it will not be fixed.
 
----
+## Looking for current documentation?
 
-## What's documented here
+NanoClaw **v2.0.0** shipped on 2026-04-22 as a ground-up architectural rewrite. For the current documentation, including new v2 concepts (two-database session model, entity model, Bun-based agent runner, OneCLI-only credentials), go to:
 
-| Section | Topics |
-|---------|--------|
-| **Getting started** | Quick start, installation, and setup |
-| **Core concepts** | Architecture, security model, groups, tasks, and containers |
-| **Features** | Messaging, scheduled tasks, agent swarms, customization, and web access |
-| **Integrations** | WhatsApp, Telegram, Discord, Slack, Gmail, and the skills system |
-| **Advanced** | Security model, IPC, container runtime, Docker sandboxes, remote control |
-| **API reference** | Configuration, message routing, group management, task scheduling, skills |
+- **https://docs.nanoclaw.dev**
 
-## Development
+## Migrating from v1 to v2?
 
-Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview documentation changes locally:
+v2 is not backward compatible with v1. To migrate an existing v1 fork, use the official migration skill from upstream NanoClaw:
 
-```bash
-npm i -g mint
-mint dev
-```
+- `/migrate-nanoclaw` — clean-base replay of your customizations on top of v2
+- `/update-nanoclaw` — selective cherry-pick
 
-Preview at `http://localhost:3000`.
+See the current docs for the migration guide and the v2 release notes.
 
-## AI-assisted writing
+## What's in this branch
 
-This repo includes the [Mintlify skill](https://mintlify.com/docs) pre-installed for AI coding assistants. It provides component references, configuration guides, and navigation helpers so your AI tool can write and edit documentation pages correctly.
+- `introduction.mdx`, `quickstart.mdx`, `installation.mdx` — v1 getting started
+- `concepts/` — v1 architecture, containers, groups, security, tasks
+- `features/` — v1 messaging, scheduled tasks, customization
+- `integrations/` — v1 channel integrations (WhatsApp, Telegram, Discord, Slack, Gmail) and skills system
+- `advanced/` — v1 container runtime, IPC system, security model
+- `api/` — v1 configuration, message routing, task scheduling, group management
+- `changelog/` — entries up to and including v1.2.53
 
-**Supported tools:** Claude Code, Cursor, Cline, Codex, Gemini CLI, GitHub Copilot, and others.
+## Source of truth
 
-In Claude Code, invoke it with `/mintlify` before creating or editing pages. Other tools pick it up automatically.
+NanoClaw upstream: **https://github.com/qwibitai/nanoclaw**
 
-To update the skill to the latest version:
-
-```bash
-npx skills add https://mintlify.com/docs
-```
-
-## Publishing
-
-Changes are deployed to production automatically after pushing to the default branch. Requires the [Mintlify GitHub app](https://dashboard.mintlify.com/settings/organization/github-app).
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to the documentation.
-
-## Troubleshooting
-
-- Dev environment not running? Run `mint update` for the latest CLI version.
-- Page loading as 404? Make sure you're in a folder with a valid `docs.json`.
-- More help: [Mintlify documentation](https://mintlify.com/docs)
-
-## Community
-
-Questions or ideas? [Join the Discord](https://discord.gg/VDdww8qS42).
-
----
-
-<p align="center">
-  <a href="https://github.com/qwibitai/nanoclaw">NanoClaw</a> is MIT licensed. Docs hosted through <a href="https://www.mintlify.com/oss-program">Mintlify's OSS program</a>.
-</p>
+The exact commit this archive was taken from is also preserved as the `v1-docs-final` tag in this repository.
