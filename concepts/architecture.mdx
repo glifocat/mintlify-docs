@@ -9,199 +9,179 @@ NanoClaw is a lightweight AI assistant that runs Claude Agent SDK in isolated co
 
 ## High-level overview
 
-NanoClaw consists of a single Node.js process that orchestrates everything:
+NanoClaw consists of a single Node.js host process that orchestrates everything. Containers communicate exclusively through per-session SQLite databases — there is no stdin piping, no stdout markers, and no IPC file watchers.
 
 ```mermaid
 graph TB
-    WA[WhatsApp] --> CF[Channel Factory]
-    TG[Telegram] --> CF
-    DC[Discord] --> CF
-    SL[Slack] --> CF
-    GM[Gmail] --> CF
-    CF --> Router[Message Router]
-    Router --> Queue[Group Queue]
-    Queue --> Container[Isolated Container]
+    WA[WhatsApp] --> CA[Channel Adapters]
+    TG[Telegram] --> CA
+    DC[Discord] --> CA
+    SL[Slack] --> CA
+    GM[Gmail] --> CA
+    CA --> Router[Inbound Router]
+    Router --> SDB[(Session DBs)]
+    SDB --> Container[Isolated Container]
     Container --> Agent[Claude Agent SDK]
-    Agent --> Response[Response]
-    Response --> CF
+    Agent --> SDB
+    SDB --> Delivery[Delivery Polls]
+    Delivery --> CA
 
-    Scheduler[Task Scheduler] --> Queue
-    IPC[IPC Watcher] --> Queue
+    Sweep[Host Sweep] --> SDB
 
-    DB[(SQLite Database)] --> Router
-    DB --> Scheduler
+    CDB[(Central DB)] --> Router
+    CDB --> Sweep
 
     style Container fill:#6ee7b7,color:#1e1e1e
     style Agent fill:#34d399,color:#1e1e1e
-    style CF fill:#a7f3d0,color:#1e1e1e
+    style CA fill:#a7f3d0,color:#1e1e1e
 ```
+
+## Entity model
+
+NanoClaw v2 uses a structured entity model instead of flat registered groups:
+
+```
+users (id "<channel>:<handle>", kind, display_name)
+user_roles (user_id, role, agent_group_id)       — owner | admin (global or scoped)
+agent_group_members (user_id, agent_group_id)    — unprivileged access gate
+
+agent_groups (workspace, memory, CLAUDE.md, container config)
+    ↕ many-to-many via messaging_group_agents (session_mode, trigger_rules, priority)
+messaging_groups (one chat/channel on one platform; unknown_sender_policy)
+
+sessions (agent_group_id + messaging_group_id + thread_id → per-session container)
+```
+
+Privilege is user-level (owner/admin), not agent-group-level. The `messaging_group_agents` junction table controls how an agent group engages with each chat — trigger mode (`pattern`, `mention`, `mention-sticky`), sender scope, ignored message policy, and session mode (`shared`, `per-thread`, `agent-shared`).
 
 ## Core components
 
-### Channel factory
+### Channel adapters
 
-NanoClaw uses a factory registry pattern for messaging channels. Each channel (WhatsApp, Telegram, Discord, Slack, Gmail) self-registers at startup. Channels with missing credentials emit a warning and are skipped — no configuration file is needed to enable or disable channels.
+NanoClaw uses a registry pattern for messaging channels. Each channel adapter self-registers at startup. Channels with missing credentials emit a warning and are skipped — no configuration file is needed to enable or disable them.
 
-All channels implement a common `Channel` interface for message handling and sending, allowing the rest of the system to be channel-agnostic.
+All channels implement a common `ChannelAdapter` interface with `onInbound`, `onInboundEvent`, `onMetadata`, and `onAction` callbacks, allowing the rest of the system to be channel-agnostic.
 
-### Message router
+### Inbound router
 
-The router (`src/index.ts`) is the central orchestrator:
+The router (`src/router.ts`) handles inbound message routing:
 
-- Polls SQLite database every 2 seconds for new messages
-- Filters messages by registered groups only
-- Checks for trigger pattern (`@{ASSISTANT_NAME}`)
-- Maintains cursor state to track processed messages
-- Routes messages to the appropriate group queue
+- Resolves messaging group from channel type + platform ID
+- Finds the correct agent group(s) via the `messaging_group_agents` wiring
+- Resolves or creates a session (based on session mode)
+- Writes messages to the session's `inbound.db`
+- Wakes the container if not already running
 
 <Info>
-The main group (typically your self-chat) doesn't require a trigger - all messages are processed automatically.
+Everything is a message. The two session databases (inbound and outbound) are the sole IO surface between host and container.
 </Info>
-
-### Group queue
-
-The GroupQueue (`src/group-queue.ts`) manages container lifecycle and concurrency:
-
-- **Concurrency limiting**: Maximum 5 concurrent containers by default (configurable via `MAX_CONCURRENT_CONTAINERS`)
-- **Per-group state**: Each group has a dedicated queue for messages and tasks
-- **Retry logic**: Exponential backoff (5s base, up to 5 retries) for failed container runs
-- **Idle management**: Keeps containers alive for 30 minutes (default `IDLE_TIMEOUT`) to handle follow-up messages
-- **IPC message piping**: Follow-up messages are sent to active containers via IPC files
-
-```typescript
-// Queue priority order when draining:
-// 1. Pending tasks (won't be re-discovered from DB)
-// 2. Pending messages (can be re-fetched from DB)
-// 3. Waiting groups (dequeued when slots become available)
-```
-
-<Note>
-When a container is already active for a group, new messages are piped directly to the running container via IPC instead of spawning a new one.
-</Note>
 
 ### Container runner
 
-The container runner (`src/container-runner.ts`) spawns and manages isolated agent execution:
+The container runner (`src/container-runner.ts`) spawns and manages isolated agent containers:
 
 **Container lifecycle:**
-1. Build volume mounts based on group privileges
-2. Spawn container with Docker CLI
-3. Pass prompt and metadata via stdin JSON (credentials handled by secret injection layer, never passed here)
-4. Stream stdout/stderr for real-time output
-5. Parse output markers (`---NANOCLAW_OUTPUT_START---` / `---NANOCLAW_OUTPUT_END---`)
-6. Clean up automatically on exit (`--rm` flag)
+1. Resolve agent group and read container config
+2. Build volume mounts based on group configuration
+3. Sync skill symlinks and compose CLAUDE.md
+4. Spawn container with Docker CLI (entrypoint: `tini` → `bun run /app/src/index.ts`)
+5. Container polls `inbound.db` for new messages and writes results to `outbound.db`
+6. On exit, mark container stopped and clean up
 
-**Timeout behavior:**
-- Hard timeout: `CONTAINER_TIMEOUT` (default 30 minutes)
-- Grace period: At least `IDLE_TIMEOUT + 30s` to allow graceful shutdown
-- Activity-based reset: Timeout resets on each streaming output
-- Post-output timeout: Not considered an error (idle cleanup)
+**Key differences from v1:**
+- No stdin/stdout communication — all IO via session databases
+- No host-side idle timeout — stale detection driven by the host sweep reading `.heartbeat` mtime and `processing_ack` claim age
+- Agent-runner source is a shared read-only mount, not a per-group writable copy
+- Container entrypoint uses `tini` for PID 1 signal forwarding, runs Bun directly
 
-**Logging:**
-- All container runs logged to `groups/{name}/logs/container-{timestamp}.log`
-- Verbose mode (`LOG_LEVEL=debug`) logs full input/output
-- Error runs log input metadata (prompt length, session ID) and full stderr — prompt content is not included
+### Delivery system
 
-### Task scheduler
+The delivery system (`src/delivery.ts`) replaces the old IPC watcher:
 
-The scheduler (`src/task-scheduler.ts`) runs scheduled tasks:
+- Polls `outbound.db` for new `messages_out` rows written by the container
+- Delivers messages through channel adapters
+- Handles system actions (schedule tasks, approvals, self-modification requests)
+- Two poll loops: active delivery (fast, for sessions with running containers) and sweep delivery (slower, catches stragglers)
 
-- Polls database every 60 seconds for due tasks
-- Supports three schedule types:
-  - **cron**: Cron expressions (e.g., `0 9 * * *` for 9am daily)
-  - **interval**: Millisecond intervals (e.g., `3600000` for hourly)
-  - **once**: ISO timestamp for one-time execution
-- Tasks run in group context with full agent capabilities
-- Results can be sent to the group chat or completed silently
-- Task containers close automatically 10 seconds after producing output
+### Host sweep
 
-<Accordion title="Task execution flow">
-1. Scheduler finds due task from database
-2. Enqueues task in GroupQueue (respects concurrency limits)
-3. Spawns container in task mode (`isScheduledTask: true`)
-4. Streams output and optionally sends to chat via `send_message` tool
-5. Logs run to database with duration and result
-6. Calculates next run time based on schedule type
-7. Container closes after 10-second grace period
-</Accordion>
+The host sweep (`src/host-sweep.ts`) runs every 60 seconds:
 
-### IPC watcher
+- Syncs `processing_ack` state between container and host
+- Detects stale/stuck containers via heartbeat age and processing claim duration
+- Wakes containers for due messages (scheduled tasks are `messages_in` rows with `kind='task'`)
+- Handles recurring task rescheduling
 
-The IPC watcher (`src/ipc.ts`) enables container-to-host communication:
+### Database architecture
 
-- Watches `data/ipc/{group}/messages/*.json` for outbound messages
-- Watches `data/ipc/{group}/tasks/*.json` for task operations
-- Validates operations against group privileges (see [security.mdx](/concepts/security))
-- Atomic file writes (`.tmp` then rename) prevent race conditions
-- Each group has isolated IPC namespace
+NanoClaw uses a three-database model:
 
-**Available operations:**
-- `send_message`: Send message to group chat (own chat only for non-main)
-- `schedule_task`, `pause_task`, `resume_task`, `cancel_task`, `update_task`: Task management
-- `register_group`, `refresh_groups`: Group management (main only)
+**Central DB** (`data/v2.db`) stores everything that isn't per-session:
 
-### Database
+- `agent_groups` — workspace, memory, personality, container config
+- `messaging_groups` — channel type, platform ID, unknown sender policy
+- `messaging_group_agents` — wiring between messaging groups and agent groups with engage mode, session mode, priority
+- `users` — namespaced IDs (e.g., `"phone:+1555..."`, `"tg:123"`, `"discord:456"`)
+- `user_roles` — owner (always global), admin (global or scoped)
+- `agent_group_members` — unprivileged access gate
+- `sessions` — agent_group_id, messaging_group_id, thread_id, status, container_status
 
-SQLite database (`store/messages.db`) stores:
+**Inbound DB** (`inbound.db`, per-session) — host writes, container reads:
 
-- **messages**: All messages with timestamps, sender info, bot-message flag, and reply context (`reply_to_message_id`, `reply_to_message_content`, `reply_to_sender_name`) for quoted message threading (queries capped at `MAX_MESSAGES_PER_PROMPT` per invocation, default 10)
-- **chats**: Chat metadata (name, last activity, channel, is_group)
-- **sessions**: Claude session IDs per group folder
-- **registered_groups**: Active groups with folder, trigger, container config, is_main flag
-- **router_state**: Message cursors and last processed timestamps
-- **scheduled_tasks**: Task definitions with schedule, context_mode (`group` or `isolated`), and status
-- **task_run_logs**: Task execution history with duration and results
+- `messages_in` — all inbound messages including scheduled tasks (`kind='task'`), with status tracking, `process_after` for scheduling, and `recurrence` for cron/interval
+- `destinations` — named routing map for agent-to-agent and channel sends
+- `session_routing` — default reply routing for the session
+
+**Outbound DB** (`outbound.db`, per-session) — container writes, host reads:
+
+- `messages_out` — outbound messages, files, system actions
+- `processing_ack` — container tracks processing status
+- `session_state` — persistent key/value (stores SDK session ID for resume)
 
 <Warning>
-The database is the source of truth for message history. If you delete it, agents lose access to conversation context.
+Each database file has exactly one writer (host or container) to avoid cross-mount lock contention. The heartbeat is a file touch at `/workspace/.heartbeat`, not a DB update.
 </Warning>
 
 ## Data flow
 
-### Incoming message flow
+### Inbound message flow
 
 ```mermaid
 sequenceDiagram
     participant PL as Platform (WA/TG/DC/...)
     participant CH as Channel Adapter
-    participant DB as Database
-    participant RT as Router
-    participant GQ as GroupQueue
-    participant CR as ContainerRunner
-    participant AG as Agent
+    participant RT as Inbound Router
+    participant IDB as inbound.db
+    participant CR as Container Runner
+    participant AG as Agent (Bun)
 
     PL->>CH: New message
-    CH->>DB: storeMessage()
-    RT->>DB: getNewMessages()
-    DB-->>RT: messages
-    RT->>RT: Check trigger
-    RT->>GQ: enqueueMessageCheck()
-    GQ->>GQ: Check concurrency
-    GQ->>CR: runContainerAgent()
-    CR->>CR: Build mounts
-    CR->>AG: Spawn container
-    AG-->>CR: Stream output
-    CR->>GQ: onOutput callback
-    GQ->>CH: sendMessage()
-    CH->>PL: Send response
+    CH->>RT: onInbound()
+    RT->>RT: Resolve messaging group → agent group → session
+    RT->>IDB: Write message_in row
+    RT->>CR: wakeContainer(session)
+    CR->>AG: Spawn container (if not running)
+    AG->>IDB: Poll for pending messages
+    IDB-->>AG: New messages
+    AG->>AG: Process with Claude SDK
 ```
 
-### Follow-up message flow (piped to active container)
+### Outbound delivery flow
 
 ```mermaid
 sequenceDiagram
-    participant RT as Router
-    participant GQ as GroupQueue
-    participant IPC as IPC File
-    participant AG as Active Container
-    
-    RT->>GQ: New message for active group
-    GQ->>GQ: Check if container active
-    GQ->>IPC: Write message JSON
-    AG->>IPC: Poll for new files
-    IPC-->>AG: Message content
-    AG->>AG: Process as follow-up
-    AG-->>GQ: Stream response
+    participant AG as Agent (Bun)
+    participant ODB as outbound.db
+    participant DL as Delivery Poll
+    participant CH as Channel Adapter
+    participant PL as Platform
+
+    AG->>ODB: Write messages_out row
+    DL->>ODB: Poll for new rows
+    ODB-->>DL: Pending outbound messages
+    DL->>DL: Handle system actions (schedule, approvals)
+    DL->>CH: deliver(channelType, platformId, content)
+    CH->>PL: Send response
 ```
 
 ## File system layout
@@ -211,34 +191,31 @@ sequenceDiagram
     <Tree.Folder name="src" />
     <Tree.Folder name="container" defaultOpen>
       <Tree.File name="Dockerfile" />
+      <Tree.File name="CLAUDE.md" />
       <Tree.Folder name="agent-runner" />
       <Tree.Folder name="skills" />
     </Tree.Folder>
     <Tree.Folder name="groups" defaultOpen>
-      <Tree.Folder name="main" defaultOpen>
+      <Tree.Folder name="{agent-group}" defaultOpen>
         <Tree.File name="CLAUDE.md" />
-        <Tree.Folder name="logs" />
+        <Tree.File name="CLAUDE.local.md" />
+        <Tree.File name="container.json" />
       </Tree.Folder>
-      <Tree.Folder name="{group-name}" />
+      <Tree.Folder name="global" />
     </Tree.Folder>
     <Tree.Folder name="data" defaultOpen>
-      <Tree.Folder name="sessions" defaultOpen>
-        <Tree.Folder name="{group}" defaultOpen>
-          <Tree.Folder name=".claude" />
-          <Tree.Folder name="agent-runner-src" />
+      <Tree.File name="v2.db" />
+      <Tree.Folder name="v2-sessions" defaultOpen>
+        <Tree.Folder name="{agent-group-id}" defaultOpen>
+          <Tree.Folder name=".claude-shared" />
+          <Tree.Folder name="{session-id}" defaultOpen>
+            <Tree.File name="inbound.db" />
+            <Tree.File name="outbound.db" />
+            <Tree.File name=".heartbeat" />
+            <Tree.Folder name="outbox" />
+          </Tree.Folder>
         </Tree.Folder>
       </Tree.Folder>
-      <Tree.Folder name="ipc" defaultOpen>
-        <Tree.Folder name="{group}" defaultOpen>
-          <Tree.Folder name="messages" />
-          <Tree.Folder name="tasks" />
-          <Tree.Folder name="input" />
-        </Tree.Folder>
-      </Tree.Folder>
-    </Tree.Folder>
-    <Tree.Folder name="store" defaultOpen>
-      <Tree.File name="messages.db" />
-      <Tree.Folder name="auth" />
     </Tree.Folder>
   </Tree.Folder>
 </Tree>
@@ -249,83 +226,74 @@ The agent container (`container/Dockerfile`) includes:
 
 - **Base**: `node:22-slim`
 - **Browser**: Chromium with all required dependencies
-- **Tools**: `agent-browser` CLI for browser automation, `curl`, `git`
-- **Runtime**: `@anthropic-ai/claude-code` (Claude Agent SDK)
+- **Agent runtime**: Bun (for running agent-runner TypeScript directly, no build step)
+- **Tools**: `agent-browser` CLI for browser automation, `curl`, `git`, `vercel`
+- **Claude SDK**: `@anthropic-ai/claude-code` (installed globally via pnpm)
+- **PID 1**: `tini` for correct signal forwarding so DB writes finalize on shutdown
 - **User**: Runs as `node` user (uid 1000, non-root)
-- **Working directory**: `/workspace/group` (group's folder)
+- **Working directory**: `/workspace/group`
+- **CJK fonts**: Opt-in via `INSTALL_CJK_FONTS=true` build arg (saves ~200MB by default)
 
 <Info>
-The container is rebuilt by `./container/build.sh`. Changes to agent-runner code require a rebuild.
+Agent-runner source is NOT baked into the image. It's provided via a shared read-only bind mount at `/app/src` from `container/agent-runner/src/`. Source-only changes never require an image rebuild.
 </Info>
 
 ## Subsystems
 
 ### Session management
 
-Each group maintains an isolated Claude conversation session:
+Each session has its own directory under `data/v2-sessions/{agent-group-id}/{session-id}/`:
 
-- Sessions stored at `data/sessions/{group}/.claude/`
-- Include full message history and file contents read
-- Auto-compact triggers at 165k tokens to preserve context fidelity
-- Settings configured per group:
-  - `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` (enable subagent orchestration)
-  - `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1` (load memory from mounts)
-  - `CLAUDE_CODE_DISABLE_AUTO_MEMORY=0` (enable persistent memory)
+- Contains `inbound.db`, `outbound.db`, `.heartbeat`, and `outbox/`
+- Claude SDK state stored in a shared `.claude-shared/` directory per agent group
+- Session mode controls isolation: `shared` (one session per messaging group), `per-thread` (one per thread), or `agent-shared` (shared across messaging groups)
 
 ### Skills system
 
-Shared skills in `container/skills/` are synced to each group's `.claude/skills/` on startup:
+Skills are managed via symlinks rather than bulk copying:
 
-- Skills are available to all agents
-- Per-group copies allow customization without affecting others
-- Changes to shared skills require container restart to sync
-- Built-in container skills include `/agent-browser` (web automation), `/capabilities` (system introspection), and `/status` (health check)
-- `/capabilities` and `/status` are main-channel only — they check for the `/workspace/project` mount to enforce access
+- Skills defined in `container/skills/` are mounted read-only at `/app/skills/` inside containers
+- Per-group skill selection is controlled by `container.json` (`skills: 'all'` or an explicit list)
+- Symlinks in `.claude-shared/skills/` point to `/app/skills/{name}` (valid inside the container)
+- Skill symlinks are synced on every container spawn based on the current `container.json`
 
-### Agent runner customization
+### CLAUDE.md composition
 
-Each group gets a writable copy of `agent-runner/src/` at `data/sessions/{group}/agent-runner-src/`:
+Each agent group's `CLAUDE.md` is composed from multiple sources on every container spawn:
 
-- Recompiled on every container startup via `entrypoint.sh`
-- Allows agents to add custom tools or modify behavior
-- Isolated from other groups (changes don't affect them)
-- MCP servers can be added by modifying the agent runner code
+- **Shared base**: `container/CLAUDE.md` (mounted read-only at `/app/CLAUDE.md`)
+- **Per-group composed entry**: `groups/{folder}/CLAUDE.md` (imports the shared base via a symlink)
+- **Skill fragments**: `groups/{folder}/.claude-fragments/` (read-only nested mount)
+- **Per-group memory**: `groups/{folder}/CLAUDE.local.md` (read-write, persists agent-written notes)
+- **Global memory**: `groups/global/` (read-only mount at `/workspace/global`)
 
 <Note>
-The agent runner is the TypeScript code that wraps Claude Agent SDK. It handles IPC, streaming output, and tool registration.
+The composed CLAUDE.md is regenerated on every spawn. Only `CLAUDE.local.md` persists agent-written content across sessions.
 </Note>
 
 ## Startup sequence
 
-1. **Container system check**: Ensure Docker is running, clean up orphaned containers
-2. **Database initialization**: Create tables if needed, load schema
-3. **State loading**: Restore message cursors, sessions, registered groups
-4. **OneCLI Agent Vault sync**: Ensure each registered non-main group has a corresponding OneCLI agent for per-group credential scoping (best-effort, non-blocking)
-
-<Note>
-In v1.2.35+, this step syncs OneCLI agents for all registered groups. In earlier versions, this starts the built-in credential proxy on `CREDENTIAL_PROXY_PORT`.
-</Note>
-5. **Remote Control restore**: Re-adopt any surviving Remote Control session from a previous run
-6. **Shutdown handlers**: Register graceful shutdown on `SIGTERM` and `SIGINT`
-7. **Channel connection**: Connect to messaging channels, authenticate if needed
-8. **Subsystem startup**:
-   - Task scheduler loop (60s interval)
-   - IPC watcher (1s poll interval)
-   - Message loop (2s poll interval)
-9. **Recovery**: Check for unprocessed messages from previous crash
-10. **Ready**: System begins processing messages and tasks
+1. **Database initialization**: Init central DB at `data/v2.db`, run migrations
+2. **Filesystem cutover**: One-time migration of group files (idempotent, no-op after first run)
+3. **Container runtime**: Ensure Docker is running, clean up orphaned containers
+4. **Channel adapters**: Initialize with `onInbound`, `onInboundEvent`, `onMetadata`, and `onAction` callbacks
+5. **Delivery adapter bridge**: Connect delivery system to channel adapters
+6. **Delivery polls**: Start active and sweep delivery poll loops
+7. **Host sweep**: Start 60-second sweep loop (stale detection, due-message wake, recurrence)
+8. **Shutdown handlers**: Register graceful shutdown on `SIGTERM` and `SIGINT`
 
 ## Graceful shutdown
 
 On `SIGTERM` or `SIGINT`:
 
-1. GroupQueue enters shutdown mode (stops accepting new work)
-2. Active containers are detached (not killed)
-3. Channels disconnect gracefully
-4. Process exits with code 0
+1. Run registered shutdown callbacks (modules clean up)
+2. Stop delivery polls
+3. Stop host sweep
+4. Tear down channel adapters
+5. Process exits with code 0
 
 <Warning>
-Containers are intentionally not killed during shutdown to prevent data loss from channel reconnection restarts. They'll finish on their own via idle timeout or container timeout.
+Containers are intentionally not killed during shutdown. They detect the host is gone via heartbeat staleness and exit on their own.
 </Warning>
 
 ## Related topics

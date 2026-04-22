@@ -84,91 +84,70 @@ Without the firewall rule, anyone on your local network can route API requests t
 
 The agent container is built from `container/Dockerfile` and includes:
 
-- **Node.js 22** - Runtime for the agent runner
+- **Node.js 22** - Base runtime for globally-installed CLIs
+- **Bun** - Runtime for the agent-runner (runs TypeScript directly, no build step)
 - **Chromium** - Browser automation via agent-browser
-- **Claude Code SDK** - Installed globally as `@anthropic-ai/claude-code`
-- **System tools** - `curl` and `git` for network requests and version control
-- **System fonts** - Emoji and international character support
+- **Claude Code SDK** - Installed globally via pnpm as `@anthropic-ai/claude-code`
+- **System tools** - `curl`, `git`, `tini`, `unzip`
+- **System fonts** - Emoji support (CJK fonts opt-in via build arg)
 
 ### Dockerfile breakdown
 
 <Accordion title="Base image and system dependencies">
   ```dockerfile
   FROM node:22-slim
+  ARG INSTALL_CJK_FONTS=false
 
-  # Install system dependencies for Chromium
-  RUN apt-get update && apt-get install -y \
-      chromium \
-      fonts-liberation \
-      fonts-noto-cjk \
-      fonts-noto-color-emoji \
-      libgbm1 \
-      libnss3 \
-      # ... additional libraries
+  RUN apt-get update && apt-get install -y --no-install-recommends \
+      chromium fonts-liberation fonts-noto-color-emoji \
+      libgbm1 libnss3 ca-certificates curl git tini unzip \
+      && if [ "$INSTALL_CJK_FONTS" = "true" ]; then \
+          apt-get install -y --no-install-recommends fonts-noto-cjk; \
+         fi \
       && rm -rf /var/lib/apt/lists/*
   ```
   
-  The slim Node.js base keeps the image small while providing the necessary runtime.
+  CJK fonts (~200MB) are opt-in via the `INSTALL_CJK_FONTS` build arg. `tini` handles PID 1 signal forwarding.
 </Accordion>
 
-<Accordion title="Browser configuration">
+<Accordion title="Bun runtime and agent-runner deps">
   ```dockerfile
-  # Set Chromium path for agent-browser
-  ENV AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
-  ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
+  ARG BUN_VERSION=1.3.12
+  RUN curl -fsSL https://bun.sh/install | bash -s "bun-v${BUN_VERSION}"
 
-  # Install agent-browser and claude-code globally
-  RUN npm install -g agent-browser @anthropic-ai/claude-code
+  WORKDIR /app
+  COPY agent-runner/package.json agent-runner/bun.lock ./
+  RUN bun install --frozen-lockfile
   ```
   
-  Browser automation is available to all agents via the `agent-browser` command.
+  Only dependencies are baked in. Agent-runner source is provided via a shared read-only bind mount at runtime — source changes never require an image rebuild.
 </Accordion>
 
-<Accordion title="Agent runner compilation">
+<Accordion title="Global Node CLIs via pnpm">
   ```dockerfile
-  # Copy package files first for better caching
-  COPY agent-runner/package*.json ./
-  RUN npm install
-
-  # Copy source code
-  COPY agent-runner/ ./
-  RUN npm run build
+  RUN corepack enable
+  RUN pnpm install -g "vercel@${VERCEL_VERSION}"
+  RUN pnpm install -g "agent-browser@${AGENT_BROWSER_VERSION}"
+  RUN pnpm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
   ```
   
-  The agent runner is pre-built during image creation for faster startup.
+  Layered for cache efficiency — bumping `claude-code` (the most common change) only invalidates one layer. `only-built-dependencies` gates pnpm's supply-chain policy.
 </Accordion>
 
-<Accordion title="Workspace setup">
+<Accordion title="Entrypoint">
   ```dockerfile
-  # Create workspace directories
-  RUN mkdir -p /workspace/group /workspace/global /workspace/extra \
-               /workspace/ipc/messages /workspace/ipc/tasks /workspace/ipc/input
+  COPY entrypoint.sh /app/entrypoint.sh
+  RUN chmod +x /app/entrypoint.sh
 
-  # Set ownership to node user (non-root) for writable directories
-  RUN chown -R node:node /workspace && chmod 777 /home/node
-
-  # Switch to non-root user
+  RUN mkdir -p /workspace/group /workspace/extra && \
+      chown -R node:node /workspace
   USER node
-
-  # Set working directory to group workspace
   WORKDIR /workspace/group
+
+  ENTRYPOINT ["/usr/bin/tini", "--", "/app/entrypoint.sh"]
   ```
   
-  Containers run as the unprivileged `node` user (uid 1000) for security.
-</Accordion>
-
-<Accordion title="Entrypoint script">
-  ```dockerfile
-  # Create entrypoint script
-  RUN printf '#!/bin/bash\nset -e\ncd /app && npx tsc --outDir /tmp/dist 2>&1 >&2\nln -s /app/node_modules /tmp/dist/node_modules\nchmod -R a-w /tmp/dist\ncat > /tmp/input.json\nnode /tmp/dist/index.js < /tmp/input.json\n' > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
-
-  ENTRYPOINT ["/app/entrypoint.sh"]
-  ```
-  
-  The entrypoint:
-  1. Recompiles the agent runner from `/app/src` (allows per-group customization)
-  2. Reads input JSON from stdin
-  3. Executes the agent runner with the input
+  `tini` is PID 1, reaps zombies, and forwards signals cleanly. `entrypoint.sh` runs `exec bun run /app/src/index.ts` so Bun is tini's direct child.
 </Accordion>
 
 ### Building the image
@@ -192,53 +171,45 @@ docker builder prune -af
 
 ### Spawning containers
 
-Containers are spawned by the `runContainerAgent` function in `src/container-runner.ts`:
+Containers are spawned by the `wakeContainer` function in `src/container-runner.ts`, which deduplicates concurrent wake calls:
 
 ```typescript
-export async function runContainerAgent(
-  group: RegisteredGroup,
-  input: ContainerInput,
-  onProcess: (proc: ChildProcess, containerName: string) => void,
-  onOutput?: (output: ContainerOutput) => Promise<void>,
-): Promise<ContainerOutput>
+export function wakeContainer(session: Session): Promise<void>
 ```
 
 <Steps>
+  <Step title="Resolve agent group and config">
+    The host reads the agent group from the central DB and loads `container.json` for container configuration, provider, and package settings.
+  </Step>
+  
+  <Step title="Prepare session state">
+    Writes destinations, session routing, and runtime identity fields. Syncs skill symlinks and composes CLAUDE.md from the shared base + fragments.
+  </Step>
+  
   <Step title="Build volume mounts">
-    The host determines which directories to mount based on group privileges (main vs. non-main) and the group's `containerConfig.additionalMounts`.
+    The host determines which directories to mount based on the agent group's configuration and any provider-contributed mounts.
   </Step>
   
   <Step title="Generate container name">
-    Each container gets a unique name: `nanoclaw-{group}-{timestamp}`
+    Each container gets a unique name: `nanoclaw-v2-{group}-{timestamp}`
   </Step>
   
   <Step title="Spawn container process">
     ```typescript
-    const container = spawn(CONTAINER_RUNTIME_BIN, containerArgs, {
-      stdio: ['pipe', 'pipe', 'pipe'],
+    const container = spawn(CONTAINER_RUNTIME_BIN, args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
     ```
     
-    The container runs with stdin/stdout/stderr piped to the host.
+    Stdin is ignored — all IO goes through session databases. The entrypoint overrides to `bash -c 'exec bun run /app/src/index.ts'`.
   </Step>
   
-  <Step title="Pass input via stdin">
-    ```typescript
-    container.stdin.write(JSON.stringify(input));
-    container.stdin.end();
-    ```
-    
-    The input JSON contains the prompt, session ID, group folder, and metadata. Credentials are handled by the secret injection layer (OneCLI Agent Vault or credential proxy) — never passed via stdin or mounted as files.
+  <Step title="Container runs independently">
+    The agent-runner inside the container polls `inbound.db` for messages and writes results to `outbound.db`. The host's delivery polls pick up outbound messages. There is no stdin piping, stdout marker parsing, or IPC file watching.
   </Step>
   
-  <Step title="Stream output">
-    The host parses output markers (`---NANOCLAW_OUTPUT_START---` and `---NANOCLAW_OUTPUT_END---`) from stdout and calls the `onOutput` callback for each complete message.
-  </Step>
-  
-  <Step title="Handle completion">
-    When the container exits, logs are written to `groups/{name}/logs/container-{timestamp}.log` and the promise resolves with the final output. Error logs include only input metadata (prompt length and session ID) rather than the full prompt to avoid persisting user conversation content on disk.
-
-    If the container exits with an error indicating a stale or missing session (e.g., missing `.jsonl` file or "no conversation found"), the session is automatically cleared from the database so the next retry starts fresh. See [stale session recovery](/advanced/troubleshooting#stale-session-auto-recovery) for details.
+  <Step title="Handle exit">
+    When the container exits, it is removed from the active containers map and the session is marked as stopped. Stderr is logged at debug level during operation.
   </Step>
 </Steps>
 
@@ -246,174 +217,94 @@ export async function runContainerAgent(
 
 From the `buildContainerArgs` function in `src/container-runner.ts`:
 
-<Tabs>
-  <Tab title="OneCLI Agent Vault (v1.2.35+)">
-    ```typescript
-    async function buildContainerArgs(
-      mounts: VolumeMount[],
-      containerName: string,
-      agentIdentifier?: string,
-    ): Promise<string[]> {
-      const args: string[] = ['run', '-i', '--rm', '--name', containerName];
+```typescript
+async function buildContainerArgs(
+  mounts: VolumeMount[],
+  containerName: string,
+  agentGroup: AgentGroup,
+  containerConfig: ContainerConfig,
+  provider: string,
+  providerContribution: ProviderContainerContribution,
+  agentIdentifier?: string,
+): Promise<string[]> {
+  const args: string[] = ['run', '--rm', '--name', containerName];
 
-      // Pass host timezone so container's local time matches the user's
-      args.push('-e', `TZ=${TIMEZONE}`);
+  // Only TZ and provider-contributed vars from env
+  args.push('-e', `TZ=${TIMEZONE}`);
 
-      // OneCLI gateway handles credential injection
-      const onecliApplied = await onecli.applyContainerConfig(args, {
-        addHostMapping: false,
-        agent: agentIdentifier,
-      });
-      if (!onecliApplied) {
-        logger.warn({ containerName }, 'OneCLI gateway not reachable');
-      }
-
-      // Runtime-specific args for host gateway resolution
-      args.push(...hostGatewayArgs());
-
-      // Run as host user so bind-mounted files are accessible
-      const hostUid = process.getuid?.();
-      const hostGid = process.getgid?.();
-      if (hostUid != null && hostUid !== 0 && hostUid !== 1000) {
-        args.push('--user', `${hostUid}:${hostGid}`);
-        args.push('-e', 'HOME=/home/node');
-      }
-
-      for (const mount of mounts) {
-        if (mount.readonly) {
-          args.push(...readonlyMountArgs(mount.hostPath, mount.containerPath));
-        } else {
-          args.push('-v', `${mount.hostPath}:${mount.containerPath}`);
-        }
-      }
-
-      args.push(CONTAINER_IMAGE);
-      return args;
+  // Provider-contributed env vars (e.g. XDG_DATA_HOME, NO_PROXY)
+  if (providerContribution.env) {
+    for (const [key, value] of Object.entries(providerContribution.env)) {
+      args.push('-e', `${key}=${value}`);
     }
-    ```
+  }
 
-    **Key flags:**
-    - `-i` - Interactive (keeps stdin open)
-    - `--rm` - Remove container after exit (ephemeral)
-    - `--name` - Unique container name for management
-    - `--add-host` - Maps `host.docker.internal` on Linux (automatic on macOS)
-    - `--user` - Run as host UID/GID for file permissions
-    - OneCLI SDK configures container networking for credential injection (no explicit env vars)
-  </Tab>
+  // OneCLI gateway — injects HTTPS_PROXY + certs for credential injection
+  await onecli.ensureAgent({ name: agentGroup.name, identifier: agentIdentifier });
+  const onecliApplied = await onecli.applyContainerConfig(args, {
+    addHostMapping: false,
+    agent: agentIdentifier,
+  });
 
-  <Tab title="Credential Proxy (legacy)">
-    ```typescript
-    function buildContainerArgs(
-      mounts: VolumeMount[],
-      containerName: string,
-    ): string[] {
-      const args: string[] = ['run', '-i', '--rm', '--name', containerName];
+  // Host gateway, user mapping, volume mounts...
+  args.push(...hostGatewayArgs());
 
-      // Pass host timezone so container's local time matches the user's
-      args.push('-e', `TZ=${TIMEZONE}`);
+  // Override entrypoint: run v2 entry point directly via Bun
+  args.push('--entrypoint', 'bash');
+  args.push(containerConfig.imageTag || CONTAINER_IMAGE);
+  args.push('-c', 'exec bun run /app/src/index.ts');
 
-      // Route API traffic through the credential proxy
-      args.push('-e', `ANTHROPIC_BASE_URL=http://${CONTAINER_HOST_GATEWAY}:${CREDENTIAL_PROXY_PORT}`);
+  return args;
+}
+```
 
-      // Mirror the host's auth method with a placeholder value
-      const authMode = detectAuthMode();
-      if (authMode === 'api-key') {
-        args.push('-e', 'ANTHROPIC_API_KEY=placeholder');
-      } else {
-        args.push('-e', 'CLAUDE_CODE_OAUTH_TOKEN=placeholder');
-      }
+**Key flags:**
+- `--rm` - Remove container after exit (ephemeral)
+- `--name` - Unique container name (`nanoclaw-v2-{group}-{timestamp}`)
+- `--add-host` - Maps `host.docker.internal` on Linux (automatic on macOS)
+- `--user` - Run as host UID/GID for file permissions
+- `--entrypoint bash` - Override default entrypoint to run Bun directly
+- OneCLI SDK configures container networking for credential injection (HTTPS_PROXY + CA certs)
 
-      // Run as host user so bind-mounted files are accessible
-      const hostUid = process.getuid?.();
-      const hostGid = process.getgid?.();
-      if (hostUid != null && hostUid !== 0 && hostUid !== 1000) {
-        args.push('--user', `${hostUid}:${hostGid}`);
-        args.push('-e', 'HOME=/home/node');
-      }
-
-      for (const mount of mounts) {
-        if (mount.readonly) {
-          args.push(...readonlyMountArgs(mount.hostPath, mount.containerPath));
-        } else {
-          args.push('-v', `${mount.hostPath}:${mount.containerPath}`);
-        }
-      }
-
-      args.push(CONTAINER_IMAGE);
-      return args;
-    }
-    ```
-
-    **Key flags:**
-    - `-i` - Interactive (keeps stdin open)
-    - `--rm` - Remove container after exit (ephemeral)
-    - `--name` - Unique container name for management
-    - `--user` - Run as host UID/GID for file permissions
-    - `-e ANTHROPIC_BASE_URL` - Routes API calls through the credential proxy
-    - `-e ANTHROPIC_API_KEY` or `-e CLAUDE_CODE_OAUTH_TOKEN` - Placeholder credential (replaced by proxy)
-  </Tab>
-</Tabs>
+<Note>
+Stdin is set to `ignore` (not piped). All configuration is read from `container.json` at `/workspace/agent/container.json` (mounted read-only). There are no credential env vars, no stdout markers, and no stdin JSON.
+</Note>
 
 ### Volume mounts
 
-Mounts are built per-group in `src/container-runner.ts`:
+All groups use the same mount structure. Mounts are built in `src/container-runner.ts`:
 
-| Path | Main Group | Non-Main Group | Mode |
-|------|------------|----------------|------|
-| Project root | `/workspace/project` | Not mounted | Read-only |
-| Store (SQLite DB) | `/workspace/project/store` | Not mounted | Read-write |
-| Group folder | `/workspace/group` | `/workspace/group` | Read-write |
-| Global memory | Via project mount | `/workspace/global` (if exists) | Read-only |
-| Claude sessions | `/home/node/.claude` | `/home/node/.claude` | Read-write |
-| IPC namespace | `/workspace/ipc` | `/workspace/ipc` | Read-write |
-| Agent runner src | `/app/src` | `/app/src` | Read-write |
-| Additional mounts | Configurable | Configurable | Per-config |
+| Host path | Container path | Mode |
+|-----------|---------------|------|
+| Session directory | `/workspace` | Read-write |
+| Agent group folder | `/workspace/agent` | Read-write |
+| container.json | `/workspace/agent/container.json` | Read-only |
+| Composed CLAUDE.md | `/workspace/agent/CLAUDE.md` | Read-only |
+| Skill fragments | `/workspace/agent/.claude-fragments` | Read-only |
+| Global memory | `/workspace/global` | Read-only |
+| Shared CLAUDE.md | `/app/CLAUDE.md` | Read-only |
+| Claude SDK state | `/home/node/.claude` | Read-write |
+| Agent-runner source | `/app/src` | Read-only |
+| Shared skills | `/app/skills` | Read-only |
+| Additional mounts | `/workspace/extra/*` | Per-config |
+| Provider mounts | Various | Per-provider |
 
 <Tip>
-Each group gets its own copy of the agent-runner source in `data/sessions/{group}/agent-runner-src/`, allowing per-group customization without affecting other groups. The cached copy is automatically refreshed when the upstream source file's modification time is newer than the cached version.
+Agent-runner source is shared read-only across all groups from `container/agent-runner/src/`. Source-only changes take effect on next container spawn without an image rebuild.
 </Tip>
 
-### Timeouts
+### Stale detection
 
-Containers have two timeout mechanisms:
+There is no host-side wall-clock timeout in v2. Instead, stale containers are detected by the host sweep (`src/host-sweep.ts`), which runs every 60 seconds:
 
-1. **Hard timeout** - Maximum runtime before force kill (default: 30 minutes 30 seconds with default settings)
-2. **Idle timeout** - Graceful shutdown after period of inactivity (default: 30 minutes)
+- **Heartbeat**: Container touches `/workspace/.heartbeat` periodically. Stale mtime indicates a stuck container.
+- **Processing claims**: The `processing_ack` table tracks which messages the container is actively processing. Long-outstanding claims indicate stuck work.
+- **Container state**: The `container_state` table records current tool-in-flight state for stuck detection.
 
-From the timeout logic in `src/container-runner.ts`:
-
-```typescript
-const configTimeout = group.containerConfig?.timeout || CONTAINER_TIMEOUT;
-const timeoutMs = Math.max(configTimeout, IDLE_TIMEOUT + 30_000);
-
-const killOnTimeout = () => {
-  timedOut = true;
-  logger.error(
-    { group: group.name, containerName },
-    'Container timeout, stopping gracefully',
-  );
-  try {
-    stopContainer(containerName);
-  } catch (err) {
-    logger.warn(
-      { group: group.name, containerName, err },
-      'Graceful stop failed, force killing',
-    );
-    container.kill('SIGKILL');
-  }
-};
-
-let timeout = setTimeout(killOnTimeout, timeoutMs);
-
-// Reset timeout on activity (streaming output)
-const resetTimeout = () => {
-  clearTimeout(timeout);
-  timeout = setTimeout(killOnTimeout, timeoutMs);
-};
-```
+When a stuck container is detected, the host kills it via `docker stop` and marks the session as stopped.
 
 <Note>
-The hard timeout is calculated as `Math.max(configTimeout, IDLE_TIMEOUT + 30_000)`, ensuring a 30-second gap between idle shutdown and the hard kill. With default settings (both 30 minutes), the hard timeout is 30 minutes 30 seconds, giving the `_close` sentinel time to trigger graceful shutdown before the hard kill fires.
+This approach avoids killing containers doing legitimate long-running work. The agent-runner's own idle timeout causes it to exit gracefully when there are no pending messages — no host-side timer is needed.
 </Note>
 
 ## Runtime management
@@ -469,52 +360,16 @@ export function cleanupOrphans(): void {
 }
 ```
 
-## Output streaming
+## IO model
 
-Containers use sentinel markers to enable robust streaming output parsing:
+All IO between host and container goes through per-session SQLite databases. There are no stdout markers, no stdin piping, and no IPC file watchers.
 
-- `---NANOCLAW_OUTPUT_START---` - Marks the beginning of a JSON output block
-- `---NANOCLAW_OUTPUT_END---` - Marks the end of a JSON output block
+- **Inbound**: Host writes `messages_in` rows to `inbound.db`. Container polls for pending rows.
+- **Outbound**: Container writes `messages_out` rows to `outbound.db`. Host delivery polls pick them up.
+- **Liveness**: Container touches `/workspace/.heartbeat`. Host sweep checks mtime.
+- **Seq parity**: Host uses even sequence numbers, container uses odd — this prevents sequence conflicts without locking.
 
-From the stdout handler in `src/container-runner.ts`:
-
-```typescript
-container.stdout.on('data', (data) => {
-  const chunk = data.toString();
-
-  // Stream-parse for output markers
-  if (onOutput) {
-    parseBuffer += chunk;
-    let startIdx: number;
-    while ((startIdx = parseBuffer.indexOf(OUTPUT_START_MARKER)) !== -1) {
-      const endIdx = parseBuffer.indexOf(OUTPUT_END_MARKER, startIdx);
-      if (endIdx === -1) break; // Incomplete pair, wait for more data
-
-      const jsonStr = parseBuffer
-        .slice(startIdx + OUTPUT_START_MARKER.length, endIdx)
-        .trim();
-      parseBuffer = parseBuffer.slice(endIdx + OUTPUT_END_MARKER.length);
-
-      try {
-        const parsed: ContainerOutput = JSON.parse(jsonStr);
-        if (parsed.newSessionId) {
-          newSessionId = parsed.newSessionId;
-        }
-        hadStreamingOutput = true;
-        resetTimeout(); // Reset timeout on activity
-        outputChain = outputChain.then(() => onOutput(parsed));
-      } catch (err) {
-        logger.warn(
-          { group: group.name, error: err },
-          'Failed to parse streamed output chunk',
-        );
-      }
-    }
-  }
-});
-```
-
-This allows the host to receive and act on agent output in real-time, rather than waiting for the container to exit.
+Each database has exactly one writer, eliminating cross-mount lock contention. The `journal_mode=DELETE` pragma is required for cross-mount visibility between host and container.
 
 ## Debugging containers
 

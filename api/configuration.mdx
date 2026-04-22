@@ -23,15 +23,15 @@ Configuration is read from `.env` file or `process.env`.
 </ParamField>
 
 <ParamField path="CONTAINER_TIMEOUT" type="number" default="1800000">
-  Container timeout in milliseconds (default: 30 minutes).
+  Container timeout in milliseconds (default: 30 minutes). In v2, this is a fallback — stale detection is primarily driven by the host sweep checking heartbeat age and processing claim duration.
 </ParamField>
 
 <ParamField path="CONTAINER_MAX_OUTPUT_SIZE" type="number" default="10485760">
-  Maximum container output size in bytes (default: 10MB). Stdout beyond this limit is truncated.
+  Maximum container output size in bytes (default: 10MB).
 </ParamField>
 
 <ParamField path="IDLE_TIMEOUT" type="number" default="1800000">
-  How long to keep container alive after last result in milliseconds (default: 30 minutes).
+  How long to keep container alive after last activity in milliseconds (default: 30 minutes).
 </ParamField>
 
 <Tabs>
@@ -53,7 +53,7 @@ Configuration is read from `.env` file or `process.env`.
 </Tabs>
 
 <ParamField path="MAX_MESSAGES_PER_PROMPT" type="number" default="10">
-  Maximum number of messages sent to container agents per prompt. Minimum value is 1. The database retrieval function defaults to 200 but in practice receives this value.
+  Maximum number of messages sent to container agents per prompt. Minimum value is 1.
 </ParamField>
 
 <ParamField path="MAX_CONCURRENT_CONTAINERS" type="number" default="5">
@@ -68,30 +68,20 @@ Configuration is read from `.env` file or `process.env`.
   Timezone for scheduled tasks (cron expressions). Uses `Intl.DateTimeFormat().resolvedOptions().timeZone` by default.
 </ParamField>
 
-## Configuration constants
-
-Defined in `src/config.ts`:
-
-```typescript
-export const POLL_INTERVAL = 2000; // Message loop interval (ms)
-export const SCHEDULER_POLL_INTERVAL = 60000; // Task scheduler interval (ms)
-export const IPC_POLL_INTERVAL = 1000; // IPC watcher interval (ms)
-```
-
 ## Directory paths
 
 All paths are absolute and resolved from the project root:
 
 <ResponseField name="STORE_DIR" type="string">
-  `{PROJECT_ROOT}/store` - Database and persistent storage
+  `{PROJECT_ROOT}/store` - Legacy storage (auth state for channels)
 </ResponseField>
 
 <ResponseField name="GROUPS_DIR" type="string">
-  `{PROJECT_ROOT}/groups` - Group folders and memory files
+  `{PROJECT_ROOT}/groups` - Agent group folders (CLAUDE.md, container.json, working files)
 </ResponseField>
 
 <ResponseField name="DATA_DIR" type="string">
-  `{PROJECT_ROOT}/data` - Runtime data directory (sessions, IPC namespaces, remote-control state)
+  `{PROJECT_ROOT}/data` - Runtime data directory. Contains the central DB (`v2.db`) and per-session directories (`v2-sessions/`)
 </ResponseField>
 
 <ResponseField name="MOUNT_ALLOWLIST_PATH" type="string">
@@ -104,23 +94,13 @@ All paths are absolute and resolved from the project root:
 
 ## Trigger pattern
 
-The default trigger pattern is generated from `ASSISTANT_NAME`:
+The default trigger pattern is generated from `ASSISTANT_NAME`. In v2, trigger behavior is configured per messaging group agent via the `engage_mode` and `engage_pattern` fields in `messaging_group_agents`:
 
-```typescript
-export const DEFAULT_TRIGGER = `@${ASSISTANT_NAME}`;
-export const TRIGGER_PATTERN = buildTriggerPattern(DEFAULT_TRIGGER);
-```
+- **`pattern`** — matches messages against a regex pattern
+- **`mention`** — responds when the agent is mentioned
+- **`mention-sticky`** — responds to mentions and continues responding in the thread
 
-Each group can override the trigger with a custom value. During message processing, the per-group trigger is resolved via `getTriggerPattern(group.trigger)`, which falls back to the default if no custom trigger is set.
-
-```typescript
-export function getTriggerPattern(trigger?: string): RegExp {
-  const normalizedTrigger = trigger?.trim();
-  return buildTriggerPattern(normalizedTrigger || DEFAULT_TRIGGER);
-}
-```
-
-Matches messages starting with the trigger word (case-insensitive, word-boundary).
+The trigger pattern defaults to `@{ASSISTANT_NAME}` (case-insensitive, word-boundary).
 
 ## Timezone configuration
 

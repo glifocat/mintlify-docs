@@ -1,415 +1,149 @@
 ---
-title: IPC system
-description: Inter-process communication architecture and implementation
+title: Host-container communication
+description: How the host process and containerized agents communicate via session databases
+tag: "UPDATED"
 ---
 
-NanoClaw uses a filesystem-based IPC system to enable communication between the host process and containerized agents. This design avoids network sockets while maintaining security boundaries.
+NanoClaw v2 uses per-session SQLite databases as the sole communication channel between the host process and containerized agents. There are no IPC files, no stdin piping, and no stdout markers.
 
 ## Architecture overview
 
-The IPC system is built on three core components:
+Each session has two database files under `data/v2-sessions/{agent-group-id}/{session-id}/`:
 
-1. **Per-group namespaces** - Each group gets its own IPC directory at `data/ipc/{group}/`
-2. **File-based message passing** - JSON files are written to subdirectories and polled by the host
-3. **Authorization checks** - The directory name determines the source group identity
+- **`inbound.db`** — host writes, container reads
+- **`outbound.db`** — container writes, host reads
 
-<Tree>
-  <Tree.Folder name="data/ipc" defaultOpen>
-    <Tree.Folder name="main" defaultOpen>
-      <Tree.Folder name="messages" />
-      <Tree.Folder name="tasks" />
-      <Tree.Folder name="input" />
-    </Tree.Folder>
-    <Tree.Folder name="family-chat" defaultOpen>
-      <Tree.Folder name="messages" />
-      <Tree.Folder name="tasks" />
-      <Tree.Folder name="input" />
-    </Tree.Folder>
-    <Tree.Folder name="errors" />
-  </Tree.Folder>
-</Tree>
+A `.heartbeat` file is touched by the container for liveness detection.
+
+```mermaid
+graph LR
+    subgraph "Host Process"
+        RT[Router] --> IDB[(inbound.db)]
+        ODB[(outbound.db)] --> DL[Delivery]
+        SW[Sweep] --> IDB
+        SW --> ODB
+    end
+
+    subgraph "Container"
+        PL[Poll Loop] --> IDB
+        PL --> ODB
+        PL --> HB[.heartbeat]
+    end
+
+    style IDB fill:#6ee7b7,color:#1e1e1e
+    style ODB fill:#34d399,color:#1e1e1e
+```
 
 ## How it works
 
-### Starting the IPC watcher
-
-The IPC watcher starts at application launch and runs continuously, polling for new files at `IPC_POLL_INTERVAL` (default: 1000ms on the host). Inside containers, the agent runner polls its own IPC input directory at 500ms intervals.
-
-From `src/ipc.ts`:
-
-```typescript
-export function startIpcWatcher(deps: IpcDeps): void {
-  if (ipcWatcherRunning) {
-    logger.debug('IPC watcher already running, skipping duplicate start');
-    return;
-  }
-  ipcWatcherRunning = true;
-
-  const ipcBaseDir = path.join(DATA_DIR, 'ipc');
-  fs.mkdirSync(ipcBaseDir, { recursive: true });
-
-  const processIpcFiles = async () => {
-    // Scan all group IPC directories
-    let groupFolders: string[];
-    try {
-      groupFolders = fs.readdirSync(ipcBaseDir).filter((f) => {
-        const stat = fs.statSync(path.join(ipcBaseDir, f));
-        return stat.isDirectory() && f !== 'errors';
-      });
-    } catch (err) {
-      logger.error({ err }, 'Error reading IPC base directory');
-      setTimeout(processIpcFiles, IPC_POLL_INTERVAL);
-      return;
-    }
-    // ...
-  };
-
-  processIpcFiles();
-}
-```
-
-### Message flow
-
 <Steps>
-  <Step title="Agent writes IPC file">
-    The agent running in a container writes a JSON file to `/workspace/ipc/messages/` or `/workspace/ipc/tasks/`.
-    
-    Example message file:
-    ```json
-    {
-      "type": "message",
-      "chatJid": "1234567890@s.whatsapp.net",
-      "text": "Hello from the agent!"
-    }
-    ```
-
-    <Note>
-    The `chatJid` format varies by channel: `1234567890@s.whatsapp.net` for WhatsApp, `tg:12345` for Telegram, `discord:12345` for Discord, etc.
-    </Note>
+  <Step title="Host writes inbound message">
+    When a platform message arrives, the router resolves the session and writes a `messages_in` row to `inbound.db` with status `pending` and `trigger=1` if the message should wake the agent.
   </Step>
   
-  <Step title="Host polls IPC directory">
-    The IPC watcher on the host scans `data/ipc/{group}/messages/` and finds the new JSON file.
+  <Step title="Container wakes">
+    The host calls `wakeContainer(session)` which spawns a container if one isn't already running. The container's poll loop detects pending messages in `inbound.db`.
   </Step>
   
-  <Step title="Authorization check">
-    The host determines the source group from the directory path (`{group}`) and verifies the operation is authorized.
-    
-    From `src/ipc.ts`:
-    ```typescript
-    // Authorization: verify this group can send to this chatJid
-    const targetGroup = registeredGroups[data.chatJid];
-    if (
-      isMain ||
-      (targetGroup && targetGroup.folder === sourceGroup)
-    ) {
-      await deps.sendMessage(data.chatJid, data.text);
-    } else {
-      logger.warn(
-        { chatJid: data.chatJid, sourceGroup },
-        'Unauthorized IPC message attempt blocked',
-      );
-    }
-    ```
+  <Step title="Container processes message">
+    The agent-runner claims the message via `processing_ack`, invokes the Claude SDK, and writes the response as a `messages_out` row in `outbound.db`.
   </Step>
   
-  <Step title="Execute operation">
-    If authorized, the host executes the requested operation (send message, schedule task, etc.).
-  </Step>
-  
-  <Step title="Delete IPC file">
-    The IPC file is deleted after processing. If processing fails, the file is moved to `data/ipc/errors/` for debugging.
+  <Step title="Host delivers response">
+    The delivery poll detects new `messages_out` rows and delivers them through the appropriate channel adapter.
   </Step>
 </Steps>
 
-## IPC operations
+## Inbound database schema
 
-### Send message
+The `inbound.db` contains tables written by the host:
 
-Allows agents to send messages to chats.
+- **`messages_in`** — inbound messages (kind: `chat`, `chat-sdk`, `task`, `webhook`, `system`), with `status`, `process_after`, `recurrence`, and `series_id` for task grouping
+- **`destinations`** — named routing map (name → channel type + platform ID + thread ID) for the agent's `send_message` tool
+- **`session_routing`** — single-row default reply routing
+- **`delivered`** — tracks delivery outcomes for outbound message IDs
 
-**File location:** `data/ipc/{group}/messages/message-{timestamp}.json`
+## Outbound database schema
 
-**Format:**
-```json
-{
-  "type": "message",
-  "chatJid": "1234567890@s.whatsapp.net",
-  "text": "Message content"
-}
-```
+The `outbound.db` contains tables written by the container:
 
-The host extracts `chatJid` and `text` from the JSON file. Any additional fields are ignored by the core IPC handler.
+- **`messages_out`** — outbound messages with routing fields, `deliver_after`, and `recurrence`
+- **`processing_ack`** — container tracks which messages it's actively processing (used by host sweep for stuck detection)
+- **`session_state`** — persistent key/value store (e.g., SDK session ID for resume)
+- **`container_state`** — single-row current tool-in-flight state (for stuck detection)
 
-**Authorization:**
-- Main group can send to any chat
-- Non-main groups can only send to their own chat
+## Sequence numbering
 
-### Schedule task
+Host and container use separate sequence spaces to avoid write conflicts:
 
-Creates a scheduled task that runs at specified intervals.
+- **Host** uses even `seq` numbers when writing to `inbound.db`
+- **Container** uses odd `seq` numbers when writing to `outbound.db`
 
-**File location:** `data/ipc/{group}/tasks/task-{timestamp}.json`
+This ensures no sequence conflicts even though both processes may be writing simultaneously to their respective databases.
 
-**Format:**
-```json
-{
-  "type": "schedule_task",
-  "prompt": "Task prompt for the agent",
-  "schedule_type": "cron",
-  "schedule_value": "0 9 * * 1",
-  "context_mode": "group",
-  "targetJid": "1234567890@s.whatsapp.net"
-}
-```
+## System actions
 
-**Parameters:**
-- `schedule_type`: `cron`, `interval`, or `once`
-- `schedule_value`: Cron expression, milliseconds, or ISO timestamp
-- `context_mode`: `group` (shared session) or `isolated` (fresh session)
-- `targetJid`: The chat JID to associate with this task
+The container communicates operations beyond simple messages by writing `messages_out` rows with `kind='system'` and an `action` field. The host delivery system interprets these:
 
-**Authorization:**
-- Main group can schedule tasks for any group
-- Non-main groups can only schedule tasks for themselves
+| Action | Purpose |
+|--------|---------|
+| `schedule_task` | Create a new scheduled task (written to `inbound.db` as a `messages_in` row with `kind='task'`) |
+| `cancel_task` | Cancel a task by ID or series ID |
+| `pause_task` | Pause an active task |
+| `resume_task` | Resume a paused task |
+| `update_task` | Update prompt, schedule, or script of an existing task |
 
-From the `processTaskIpc` function in `src/ipc.ts`:
+Task operations are applied by the host to the session's `inbound.db` since the container cannot write to it directly.
 
-```typescript
-// Authorization: non-main groups can only schedule for themselves
-if (!isMain && targetFolder !== sourceGroup) {
-  logger.warn(
-    { sourceGroup, targetFolder },
-    'Unauthorized schedule_task attempt blocked',
-  );
-  break;
-}
-```
+## Liveness detection
 
-### Pause task
+The container touches `/workspace/.heartbeat` periodically during operation. The host sweep (`src/host-sweep.ts`) runs every 60 seconds and checks:
 
-Pauses an active task.
+1. **Heartbeat mtime** — if stale beyond a threshold, the container may be stuck
+2. **Processing claim age** — long-outstanding claims in `processing_ack` indicate stuck work
+3. **Container state** — the `container_state` table distinguishes legitimate long-running work from stuck containers
 
-**Format:**
-```json
-{
-  "type": "pause_task",
-  "taskId": "task-1234567890-abc123"
-}
-```
+## Database pragmas
 
-### Resume task
-
-Resumes a paused task.
-
-**Format:**
-```json
-{
-  "type": "resume_task",
-  "taskId": "task-1234567890-abc123"
-}
-```
-
-### Update task
-
-Updates an existing task's prompt, schedule type, or schedule value. The next run time is automatically recalculated when the schedule changes.
-
-**Format:**
-```json
-{
-  "type": "update_task",
-  "taskId": "task-1234567890-abc123",
-  "prompt": "Updated task prompt",
-  "schedule_type": "cron",
-  "schedule_value": "0 10 * * *"
-}
-```
-
-All fields except `taskId` are optional — only include the fields you want to change.
-
-**Authorization:**
-- Main group can update any task
-- Non-main groups can only update their own tasks
-
-### Cancel task
-
-Deletes a task permanently.
-
-**Format:**
-```json
-{
-  "type": "cancel_task",
-  "taskId": "task-1234567890-abc123"
-}
-```
-
-### Refresh groups
-
-Forces a refresh of group metadata. **Main group only.**
-
-**Format:**
-```json
-{
-  "type": "refresh_groups"
-}
-```
-
-From `src/ipc.ts`:
-
-```typescript
-case 'refresh_groups':
-  // Only main group can request a refresh
-  if (isMain) {
-    logger.info(
-      { sourceGroup },
-      'Group metadata refresh requested via IPC',
-    );
-    await deps.syncGroups(true);
-  } else {
-    logger.warn(
-      { sourceGroup },
-      'Unauthorized refresh_groups attempt blocked',
-    );
-  }
-  break;
-```
-
-### Register group
-
-Registers or updates a group for agent access. **Main group only.**
-
-**Format:**
-```json
-{
-  "type": "register_group",
-  "jid": "1234567890-9876543210@g.us",
-  "name": "Family Chat",
-  "folder": "family-chat",
-  "trigger": "@Andy",
-  "requiresTrigger": true,
-  "containerConfig": {
-    "additionalMounts": [],
-    "timeout": 1800000
-  }
-}
-```
-
-<Note>
-When updating an existing group via `register_group`, the `isMain` flag is preserved from the current registration. This prevents IPC configuration updates (e.g. adding mounts) from accidentally stripping the main group's privileged status.
-</Note>
-
-## Task snapshot refresh
-
-When a task mutation succeeds (`schedule_task`, `pause_task`, `resume_task`, `cancel_task`, or `update_task`), the host immediately refreshes the `current_tasks.json` snapshot for all registered groups. This ensures that a subsequent `list_tasks` call within the same agent session sees the updated task list without waiting for a container restart.
-
-The refresh is implemented via an `onTasksChanged` callback in `IpcDeps`, keeping `ipc.ts` decoupled from the container and snapshot layers.
-
-## Security model
-
-### Identity verification
-
-The source group identity is determined by the directory path, not the file contents. This prevents impersonation attacks.
-
-From the IPC watcher in `src/ipc.ts`:
-
-```typescript
-for (const sourceGroup of groupFolders) {
-  const isMain = folderIsMain.get(sourceGroup) === true;
-  const messagesDir = path.join(ipcBaseDir, sourceGroup, 'messages');
-  const tasksDir = path.join(ipcBaseDir, sourceGroup, 'tasks');
-  // Process files with verified identity
-}
-```
-
-### Mount isolation
-
-Each container can only write to its own IPC namespace:
-
-- Main group: `/workspace/ipc` → `data/ipc/main/`
-- Other groups: `/workspace/ipc` → `data/ipc/{group}/`
-
-This is enforced at mount time in `src/container-runner.ts`:
-
-```typescript
-// Per-group IPC namespace: each group gets its own IPC directory
-// This prevents cross-group privilege escalation via IPC
-const groupIpcDir = resolveGroupIpcPath(group.folder);
-fs.mkdirSync(path.join(groupIpcDir, 'messages'), { recursive: true });
-fs.mkdirSync(path.join(groupIpcDir, 'tasks'), { recursive: true });
-fs.mkdirSync(path.join(groupIpcDir, 'input'), { recursive: true });
-mounts.push({
-  hostPath: groupIpcDir,
-  containerPath: '/workspace/ipc',
-  readonly: false,
-});
-```
-
-### Error handling
-
-Failed IPC operations are moved to `data/ipc/errors/` with a prefix identifying the source group:
-
-From `src/ipc.ts`:
-
-```typescript
-const errorDir = path.join(ipcBaseDir, 'errors');
-fs.mkdirSync(errorDir, { recursive: true });
-fs.renameSync(
-  filePath,
-  path.join(errorDir, `${sourceGroup}-${file}`),
-);
-```
-
-## Debugging IPC issues
-
-<Accordion title="Check for failed IPC operations">
-  ```bash
-  ls -la data/ipc/errors/
-  cat data/ipc/errors/main-message-*.json
-  ```
-  
-  Failed operations are moved here with the source group prefix.
-</Accordion>
-
-<Accordion title="Monitor IPC activity">
-  ```bash
-  grep 'IPC' logs/nanoclaw.log | tail -20
-  ```
-  
-  All IPC operations are logged with the source group and operation type.
-</Accordion>
-
-<Accordion title="Verify IPC directory permissions">
-  ```bash
-  ls -la data/ipc/main/
-  ls -la data/ipc/family-chat/
-  ```
-  
-  Ensure the host process can read and write these directories.
-</Accordion>
-
-<Accordion title="Test IPC manually">
-  ```bash
-  # Write a test message
-  echo '{"type":"message","chatJid":"me","text":"test"}' > \
-    data/ipc/main/messages/test.json
-  
-  # Watch logs for processing
-  tail -f logs/nanoclaw.log | grep IPC
-  ```
-</Accordion>
-
-## Performance considerations
-
-<Tip>
-  The host-side IPC poll interval is configurable via `IPC_POLL_INTERVAL` in `src/config.ts` (default: 1000ms). The in-container poll interval is 500ms (hardcoded in the agent runner). Lowering the host interval reduces latency but increases CPU usage.
-</Tip>
+The `journal_mode=DELETE` pragma is required for cross-mount visibility. WAL mode does not work reliably across Docker bind mounts because the WAL file's shared memory mapping is not visible to the other process.
 
 <Warning>
-  IPC operations are processed sequentially. If processing a single operation takes longer than the poll interval, a backlog can form. Monitor `data/ipc/{group}/` directories for accumulating files.
+Do not change the journal mode in session databases. `DELETE` mode is load-bearing for host-container communication across bind mounts.
 </Warning>
+
+## Debugging
+
+<Accordion title="Check inbound message status">
+  ```bash
+  sqlite3 data/v2-sessions/{group-id}/{session-id}/inbound.db \
+    "SELECT seq, kind, status, process_after FROM messages_in ORDER BY seq DESC LIMIT 10;"
+  ```
+</Accordion>
+
+<Accordion title="Check outbound messages">
+  ```bash
+  sqlite3 data/v2-sessions/{group-id}/{session-id}/outbound.db \
+    "SELECT seq, kind, deliver_after FROM messages_out ORDER BY seq DESC LIMIT 10;"
+  ```
+</Accordion>
+
+<Accordion title="Check heartbeat">
+  ```bash
+  stat data/v2-sessions/{group-id}/{session-id}/.heartbeat
+  ```
+  
+  If the mtime is more than a few minutes old while a container is running, the container may be stuck.
+</Accordion>
+
+<Accordion title="Check processing claims">
+  ```bash
+  sqlite3 data/v2-sessions/{group-id}/{session-id}/inbound.db \
+    "SELECT * FROM processing_ack;"
+  ```
+</Accordion>
 
 ## Related pages
 
 - [Security model](/advanced/security-model) - Authorization and trust boundaries
 - [Container runtime](/advanced/container-runtime) - How agents execute in containers
-- [Troubleshooting](/advanced/troubleshooting) - Common IPC issues
+- [Troubleshooting](/advanced/troubleshooting) - Common communication issues
