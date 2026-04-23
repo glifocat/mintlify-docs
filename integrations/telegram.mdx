@@ -1,6 +1,7 @@
 ---
 title: Telegram integration
 description: Add Telegram support using the /add-telegram skill
+tag: "UPDATED"
 ---
 
 import SyncEnv from "/snippets/sync-env.mdx";
@@ -430,9 +431,9 @@ Since Telegram was added via a git merge, you remove it by reverting the merge c
     ```bash
     npm install
     npm run build
-    launchctl kickstart -k gui/$(id -u)/com.nanoclaw  # macOS
-    # or: systemctl --user restart nanoclaw (Linux)
     ```
+
+    <RestartService />
   </Step>
 </Steps>
 
