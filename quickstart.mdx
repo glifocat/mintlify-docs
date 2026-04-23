@@ -17,48 +17,43 @@ This guide assumes you have Node.js 20+ and Claude Code installed. See [Installa
 ## Setup process
 
 <Steps>
-  <Step title="Fork and clone the repository">
-    Fork [qwibitai/nanoclaw](https://github.com/qwibitai/nanoclaw) on GitHub, then clone your fork:
+  <Step title="Clone the repository">
+    Clone NanoClaw (or your fork) into a fresh directory:
 
     ```bash
-    git clone https://github.com/<you>/nanoclaw.git
-    cd nanoclaw
+    git clone https://github.com/qwibitai/nanoclaw.git nanoclaw-v2
     ```
 
     <Info>
-    Forking gives you a remote to push your customizations to. If you just want to try things out, `git clone https://github.com/qwibitai/nanoclaw.git` works too — you can migrate to a fork later.
+    Forking first gives you a remote to push your customizations to. A plain clone works for trying things out — you can migrate to a fork later.
     </Info>
   </Step>
 
-  <Step title="Launch Claude Code">
-    Open Claude Code in the NanoClaw directory:
-
+  <Step title="Enter the directory">
     ```bash
-    claude
+    cd nanoclaw-v2
     ```
-
-    This launches Claude Code with access to the NanoClaw codebase.
   </Step>
 
-  <Step title="Run the setup command">
-    In Claude Code, run:
+  <Step title="Run nanoclaw.sh">
+    Kick off the end-to-end installer:
 
-    ```
-    /setup
+    ```bash
+    bash nanoclaw.sh
     ```
 
-    Claude Code will automatically handle:
-    - Installing Node.js dependencies
-    - Setting up your container runtime (Apple Container or Docker)
-    - Building the agent container image
-    - Authenticating with Claude
-    - Installing the skills marketplace plugin
-    - Asking which messaging channels you want
-    - Running the setup skill for each selected channel
-    - Starting the background service
+    `nanoclaw.sh` is the single entry point. It walks you from a fresh machine to a named agent you can message. It:
+
+    - Installs Node, pnpm, and Docker if missing
+    - Registers your Anthropic credential with OneCLI Agent Vault
+    - Builds the agent container image
+    - Pairs your first channel (Telegram, Discord, WhatsApp, or a local CLI)
+    - Installs and starts the background service
+
+    If a step fails, Claude Code is invoked automatically to diagnose and resume from where it broke — no manual recovery needed.
 
     <Info>
-    The `/setup` skill is AI-native: no installation wizard, just Claude guiding you through each step.
+    The installer is a hybrid flow: fast scripted path for the deterministic steps, with Claude Code handoff when a step needs judgment or repair.
     </Info>
   </Step>
 
@@ -124,13 +119,13 @@ This guide assumes you have Node.js 20+ and Claude Code installed. See [Installa
 
 ## What happens during setup?
 
-Here's what Claude Code does when you run `/setup`:
+Here's what `nanoclaw.sh` (and its Claude Code handoff for judgment-requiring steps) does:
 
 <Accordion title="1. Bootstrap dependencies">
-  - Verifies Node.js 20+ is installed
-  - Runs `npm install` to install dependencies
+  - Verifies Node.js 20+ is installed (installs it if missing)
+  - Installs pnpm and runs `pnpm install --frozen-lockfile`
   - Tests that native modules (better-sqlite3) load correctly
-  - Detects your platform (macOS/Linux) and environment (WSL, headless)
+  - Detects your platform (macOS/Linux/WSL) and environment
 </Accordion>
 
 <Accordion title="2. Container runtime setup">
