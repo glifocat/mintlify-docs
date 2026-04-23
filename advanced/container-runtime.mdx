@@ -75,13 +75,15 @@ The agent container is built from `container/Dockerfile` and includes:
 ./container/build.sh
 ```
 
+### Per-checkout image tag
+
+Each checkout gets a deterministic slug (`sha1(projectRoot)[:8]`) so two NanoClaw installs on the same host don't share the `nanoclaw-agent:latest` tag and overwrite each other on rebuild. The base image is tagged `nanoclaw-agent-v2-<slug>:latest`; per-agent-group derivatives are tagged `nanoclaw-agent-v2-<slug>:<agentGroupId>`.
+
+Override with the `CONTAINER_IMAGE` or `CONTAINER_IMAGE_BASE` environment variables if you need a fixed tag (for example, pushing to a registry).
+
 ### Per-agent-group images
 
-Agent groups can specify custom packages in `container.json`. The host builds a derived Docker image:
-
-- Tag: `nanoclaw-agent:{agentGroupId}`
-- Built on top of `nanoclaw-agent:latest`
-- Adds custom apt and npm packages
+Agent groups can specify custom packages in `container.json`. The host builds a derived Docker image on top of the base image, adding custom apt and npm packages. The derived tag reuses the install slug: `nanoclaw-agent-v2-<slug>:<agentGroupId>`.
 
 ## Two-database IO model
 
@@ -160,12 +162,26 @@ Containers are spawned by the `spawnContainer` function. Wake calls are deduplic
 | Additional mounts | `/workspace/extra/{name}` | Per-config | Validated against allowlist |
 | Provider mounts | Various | Per-provider | Provider-contributed |
 
+### Install-scoped orphan reaper
+
+Every spawned container is stamped with a `nanoclaw-install=<slug>` Docker label. The orphan reaper filters by that label so it only reaps containers from this install:
+
+```bash
+docker ps --filter label=nanoclaw-install=<slug> --format '{{.Names}}'
+```
+
+Peers — including a crash-looping legacy install — cannot touch your containers, and you cannot touch theirs. This replaces the old substring-match approach (`--filter name=nanoclaw-`) which let any peer trash every install's containers on boot.
+
 ### Timeouts and stale detection
 
 Containers have two timeout/detection mechanisms:
 
 1. **Container timeout** — maximum runtime before force kill (default: 30 minutes)
 2. **Stale detection** — host sweep checks `.heartbeat` mtime and `processing_ack` age to detect stuck containers
+
+The sweep runs its wake step **before** crashed-container cleanup so a freshly-spawned container clears its own orphan claims on startup rather than being reset out from under itself. `resetStuckProcessingRows` is idempotent: messages already carrying a future `process_after` skip the retry bump and wait for the backoff to elapse.
+
+The heartbeat file (`.heartbeat`) is cleared at spawn time. Otherwise the sweep's ceiling check would read the previous container's stale mtime and kill the replacement within seconds of startup.
 
 ### Container shutdown
 
@@ -192,8 +208,14 @@ const onecliApplied = await onecli.applyContainerConfig(args, {
 
 <Accordion title="List running containers">
   ```bash
+  # All NanoClaw containers on this host (every install)
   docker ps --filter name=nanoclaw-
+
+  # Just this install's containers (by label)
+  docker ps --filter label=nanoclaw-install=<slug>
   ```
+
+  The install slug is `sha1(projectRoot)[:8]`. Print it with `node -e "console.log(require('./dist/install-slug.js').getInstallSlug())"`.
 </Accordion>
 
 <Accordion title="View container logs">
