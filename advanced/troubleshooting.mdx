@@ -264,6 +264,30 @@ If you need Kubernetes enabled, set `CONTAINER_IMAGE` to an image stored in a re
 
 **Fix:** Already fixed. The agent runner now passes `resumeSessionAt` with the last assistant message UUID to explicitly anchor each resume.
 
+### Peer installs killing each other's containers
+
+**Symptoms:** Containers get killed within seconds of spawning on a host that has two NanoClaw checkouts (or a leftover v1 install). Logs show the container exits cleanly but the session never completes a turn.
+
+**Cause:** Before v2.0.5, the orphan reaper matched any container with a name starting with `nanoclaw-`, which picked up peer installs. A crash-looping legacy service could reap a healthy install's containers on every boot.
+
+**Fix:** Already fixed. Containers are now stamped with `--label nanoclaw-install=<slug>` at spawn and the reaper filters by that label. Each checkout also gets its own service unit (`com.nanoclaw-v2-<slug>` / `nanoclaw-v2-<slug>.service`) and its own image tag (`nanoclaw-agent-v2-<slug>:latest`).
+
+### Stale heartbeat kills freshly spawned containers
+
+**Symptoms:** A session that just restarted gets killed by the host sweep within a few seconds of the new container starting.
+
+**Cause:** The previous container's `.heartbeat` file was left behind with the mtime of its last SDK activity. The sweep's ceiling check read the stale mtime and killed the new instance before it had a chance to touch the file.
+
+**Fix:** Already fixed. `container-runner` now removes any orphan heartbeat right before spawn, so the sweep treats the new container as a fresh spawn and grants startup grace.
+
+### Orphan `processing_ack` claim stalls message retries
+
+**Symptoms:** An inbound message reaches `MAX_TRIES` and is marked failed without any container ever being spawned for it. Logs show repeated `resetStuckProcessingRows` bumps pushing `process_after` further into the future.
+
+**Cause:** When a container exited with an unresolved `processing_ack` claim, the host sweep reordered its work such that the crashed-container cleanup ran before the wake step. That cleanup reset the matching inbound row with `tries++` and a future `process_after`, dropping `dueCount` to 0 so wake never fired. On the next tick the sweep found the same orphan claim, bumped `tries` again, and repeated until the message failed.
+
+**Fix:** Already fixed. The sweep now wakes due messages before cleaning up crashed-container claims, and `resetStuckProcessingRows` is idempotent — if `process_after` is already in the future, the retry bump is skipped. A fresh container clears the orphan `processing` row on its own startup.
+
 ## Container 401 errors
 
 ### Symptoms

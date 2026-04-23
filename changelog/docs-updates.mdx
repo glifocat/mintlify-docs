@@ -5,6 +5,14 @@ icon: "file-pen"
 rss: true
 ---
 
+<Update label="v2.0.3–v2.0.8 sync" description="2026-04-23" tags={["Updated"]}>
+  Brought docs in line with the 2.0.3 through 2.0.8 release wave.
+
+  - **`advanced/container-runtime.mdx`**: documented per-checkout image tags (`nanoclaw-agent-v2-<slug>:latest`) and per-install service naming, the `nanoclaw-install=<slug>` label stamped on every container, label-scoped orphan reaping, and the pre-spawn heartbeat clear step.
+  - **`advanced/troubleshooting.mdx`**: added known-issue entries for peer installs killing each other's containers (fixed by label scoping), stale heartbeat killing freshly spawned containers, and orphan `processing_ack` claims stalling message retries.
+  - **`changelog/index.mdx`**: added release entries for 2.0.3, 2.0.5, 2.0.6, and 2.0.8.
+</Update>
+
 <Update label="v2.0.0 launch readiness: front-door rewrites" description="2026-04-22" tags={["Updated"]}>
   Phase A of the v2 documentation sprint — bringing the pages every new user lands on into alignment with the v2 rewrite. All claims verified directly against upstream source (`src/db/schema.ts`, `src/types.ts`, `src/config.ts`, `container/Dockerfile`, `src/delivery.ts`) rather than upstream `docs/` (which includes a stale `architecture.md` draft and a `db-session.md` that omits the `container_state` table).
 

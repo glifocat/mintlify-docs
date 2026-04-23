@@ -6,6 +6,24 @@ rss: true
 tag: "UPDATED"
 ---
 
+<Update label="v2.0.8" description="2026-04-23" tags={["Fix"]}>
+  - Fixed Telegram `ask_question` delivery — option indices are now encoded in `callback_data` so payloads fit Telegram's 64-byte cap for any option value (long tokens, ISO datetimes, URLs). A backward-compat fallback resolves cards delivered under the old encoding.
+  - Fixed container restart recovery — the host sweep now wakes due messages before cleaning up crashed-container claims, and `resetStuckProcessingRows` is idempotent so retry bumps don't push `process_after` indefinitely.
+  - Fixed stale heartbeat killing freshly spawned containers — orphan `.heartbeat` files are cleared at spawn time so the sweep's ceiling check treats the new instance as a fresh spawn.
+</Update>
+
+<Update label="v2.0.6" description="2026-04-23" tags={["Feature", "Skill"]}>
+  - Added `/add-atomic-chat-tool` skill — exposes local Atomic Chat models (OpenAI-compatible API at `127.0.0.1:1337/v1`) as `atomic_chat_list_models` and `atomic_chat_generate` MCP tools to the container agent.
+</Update>
+
+<Update label="v2.0.5" description="2026-04-23" tags={["Fix"]}>
+  - Fixed peer installs killing each other's containers — every container is now stamped with `--label nanoclaw-install=<slug>` at spawn, and the orphan reaper filters by that label instead of matching container names by substring. Setup also unloads crash-looping legacy services before installing its own.
+</Update>
+
+<Update label="v2.0.3" description="2026-04-23" tags={["Feature"]}>
+  - Per-checkout service name and Docker image tag — two NanoClaw installs on the same host no longer fight over `com.nanoclaw` / `nanoclaw.service` / `nanoclaw-agent:latest`. A deterministic slug (`sha1(projectRoot)[:8]`) namespaces the launchd label, systemd unit, and image tag. Legacy `com.nanoclaw` services on the host coexist untouched.
+</Update>
+
 <Update label="v2.0.0" description="2026-04-22" tags={["Breaking"]}>
   - Ground-up architectural rewrite with new entity model (users, roles, messaging groups, agent groups, wirings)
   - Two-database session model — `inbound.db` (host writes) and `outbound.db` (container writes) eliminate cross-mount SQLite contention
