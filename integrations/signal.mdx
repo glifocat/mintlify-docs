@@ -1,0 +1,240 @@
+---
+title: "Signal integration"
+description: "Add Signal support via the /add-signal skill — native adapter over signal-cli TCP daemon."
+tag: "NEW"
+keywords: ["signal", "signal-cli", "add-signal", "messaging", "channel"]
+---
+
+Signal is a messaging channel for NanoClaw, installed via the `/add-signal` skill. The adapter talks JSON-RPC to a [signal-cli](https://github.com/AsamK/signal-cli) TCP daemon — no Chat SDK bridge, no npm runtime dependencies, only Node.js builtins.
+
+## Overview
+
+Signal is direct-addressable — your phone number is the platform ID. The skill copies the adapter from the `channels` branch into your fork, installs `qrcode` (used by the setup flow to render the link QR in your terminal), and wires your first agent to the linked account.
+
+### Features
+
+- **DMs and groups** — 1:1 chats use your phone number (e.g. `+15555550123`); groups use `group:<groupId>`
+- **Markdown formatting** — `**bold**`, `*italic*`, `` `code` ``, fenced code, `~~strike~~`, `||spoiler||` — converted to Signal's offset-based text styles
+- **Quoted replies** — `replyTo*` fields are populated from Signal quotes
+- **Typing indicators** — DMs only (Signal doesn't support group typing)
+- **Echo suppression** — outbound messages are matched on `(platformId, text)` within a 10 s TTL to avoid syncMessage loops
+- **Note to Self** — messages you send to your own account from another device route in as inbound with `isFromMe: true`
+- **Voice attachments** — detected but not transcribed by default; the agent receives `[Voice Message]` placeholder text. Run `/add-voice-transcription` for local transcription
+
+Not yet supported: outbound file attachments (logged and dropped), edit/delete messages, reactions.
+
+## Prerequisites
+
+You need [signal-cli](https://github.com/AsamK/signal-cli) installed with your Signal account linked:
+
+<Tabs>
+  <Tab title="macOS">
+    ```bash
+    brew install signal-cli
+    ```
+  </Tab>
+  <Tab title="Linux">
+    Download the latest release from [GitHub releases](https://github.com/AsamK/signal-cli/releases), extract, and put `signal-cli` on your `PATH`.
+  </Tab>
+</Tabs>
+
+<Note>
+The NanoClaw installer (`bash nanoclaw.sh`) probes for `signal-cli`, offers the Homebrew command on macOS if it's missing, and links the GitHub releases page on Linux. It can also drive the `signal-cli link` flow for you — scanning the QR happens inline, no manual link step required.
+</Note>
+
+## Adding Signal
+
+### Through the installer
+
+If you're running `bash nanoclaw.sh` for the first time, pick **Signal** at the channel prompt. The setup flow handles everything: installs the adapter, runs `signal-cli link --name NanoClaw`, renders the link URL as a terminal QR code, persists `SIGNAL_ACCOUNT` to `.env`, restarts the service, and wires your first agent.
+
+### Through the skill
+
+On an existing install, use the `/add-signal` skill:
+
+<Steps>
+  <Step title="Run the skill">
+    ```bash
+    claude
+    /add-signal
+    ```
+  </Step>
+
+  <Step title="Copy the adapter">
+    The skill fetches the `channels` branch and copies `src/channels/signal.ts` and `src/channels/signal.test.ts` into your fork. It also appends `import './signal.js';` to `src/channels/index.ts` so the channel self-registers on startup. No npm packages are added — the runtime adapter uses only Node.js builtins (`node:net`, `node:child_process`, `node:fs`).
+  </Step>
+
+  <Step title="Link your account">
+    If you haven't already, link signal-cli to your phone:
+
+    ```bash
+    signal-cli -a +1YOURNUMBER link --name NanoClaw
+    ```
+
+    Scan the QR from **Signal → Settings → Linked Devices → Link New Device**. Signal's `link` flow creates a *secondary* device — the phone number comes from the primary (the phone that scanned the QR). This host then sends and receives as that number.
+  </Step>
+
+  <Step title="Configure credentials">
+    Add your Signal account to `.env`:
+
+    ```bash
+    SIGNAL_ACCOUNT=+1YOURNUMBER
+    ```
+
+    Sync to the container and restart (see [Configuration](#configuration) below).
+  </Step>
+
+  <Step title="Wire your first agent">
+    Run `/init-first-agent` to create an agent and wire it to your Signal DM, or `/manage-channels` to wire Signal to an existing agent group.
+  </Step>
+</Steps>
+
+## Configuration
+
+### Environment variables
+
+Add to `.env`:
+
+```bash
+SIGNAL_ACCOUNT=+1YOURNUMBER
+```
+
+Optional settings:
+
+```bash
+# TCP daemon host and port (default: 127.0.0.1:7583)
+SIGNAL_TCP_HOST=127.0.0.1
+SIGNAL_TCP_PORT=7583
+
+# Path to the signal-cli binary (default: resolved on PATH)
+SIGNAL_CLI_PATH=/usr/local/bin/signal-cli
+
+# Whether NanoClaw manages the daemon lifecycle (default: true).
+# Set to false if you run signal-cli daemon externally.
+SIGNAL_MANAGE_DAEMON=true
+
+# signal-cli data directory (default: ~/.local/share/signal-cli)
+SIGNAL_DATA_DIR=~/.local/share/signal-cli
+```
+
+<Warning>
+Keep `SIGNAL_TCP_HOST` on `127.0.0.1`. The signal-cli daemon has no auth — binding it to a public interface would expose your full Signal account to the network.
+</Warning>
+
+### Sync to container
+
+The container reads environment from `data/env/env`:
+
+```bash
+mkdir -p data/env && cp .env data/env/env
+```
+
+### Restart the service
+
+```bash
+# macOS
+launchctl kickstart -k gui/$(id -u)/com.nanoclaw
+
+# Linux
+systemctl --user restart nanoclaw
+```
+
+## Platform IDs
+
+Signal chats use native platform IDs — no channel prefix.
+
+- **Direct message:** your correspondent's phone number, e.g. `+15555550123`
+- **Group:** `group:<groupId>` — list IDs with `signal-cli -a +1YOURNUMBER listGroups`
+
+Because phone numbers are already globally unique, `init-first-agent` skips channel-prefixing for Signal IDs (phone numbers starting with `+` and group IDs starting with `group:`).
+
+## Daemon lifecycle
+
+By default (`SIGNAL_MANAGE_DAEMON=true`), NanoClaw auto-starts and auto-stops the signal-cli TCP daemon as the channel connects and disconnects. The daemon listens on `127.0.0.1:7583` and the adapter speaks JSON-RPC over TCP.
+
+If you already run signal-cli as a long-lived service, set `SIGNAL_MANAGE_DAEMON=false` and start the daemon yourself:
+
+```bash
+signal-cli -a +1YOURNUMBER daemon --tcp 127.0.0.1:7583
+```
+
+## Isolation
+
+Signal is direct-addressable — one agent per Signal account is the common pattern. Multiple chats with the same operator can share an agent group; groups with other people should typically be separate agent groups. See [Channel isolation model](/concepts/groups).
+
+## Troubleshooting
+
+### Daemon not reachable
+
+Check the host log:
+
+```bash
+grep "Signal" logs/nanoclaw.log | tail
+```
+
+<AccordionGroup>
+  <Accordion title="Signal daemon failed to start">
+    Confirm `signal-cli` is on `PATH` (or set `SIGNAL_CLI_PATH`) and that your account is linked:
+
+    ```bash
+    signal-cli -a +1YOURNUMBER listIdentities
+    ```
+
+    This should print identities without prompting. If it errors, the account isn't linked yet — run `signal-cli -a +1YOURNUMBER link --name NanoClaw`.
+  </Accordion>
+
+  <Accordion title="Signal daemon not reachable at 127.0.0.1:7583">
+    If `SIGNAL_MANAGE_DAEMON=false`, start the daemon yourself:
+
+    ```bash
+    signal-cli -a +1YOURNUMBER daemon --tcp 127.0.0.1:7583
+    ```
+
+    If `SIGNAL_MANAGE_DAEMON=true`, check whether another process is already bound to the port:
+
+    ```bash
+    lsof -i :7583
+    ```
+  </Accordion>
+
+  <Accordion title="Bot not responding">
+    1. Confirm the channel initialized: `grep "Signal channel connected" logs/nanoclaw.log | tail -1`
+    2. Confirm the channel is wired to an agent group:
+       ```bash
+       sqlite3 data/v2.db "SELECT mg.platform_id, mg.name FROM messaging_groups mg JOIN messaging_group_agents mga ON mg.id = mga.messaging_group_id WHERE mg.channel_type='signal'"
+       ```
+    3. Confirm the service is running:
+       ```bash
+       launchctl print gui/$(id -u)/com.nanoclaw   # macOS
+       systemctl --user status nanoclaw             # Linux
+       ```
+  </Accordion>
+
+  <Accordion title="Lost connection mid-session">
+    If you see `Signal channel lost TCP connection to signal-cli daemon` in the logs, the daemon dropped the connection. There's no auto-reconnect yet — restart the service to re-establish.
+  </Accordion>
+</AccordionGroup>
+
+## Removing Signal
+
+Since Signal is added by the `/add-signal` skill, you remove it by reverting the skill's commits. See [removing a skill](/integrations/skills-system#removing-a-skill) for the general pattern.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Voice transcription" icon="microphone" href="/features/voice-transcription">
+    Install `/add-voice-transcription` to transcribe Signal voice messages
+  </Card>
+
+  <Card title="Manage channels" icon="plug" href="/integrations/overview">
+    Wire Signal to an existing agent group, or add more channels
+  </Card>
+
+  <Card title="Skills system" icon="puzzle-piece" href="/integrations/skills-system">
+    How the `channels` branch and `/add-<name>` skills work
+  </Card>
+
+  <Card title="Channel isolation" icon="layer-group" href="/concepts/groups">
+    Decide how Signal chats relate to agent groups
+  </Card>
+</CardGroup>
