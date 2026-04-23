@@ -14,7 +14,9 @@ Run these commands to get a quick overview of system health:
 ```bash
 # 1. Is the service running?
 launchctl list | grep nanoclaw
-# Expected: PID  0  com.nanoclaw (PID = running, "-" = not running, non-zero exit = crashed)
+# Expected: PID  0  com.nanoclaw-v2-<slug> (PID = running, "-" = not running, non-zero exit = crashed)
+# Each checkout gets its own service label: com.nanoclaw-v2-<sha1(projectRoot)[:8]>.
+# Legacy v1 installs kept the unsuffixed com.nanoclaw label and can coexist.
 
 # 2. Any running containers?
 docker ps --format '{{.Names}} {{.Status}}' 2>/dev/null | grep nanoclaw
@@ -263,6 +265,44 @@ If you need Kubernetes enabled, set `CONTAINER_IMAGE` to an image stored in a re
 **Issue:** When agent teams spawns subagent CLI processes, they write to the same session JSONL. On subsequent `query()` resumes, the CLI reads the JSONL but may pick a stale branch tip, causing responses to land on a branch the host never receives.
 
 **Fix:** Already fixed. The agent runner now passes `resumeSessionAt` with the last assistant message UUID to explicitly anchor each resume.
+
+## Multiple installs on the same host
+
+Two NanoClaw checkouts on one host used to fight over the shared `com.nanoclaw` service label and the `nanoclaw-agent:latest` image tag — the second install silently rewrote the service pointer and rebuilt the image out from under the first.
+
+Each checkout now gets a deterministic per-checkout slug (`sha1(projectRoot)[:8]`) stamped onto every install artifact:
+
+| Artifact | Scope |
+|----------|-------|
+| launchd label | `com.nanoclaw-v2-<slug>` |
+| systemd unit | `nanoclaw-v2-<slug>.service` |
+| Base image tag | `nanoclaw-agent-v2-<slug>:latest` |
+| Per-group image tag | `nanoclaw-agent-v2-<slug>:<agentGroupId>` |
+| Container label | `nanoclaw-install=<slug>` |
+
+The orphan reaper filters containers by that label, so peer installs can't kill your containers and you can't kill theirs.
+
+### Unhealthy peer cleanup at setup
+
+Setup's preflight still enumerates other `com.nanoclaw*` launchd plists (or `nanoclaw*` user systemd units), checks their state and restart count, and unloads any peer that is crash-looping (state != running AND runs > 10) before installing this install's service. Healthy peers are left alone — multiple installs can coexist.
+
+The common symptom this fixes: a legacy v1 `com.nanoclaw` plist respawning ~6k times would call its unscoped `cleanupOrphans()` on every boot and kill the healthy install's session containers within seconds of spawn.
+
+## Container restart recovery
+
+**Symptoms:**
+- A freshly-spawned container is killed within seconds. Host log shows "stale heartbeat" or a premature kill.
+- A message is marked permanently failed after hitting `MAX_TRIES` without any container ever spawning.
+- Every retry on a delivery-failed question or approval card hits `UNIQUE constraint failed: pending_questions.question_id` (or `pending_approvals.approval_id`).
+
+**Fixes already applied (v2.0.7+):**
+
+- **Orphan heartbeat cleared at spawn.** `.heartbeat` is removed when a new container starts so the sweep's ceiling check doesn't read the previous container's mtime.
+- **Sweep wakes before reset.** The wake step runs before crashed-container cleanup. A fresh container clears its own orphan `processing` rows on startup, so the claim resolves itself instead of being pushed further into the future by the retry bump.
+- **Idempotent retry bump.** `resetStuckProcessingRows` skips messages that already have a future `process_after` set — the wake path picks them up when backoff elapses.
+- **Idempotent pending rows.** `createPendingQuestion` and `createPendingApproval` use `INSERT OR IGNORE` so a retry after a delivery failure (rate limit, network blip, adapter 5xx) doesn't trip the unique constraint on the second attempt.
+
+If you see these symptoms on v2.0.6 or earlier, update: `git fetch upstream main && git merge upstream/main`.
 
 ## Container 401 errors
 
@@ -567,6 +607,10 @@ for i, line in enumerate(lines):
 This issue was fixed by passing `resumeSessionAt` with the last assistant message UUID. If you're still experiencing it, ensure you're running the latest version of the agent runner.
 
 ## Service management
+
+<Note>
+The examples below use `com.nanoclaw` for brevity. v2 installs are actually registered as `com.nanoclaw-v2-<slug>` (launchd) or `nanoclaw-v2-<slug>.service` (systemd), where `<slug>` is `sha1(projectRoot)[:8]`. Find yours with `launchctl list | grep nanoclaw` or `systemctl --user list-units 'nanoclaw*'`.
+</Note>
 
 ### Restart the service
 
