@@ -11,7 +11,7 @@ NanoClaw trunk ships the registry and infrastructure. Channel adapters and alter
 
 <CardGroup cols={2}>
   <Card title="Channels" icon="plug" href="#channels">
-    Where messages come from: WhatsApp, Telegram, Discord, Slack, email, the terminal — 13+ adapters live on the `channels` branch
+    Where messages come from: WhatsApp, Telegram, Discord, Slack, Teams, email, the terminal — 15+ adapters live on the `channels` branch
   </Card>
   <Card title="Providers" icon="robot" href="#providers">
     Which AI runs the agent: Claude (default), OpenAI Codex, OpenCode (OpenRouter/Google/DeepSeek), Ollama (local). Configurable per agent group.
@@ -40,10 +40,6 @@ Install with a skill invocation in Claude Code. The skill copies the adapter fro
   <Card title="Slack" icon="hashtag" href="/integrations/slack">
     `/add-slack` — Socket Mode (no public URL required)
   </Card>
-
-  <Card title="Gmail" icon="envelope" href="/integrations/gmail">
-    `/add-gmail` — OAuth for reading and sending
-  </Card>
 </CardGroup>
 
 ### Also available on the `channels` branch
@@ -58,6 +54,7 @@ Install with a skill invocation in Claude Code. The skill copies the adapter fro
 | `/add-linear` | Linear | Issue comments, triage workflows |
 | `/add-github` | GitHub | PR comments, issue reactions, webhooks |
 | `/add-wechat` | WeChat | WeChat Work API |
+| `/add-emacs` | Emacs | Talk to your agent from inside your editor |
 | `/add-resend` | Email (outbound) | Transactional sends via Resend |
 | `/claw` | Local terminal | Talk to your agent from a CLI — no platform account required |
 
