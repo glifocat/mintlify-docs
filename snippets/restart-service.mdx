@@ -1,11 +1,13 @@
+Each NanoClaw install has a per-checkout label (`com.nanoclaw-v2-<slug>` on macOS, `nanoclaw-v2-<slug>` on Linux). Substitute your install's label below — `setup.sh` prints it at the end of the install.
+
 <CodeGroup>
 ```bash macOS
 npm run build
-launchctl kickstart -k gui/$(id -u)/com.nanoclaw
+launchctl kickstart -k gui/$(id -u)/com.nanoclaw-v2-<slug>
 ```
 
 ```bash Linux
 npm run build
-systemctl --user restart nanoclaw
+systemctl --user restart nanoclaw-v2-<slug>
 ```
 </CodeGroup>
