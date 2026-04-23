@@ -2,7 +2,7 @@
 title: Integrations overview
 description: Channels and providers as skills — add only what you need.
 tag: "UPDATED"
-keywords: ["integrations", "channels", "providers", "skills", "add-telegram", "add-whatsapp", "add-codex", "add-opencode"]
+keywords: ["integrations", "channels", "providers", "skills", "add-telegram", "add-whatsapp", "add-signal", "add-codex", "add-opencode"]
 ---
 
 NanoClaw trunk ships the registry and infrastructure. Channel adapters and alternative AI providers live on long-lived skill branches — you install them on demand with `/add-<name>` skills. This keeps your fork lean and your code legible: nothing you didn't ask for.
@@ -39,6 +39,10 @@ Install with a skill invocation in Claude Code. The skill copies the adapter fro
 
   <Card title="Slack" icon="hashtag" href="/integrations/slack">
     `/add-slack` — Socket Mode (no public URL required)
+  </Card>
+
+  <Card title="Signal" icon="shield-halved" href="/integrations/signal">
+    `/add-signal` — native adapter over a local `signal-cli` TCP daemon
   </Card>
 </CardGroup>
 
