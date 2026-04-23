@@ -104,9 +104,13 @@ Messages sent to the agent receive no response.
   grep 'concurrency limit' logs/nanoclaw.log | tail -5
   ```
   
-  Stop stuck containers:
+  Stop stuck containers from **this install only** (safer when multiple NanoClaw installs share a host):
   
   ```bash
+  # Preferred: scope by install label
+  docker stop -t 1 $(docker ps -q --filter label=nanoclaw-install=<slug>)
+
+  # Or broader — will include peer installs
   docker stop -t 1 $(docker ps -q --filter name=nanoclaw-)
   ```
 </Accordion>
@@ -257,6 +261,32 @@ grep -E "image found|image NOT found|image missing" logs/nanoclaw.log
 ```
 
 If you need Kubernetes enabled, set `CONTAINER_IMAGE` to an image stored in a registry that the kubelet won't garbage-collect, or raise the kubelet's GC thresholds.
+
+### Peer installs killing each other's containers
+
+**Symptom:** Containers from a healthy install get force-stopped within seconds of spawn, with no errors in the install's own logs. Common when a legacy v1 plist is crash-looping on the same host.
+
+**Cause:** Older versions of the orphan reaper matched containers by `name=nanoclaw-` prefix, so any NanoClaw install (including crash-looping peers) could call `cleanupOrphans` on boot and stop another install's containers.
+
+**Fix:** Already fixed. Spawned containers are now stamped with a `nanoclaw-install=<slug>` label, and `cleanupOrphans` filters by that label. Setup's preflight also unloads crash-looping `com.nanoclaw*` launchd/systemd services before installing its own.
+
+If you still see it, verify the peer install is on the fixed version — an unpatched peer will still use the old unscoped filter.
+
+### Stuck orphan processing claims after container crash
+
+**Symptom:** A message reaches `MAX_TRIES` and is marked failed without any container ever spawning. Logs show repeated `tries++` on the same message with no wake event.
+
+**Cause:** When a container exited with an unresolved `processing_ack` claim, the older sweep would reset the matching inbound row (tries++ and push `process_after` into the future) *before* trying to wake a replacement. `dueCount` then dropped to 0, so the wake step never fired, and the next sweep tick repeated the bump.
+
+**Fix:** Already fixed. The sweep now wakes a fresh container **before** running crashed-container cleanup — a new container clears its own orphan `processing` rows on startup. `resetStuckProcessingRows` is also idempotent: rows with `process_after` in the future are skipped so tries aren't double-bumped.
+
+### Fresh container killed by stale heartbeat
+
+**Symptom:** A container for an existing session is spawned successfully, then force-stopped within a few seconds. Sweep logs show the ceiling check tripping on a heartbeat mtime older than the spawn.
+
+**Cause:** The previous container's `.heartbeat` file was left on disk. The sweep's absolute-ceiling check read the stale mtime and killed the fresh container before it had a chance to touch the file itself.
+
+**Fix:** Already fixed. The host removes any orphan `.heartbeat` file at spawn time. The sweep's existing "no heartbeat file" carve-out treats a missing file as a fresh spawn and grants grace.
 
 ### Resume branches from stale tree position
 

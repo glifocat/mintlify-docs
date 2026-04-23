@@ -83,6 +83,15 @@ The permissions module (`src/modules/permissions/`) registers hooks into the cor
 - Approve: creates wiring with defaults, admits sender, replays message
 - Deny: sets `denied_at`, future mentions silently dropped
 
+### Per-install scoping
+
+When multiple NanoClaw checkouts run on the same host, each install must only manage its own containers:
+
+- Every spawned container is stamped with a `nanoclaw-install=<slug>` label derived from the install path
+- `cleanupOrphans` filters by this label — a crash-looping peer cannot reap another install's live containers
+- Setup's preflight probes `com.nanoclaw*` launchd plists and nanoclaw user systemd units and unloads any that are crash-looping (state != running and runs > 10) before installing its own service
+- Container image tags are also namespaced per checkout (`CONTAINER_IMAGE_BASE`) so rebuilds don't clobber peer installs
+
 ### Session isolation
 
 Each session has isolated databases:

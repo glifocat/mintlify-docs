@@ -136,8 +136,12 @@ Containers are spawned by the `spawnContainer` function. Wake calls are deduplic
     A composed `CLAUDE.md` is regenerated and mounted read-only.
   </Step>
 
+  <Step title="Clear stale heartbeat">
+    Any leftover `.heartbeat` file from a previous container instance is removed before spawn. The host sweep treats a missing heartbeat as a fresh spawn and grants grace, so clearing the orphan prevents the new container from being killed on a stale mtime.
+  </Step>
+
   <Step title="Spawn container">
-    Docker container is spawned with `tini` as PID 1.
+    Docker container is spawned with `tini` as PID 1 and stamped with the `nanoclaw-install=<slug>` label for peer-safe orphan cleanup.
   </Step>
 
   <Step title="Track container state">
@@ -188,11 +192,27 @@ const onecliApplied = await onecli.applyContainerConfig(args, {
 - No raw API keys are passed via environment variables
 - Each agent group gets its own `agentIdentifier` for credential scoping
 
+## Orphan cleanup and install scoping
+
+Every container spawned by NanoClaw is stamped with a `nanoclaw-install=<slug>` label. The slug is derived from the install path so two checkouts on the same host get different labels.
+
+The orphan reaper (`cleanupOrphans` in `src/container-runtime.ts`) filters by this label:
+
+```bash
+docker ps --filter label=nanoclaw-install=<slug> --format '{{.Names}}'
+```
+
+This means a crash-looping peer install cannot reap this install's containers, and vice versa. Setup's preflight also probes `com.nanoclaw*` launchd plists and nanoclaw user systemd units, unloading any that are crash-looping (state != running and runs > 10) before installing its own service.
+
 ## Debugging containers
 
 <Accordion title="List running containers">
   ```bash
+  # All NanoClaw containers on this host
   docker ps --filter name=nanoclaw-
+
+  # Only this install's containers (use the value from CONTAINER_INSTALL_LABEL)
+  docker ps --filter label=nanoclaw-install=<slug>
   ```
 </Accordion>
 
