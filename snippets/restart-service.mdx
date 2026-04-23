@@ -1,11 +1,19 @@
+<Note>
+As of v2.0.3, each NanoClaw checkout gets a per-install service label of the
+form `com.nanoclaw-v2-<slug>` (macOS) or `nanoclaw-v2-<slug>` (Linux). The
+commands below auto-discover the label for the current install.
+</Note>
+
 <CodeGroup>
 ```bash macOS
 npm run build
-launchctl kickstart -k gui/$(id -u)/com.nanoclaw
+LABEL=$(launchctl list | awk '/com\.nanoclaw-v2-/ {print $3; exit}')
+launchctl kickstart -k "gui/$(id -u)/${LABEL:-com.nanoclaw}"
 ```
 
 ```bash Linux
 npm run build
-systemctl --user restart nanoclaw
+UNIT=$(systemctl --user list-unit-files 'nanoclaw-v2-*.service' --no-legend | awk 'NR==1 {print $1}')
+systemctl --user restart "${UNIT:-nanoclaw.service}"
 ```
 </CodeGroup>

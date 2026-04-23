@@ -14,7 +14,8 @@ Run these commands to get a quick overview of system health:
 ```bash
 # 1. Is the service running?
 launchctl list | grep nanoclaw
-# Expected: PID  0  com.nanoclaw (PID = running, "-" = not running, non-zero exit = crashed)
+# Expected: PID  0  com.nanoclaw-v2-<slug> (PID = running, "-" = not running, non-zero exit = crashed)
+# Since v2.0.3 each checkout has a per-install slug; v1 `com.nanoclaw` may also appear if present.
 
 # 2. Any running containers?
 docker ps --format '{{.Names}} {{.Status}}' 2>/dev/null | grep nanoclaw
@@ -173,10 +174,7 @@ cat groups/{group}/logs/container-{timestamp}.log
   export const CONTAINER_TIMEOUT = 30 * 60 * 1000; // 30 minutes
   ```
   
-  Then rebuild:
-  ```bash
-  npm run build && launchctl kickstart -k gui/$(id -u)/com.nanoclaw
-  ```
+  Then rebuild and restart using the [restart steps below](#rebuild-after-code-changes) (auto-detects the per-checkout label).
 </Accordion>
 
 ## Service stops after SSH logout (Linux)
@@ -231,9 +229,9 @@ If containers are consistently hitting the hard timeout, consider lowering `IDLE
 
 ### Kubernetes image garbage collection deletes nanoclaw-agent image
 
-**Symptoms:** `Container exited with code 125: pull access denied for nanoclaw-agent` — the container image disappears after a few hours, even though you just built it.
+**Symptoms:** `Container exited with code 125: pull access denied for nanoclaw-agent-v2-<slug>` — the container image disappears after a few hours, even though you just built it.
 
-**Cause:** If your container runtime has Kubernetes enabled (Rancher Desktop enables it by default), the kubelet runs image garbage collection when disk usage exceeds 85%. NanoClaw containers are ephemeral (run and exit), so `nanoclaw-agent:latest` is never protected by a running container. The kubelet sees it as unused and deletes it — often overnight when no messages are being processed.
+**Cause:** If your container runtime has Kubernetes enabled (Rancher Desktop enables it by default), the kubelet runs image garbage collection when disk usage exceeds 85%. NanoClaw containers are ephemeral (run and exit), so the base image tag (`nanoclaw-agent-v2-<slug>:latest`) is never protected by a running container. The kubelet sees it as unused and deletes it — often overnight when no messages are being processed.
 
 **Fix:** Disable Kubernetes if you don't need it:
 
@@ -304,11 +302,13 @@ After updating credentials, restart the service:
 
 <CodeGroup>
 ```bash macOS
-launchctl kickstart -k gui/$(id -u)/com.nanoclaw
+LABEL=$(launchctl list | awk '/com\.nanoclaw-v2-/ {print $3; exit}')
+launchctl kickstart -k "gui/$(id -u)/$LABEL"
 ```
 
 ```bash Linux
-systemctl --user restart nanoclaw
+UNIT=$(systemctl --user list-unit-files 'nanoclaw-v2-*.service' --no-legend | awk 'NR==1 {print $1}')
+systemctl --user restart "$UNIT"
 ```
 </CodeGroup>
 
@@ -346,11 +346,13 @@ Scan the QR code with your phone, then restart the service:
 
 <CodeGroup>
 ```bash macOS
-launchctl kickstart -k gui/$(id -u)/com.nanoclaw
+LABEL=$(launchctl list | awk '/com\.nanoclaw-v2-/ {print $3; exit}')
+launchctl kickstart -k "gui/$(id -u)/$LABEL"
 ```
 
 ```bash Linux
-systemctl --user restart nanoclaw
+UNIT=$(systemctl --user list-unit-files 'nanoclaw-v2-*.service' --no-legend | awk 'NR==1 {print $1}')
+systemctl --user restart "$UNIT"
 ```
 </CodeGroup>
 
@@ -426,9 +428,11 @@ sqlite3 store/messages.db "SELECT name, container_config FROM registered_groups;
   Run a test container to verify mounts:
   
   ```bash
+  # Resolve the per-checkout image tag
+  IMAGE=$(docker images --format '{{.Repository}}:{{.Tag}}' | grep '^nanoclaw-agent-v2-.*:latest$' | head -1)
   docker run -i --rm \
     -v /path/to/host:/workspace/test:ro \
-    nanoclaw-agent:latest \
+    "$IMAGE" \
     ls -la /workspace/test
   ```
 </Accordion>
@@ -568,10 +572,13 @@ This issue was fixed by passing `resumeSessionAt` with the last assistant messag
 
 ## Service management
 
+Since v2.0.3 each checkout has a per-install service label — the snippets below auto-discover it.
+
 ### Restart the service
 
 ```bash
-launchctl kickstart -k gui/$(id -u)/com.nanoclaw
+LABEL=$(launchctl list | awk '/com\.nanoclaw-v2-/ {print $3; exit}')
+launchctl kickstart -k "gui/$(id -u)/$LABEL"
 ```
 
 ### View live logs
@@ -587,19 +594,23 @@ Stopping the service does NOT kill running containers. They will continue runnin
 </Warning>
 
 ```bash
-launchctl bootout gui/$(id -u)/com.nanoclaw
+LABEL=$(launchctl list | awk '/com\.nanoclaw-v2-/ {print $3; exit}')
+launchctl bootout "gui/$(id -u)/$LABEL"
 ```
 
 ### Start the service
 
 ```bash
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.nanoclaw.plist
+PLIST=$(ls "$HOME/Library/LaunchAgents"/com.nanoclaw-v2-*.plist 2>/dev/null | head -1)
+launchctl bootstrap "gui/$(id -u)" "$PLIST"
 ```
 
 ### Rebuild after code changes
 
 ```bash
-npm run build && launchctl kickstart -k gui/$(id -u)/com.nanoclaw
+npm run build
+LABEL=$(launchctl list | awk '/com\.nanoclaw-v2-/ {print $3; exit}')
+launchctl kickstart -k "gui/$(id -u)/$LABEL"
 ```
 
 ## Getting help
