@@ -6,6 +6,42 @@ rss: true
 tag: "UPDATED"
 ---
 
+<Update label="v2.0.11" description="2026-04-24" tags={["Fix"]}>
+  - Setup verify now accepts CLI-only success — the first-agent verification step no longer fails when the channel round-trip is skipped
+  - Formatting fix for `src/channels/chat-sdk-bridge.ts` to keep CI `format:check` green
+</Update>
+
+<Update label="v2.0.10" description="2026-04-24" tags={["Fix"]}>
+  - Container provider resolution honors the documented precedence: `sessions.agent_provider` → `agent_groups.agent_provider` → `container.json` `provider` → `claude`. Setting `agent_provider = 'codex'` on a group now routes the spawned container to the Codex provider without editing the per-group `container.json`. Empty strings are treated as unset.
+</Update>
+
+<Update label="v2.0.9" description="2026-04-24" tags={["Feature"]}>
+  - Signal wired into the auto setup flow — `bash nanoclaw.sh` offers Signal as a channel choice, renders the `signal-cli link` QR in the terminal, and wires the first agent end-to-end, mirroring the WhatsApp and Telegram flows
+  - Approvals: channel/sender approval cards persist `title` + `options_json` per row (migration 013), fixing post-click card drift
+</Update>
+
+<Update label="v2.0.8" description="2026-04-23" tags={["Fix"]}>
+  - Telegram callback data now encodes the option index so it stays within Telegram's 64-byte `callback_data` cap
+  - `pending_questions` / `pending_approvals` inserts are idempotent — retries no longer fail on duplicate inserts
+  - Host sweep wakes before reset and retries idempotently when reclaiming orphan containers
+  - Container restart clears stale orphan heartbeat before spawn
+  - Setup detects registered groups from the v2 central DB
+</Update>
+
+<Update label="v2.0.7" description="2026-04-23" tags={["Feature"]}>
+  - Added experimental Slack and iMessage channel flows to `bash nanoclaw.sh`
+  - Discord approval clicks resolve user IDs correctly from DM interactions
+  - Router passes `isGroup` from the channel adapter through to messaging group creation
+  - Approval cards show human-readable names and correct post-click labels
+</Update>
+
+<Update label="v2.0.6" description="2026-04-22" tags={["Feature"]}>
+  - Added `/add-atomic-chat-tool` skill for spawning ad-hoc MCP tools per group
+  - Orphan reaper now scopes by install label so peer installs don't kill each other
+  - Setup: Yes-default + session-persist on claude-assist, quieter first-chat flow
+  - Setup: GitHub API rate-limit bypass when installing the OneCLI CLI; PATH fix for npm global prefix after fallback install
+</Update>
+
 <Update label="v2.0.0" description="2026-04-22" tags={["Breaking"]}>
   - Ground-up architectural rewrite with new entity model (users, roles, messaging groups, agent groups, wirings)
   - Two-database session model — `inbound.db` (host writes) and `outbound.db` (container writes) eliminate cross-mount SQLite contention

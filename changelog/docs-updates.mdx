@@ -5,6 +5,15 @@ icon: "file-pen"
 rss: true
 ---
 
+<Update label="Provider precedence + Signal channel" description="2026-04-24" tags={["Updated"]}>
+  Synced with upstream v2.0.6 – v2.0.11 behavior changes.
+
+  ## Updated
+  - **`advanced/container-runtime`**: Clarified provider resolution order in the spawn lifecycle — `sessions.agent_provider` → `agent_groups.agent_provider` → `container.json` `provider` → `claude`. Empty strings are treated as unset. Reflects the `resolveProviderName` extraction in [qwibitai/nanoclaw#1958](https://github.com/qwibitai/nanoclaw/pull/1958).
+  - **`integrations/overview`**: Expanded the `agent_provider` note to document the per-session override path and added `/add-signal` to the available channels list ([qwibitai/nanoclaw#1954](https://github.com/qwibitai/nanoclaw/pull/1954)).
+  - **`api/group-management`**: Added `pending_approvals` and `pending_channel_approvals` to the central-DB table list and noted that channel/sender approval rows now persist their own `title` + `options_json` (migration 013).
+</Update>
+
 <Update label="v2.0.0 launch readiness: front-door rewrites" description="2026-04-22" tags={["Updated"]}>
   Phase A of the v2 documentation sprint — bringing the pages every new user lands on into alignment with the v2 rewrite. All claims verified directly against upstream source (`src/db/schema.ts`, `src/types.ts`, `src/config.ts`, `container/Dockerfile`, `src/delivery.ts`) rather than upstream `docs/` (which includes a stale `architecture.md` draft and a `db-session.md` that omits the `container_state` table).
 
