@@ -17,7 +17,7 @@ interface AgentGroup {
   id: string;             // Unique identifier
   name: string;           // Display name
   folder: string;         // Filesystem folder name
-  agent_provider?: string; // Optional provider override
+  agent_provider?: string; // Optional provider override (e.g., 'claude', 'codex', 'opencode')
   created_at: string;     // ISO timestamp
 }
 ```
@@ -135,8 +135,10 @@ Session resolution depends on the wiring's `session_mode`:
 | `agent_group_members` | Unprivileged membership |
 | `user_dms` | Cached DM channel mapping |
 | `sessions` | Session status and container tracking |
+| `pending_approvals` | Generic approval cards (title + options persisted per row) |
 | `pending_questions` | Interactive question cards |
-| `pending_sender_approvals` | Unknown sender approval flow |
+| `pending_channel_approvals` | Unknown channel approval flow (persists title + options) |
+| `pending_sender_approvals` | Unknown sender approval flow (persists title + options) |
 
 ### Session databases
 
