@@ -104,6 +104,17 @@ const TRIGGER_PATTERN = new RegExp(`^${DEFAULT_TRIGGER}\\b`, 'i');
 
 In v2, trigger behavior is controlled per-wiring via `engage_mode` and `engage_pattern` rather than a global trigger pattern.
 
+## Provider selection
+
+The AI provider for an agent container is resolved at spawn time with this precedence:
+
+1. `sessions.agent_provider` — per-session override (central DB)
+2. `agent_groups.agent_provider` — per-group default (central DB)
+3. `container.json` `provider` field — on-disk fallback
+4. `'claude'` — built-in default
+
+Empty strings at any level are treated as unset, so DB-backed forms can write `''` for "no override" without breaking the fallback. Setting `agent_provider = 'codex'` on an agent group routes all future sessions to Codex — no need to edit per-group JSON. See [Container runtime › Provider precedence](/advanced/container-runtime#provider-precedence) for implementation details.
+
 ## Example .env file
 
 ```bash

@@ -125,7 +125,7 @@ Missing-file state is NOT cached — you can create the allowlist without restar
 Container spawning is deduplicated — concurrent wake calls for the same session share a single in-flight promise:
 
 1. `wakeContainer(session)` checks for existing running container or in-flight spawn
-2. `spawnContainer(session)` reads agent group config, resolves provider contributions, builds mounts
+2. `spawnContainer(session)` resolves the provider (`sessions.agent_provider` → `agent_groups.agent_provider` → `container.json` `provider` → `'claude'`), reads agent group config, and builds mounts
 3. Skill symlinks are synced before every spawn
 4. Docker container is spawned with `tini` as PID 1
 
