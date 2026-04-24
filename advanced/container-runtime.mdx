@@ -120,8 +120,12 @@ Three invariants are critical for correctness:
 Containers are spawned by the `spawnContainer` function. Wake calls are deduplicated via an in-flight promise map.
 
 <Steps>
+  <Step title="Resolve provider">
+    The host selects the provider by walking `sessions.agent_provider` → `agent_groups.agent_provider` → `container.json` `provider` → `'claude'`. Empty strings are treated as unset, so a form writing `''` for "no override" falls through. See [Provider precedence](#provider-precedence).
+  </Step>
+
   <Step title="Read agent group config">
-    The host reads `container.json` and resolves provider contributions.
+    The host reads `container.json` and resolves provider contributions (mounts, env, CLI args).
   </Step>
 
   <Step title="Build volume mounts">
@@ -144,6 +148,19 @@ Containers are spawned by the `spawnContainer` function. Wake calls are deduplic
     Session is marked as running in the central DB.
   </Step>
 </Steps>
+
+### Provider precedence
+
+The spawned container's AI provider is resolved with this precedence:
+
+1. `sessions.agent_provider` — per-session override in the central DB
+2. `agent_groups.agent_provider` — per-group default in the central DB
+3. `container.json` `provider` field — on-disk fallback for installs that don't use the DB columns
+4. `'claude'` — built-in default
+
+Empty strings at any level are treated as unset to avoid footguns when a DB-backed form writes `''` for "no override." Values are normalized to lowercase before lookup in the provider registry.
+
+This means you can set `agent_provider = 'codex'` on an agent group and all future sessions route to Codex without editing per-group JSON. Existing installs that only set `provider` in `container.json` keep working.
 
 ### Volume mounts
 
