@@ -46,6 +46,7 @@ Install with a skill invocation in Claude Code. The skill copies the adapter fro
 
 | Skill | Platform | Notes |
 |-------|----------|-------|
+| `/add-signal` | Signal | signal-cli bridge |
 | `/add-teams` | Microsoft Teams | Bot framework |
 | `/add-imessage` | Apple iMessage | macOS-only; uses AppleScript bridge |
 | `/add-matrix` | Matrix | Federated; supports Element and self-hosted homeservers |
@@ -72,6 +73,8 @@ By default, NanoClaw uses Claude via the official [Claude Agent SDK](https://doc
 | `/add-ollama-tool` | Ollama (tool mode) | Use local Ollama as a tool inside Claude agents |
 
 `agent_provider` is a column on `agent_groups` in the central database — each agent group can run a different provider. Mix and match in the same install.
+
+Provider resolution follows a strict precedence: `sessions.agent_provider` overrides `agent_groups.agent_provider`, which overrides the `provider` field in the group's `container.json`, which falls back to `claude`. Empty strings are treated as unset. This lets you override the provider for a single session without touching the group's default.
 
 ## How channel skills work
 
