@@ -5,6 +5,14 @@ icon: "file-pen"
 rss: true
 ---
 
+<Update label="v2.0.1 → v2.0.11 release sync" description="2026-04-24" tags={["Updated"]}>
+  Synced docs to the v2.0.1 → v2.0.11 patch series upstream.
+
+  - **`changelog/index.mdx`**: added per-version entries for v2.0.5 – v2.0.11 reconstructed from commits (upstream `CHANGELOG.md` only tracks 2.0.0)
+  - **`introduction.mdx` + `integrations/skills-system.mdx`**: token count bumped from 127k to 130k to match `repo-tokens/badge.svg`
+  - **`integrations/overview.mdx`**: added Signal (`/add-signal`) to the channels branch table, and documented the provider resolution precedence (`sessions.agent_provider` → `agent_groups.agent_provider` → `container.json` → `claude`) after the v2.0.9 container-runner fix
+</Update>
+
 <Update label="v2.0.0 launch readiness: front-door rewrites" description="2026-04-22" tags={["Updated"]}>
   Phase A of the v2 documentation sprint — bringing the pages every new user lands on into alignment with the v2 rewrite. All claims verified directly against upstream source (`src/db/schema.ts`, `src/types.ts`, `src/config.ts`, `container/Dockerfile`, `src/delivery.ts`) rather than upstream `docs/` (which includes a stale `architecture.md` draft and a `db-session.md` that omits the `container_state` table).
 

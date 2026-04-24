@@ -6,6 +6,57 @@ rss: true
 tag: "UPDATED"
 ---
 
+<Update label="v2.0.11" description="2026-04-24" tags={["Fix"]}>
+  - Label PR workflow now labels PRs from forks that follow the contributing template
+  - Prettier formatting applied to `chat-sdk-bridge.ts`
+</Update>
+
+<Update label="v2.0.10" description="2026-04-24" tags={["Fix"]}>
+  - Setup verify now accepts CLI-only success (no standalone SDK required)
+  - Minimized verify diff with added test coverage
+</Update>
+
+<Update label="v2.0.9" description="2026-04-24" tags={["Fix"]}>
+  - `container-runner` now honors `agent_provider` columns on `sessions` and `agent_groups`, with sessions overriding groups; `container.json` remains the final fallback. Previously the DB columns were ignored, so setting `agent_provider = 'codex'` on a group had no effect.
+  - Signal channel adapter wired into the auto setup flow
+  - `/add-codex` skill bumped to `CODEX_VERSION=0.124.0`
+</Update>
+
+<Update label="v2.0.8" description="2026-04-23" tags={["Fix"]}>
+  - Approvals now persist `title` and `options_json` on `pending_channel_approvals` and `pending_sender_approvals` (migration 013). Post-click cards show the same title the initial card used instead of a generic constant.
+  - Addressed review feedback for the Signal adapter; moved adapter source to the `channels` branch
+</Update>
+
+<Update label="v2.0.8" description="2026-04-23" tags={["Feature"]}>
+  - Signal channel adapter — install via `/add-signal` (lives on the `channels` branch)
+  - Telegram: encode option index in `callback_data` to stay under Telegram's 64-byte cap
+  - `pending_questions` / `pending_approvals` inserts are now idempotent (`INSERT OR IGNORE`) so delivery retries don't trip UNIQUE constraints after a transient send failure
+</Update>
+
+<Update label="v2.0.7" description="2026-04-23" tags={["Fix"]}>
+  - Container orphan reaper is now scoped by install label so peer installs don't kill each other's containers
+  - Clear orphan heartbeat before spawn; sweep wakes before reset and retries orphan claims idempotently
+  - Setup detects already-registered groups from the v2 central DB
+  - New `/add-atomic-chat-tool` skill — ships its MCP file inside the skill folder
+  - Approvals render human-readable names and correct post-click labels on channel/sender cards
+  - Discord: resolve user ID from DM interactions for approval clicks
+  - Router passes `isGroup` from adapter through to messaging group creation
+</Update>
+
+<Update label="v2.0.6" description="2026-04-23" tags={["Feature"]}>
+  - Experimental Slack and iMessage channel flows added to setup
+  - Container: scope orphan reaper by install label so peers don't kill each other
+  - Setup: Yes-default and session-persist on claude-assist, quieter first-chat, PATH fixes after npm fallback install, bypass rate-limited GitHub API when installing OneCLI CLI
+</Update>
+
+<Update label="v2.0.5" description="2026-04-23" tags={["Fix"]}>
+  - Setup: clarifications from user-feedback session, per-checkout service name and Docker image tag, offer to reuse an existing OneCLI install instead of clobbering it
+  - Container: loosened `/home/node` permissions to `0777` so bind-mounted config writes work across host UIDs
+  - Setup: resolve channels remote dynamically (don't assume `origin`); fall back to `npm install` when corepack is missing
+  - `/setup` skill collapsed to a single instruction: run `bash nanoclaw.sh`
+  - Chinese and Japanese READMEs aligned with v2 English
+</Update>
+
 <Update label="v2.0.0" description="2026-04-22" tags={["Breaking"]}>
   - Ground-up architectural rewrite with new entity model (users, roles, messaging groups, agent groups, wirings)
   - Two-database session model — `inbound.db` (host writes) and `outbound.db` (container writes) eliminate cross-mount SQLite contention
