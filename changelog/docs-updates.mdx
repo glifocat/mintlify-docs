@@ -5,6 +5,10 @@ icon: "file-pen"
 rss: true
 ---
 
+<Update label="Dedicated agent memory guide" description="2026-07-26" tags={["New", "Updated"]}>
+  Added **`concepts/agent-memory`**, the first single-page explanation of NanoClaw's provider-neutral memory system: the host and container paths, boot scaffold, Core Memory, session-start injection rules, 16,000-character per-file budget, OKF concept format, group sharing boundary, operator workflow, prompt-injection risk, and legacy migration. The page is verified against `nanocoai/nanoclaw@f1e66179` and linked from the entity model, isolation, security, customization, providers, self-modification, installation, and quickstart pages.
+</Update>
+
 <Update label="Setup wizard screenshot on the quickstart" description="2026-07-18" tags={["Updated"]}>
   The site's first screenshot: the quickstart's "Answer the wizard" step now opens with a real capture of `bash nanoclaw.sh` — the NanoClaw splash, Standard setup selected, the system check passed, and the sandbox build starting. Captured from an actual run of upstream main (`d23db4f3`) with VHS, so it can be re-rendered when the wizard's look changes; nothing sensitive is on screen (the run ends before any credential step).
 </Update>

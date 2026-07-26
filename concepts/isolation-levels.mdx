@@ -17,7 +17,7 @@ Every time you wire a chat to an agent, you answer one question: should this con
 
 ## Separate agent groups — nothing shared
 
-Each agent group is its own world: a workspace folder under `groups/<folder>/`, its own per-group standing instructions (`instructions.prepend.md`) and durable memory (the `memory/` tree), its own composed `CLAUDE.md`, its own container config (packages, mounts, model, skills), and its own Agent Vault credential scope — the OneCLI agent identifier *is* the agent group id, so secrets granted to one group never reach another. Sessions of different groups share only the host and the read-only pieces every container gets: the shared base instructions (`container/CLAUDE.md`, mounted at `/app/CLAUDE.md`) plus the agent-runner source and skills.
+Each agent group is its own world: a workspace folder under `groups/<folder>/`, its own per-group standing instructions (`instructions.prepend.md`) and [durable memory](/concepts/agent-memory) (the `memory/` tree), its own composed `CLAUDE.md`, its own container config (packages, mounts, model, skills), and its own Agent Vault credential scope — the OneCLI agent identifier *is* the agent group id, so secrets granted to one group never reach another. Sessions of different groups share only the host and the read-only pieces every container gets: the shared base instructions (`container/CLAUDE.md`, mounted at `/app/CLAUDE.md`) plus the agent-runner source and skills.
 
 Choose this when:
 

@@ -31,7 +31,7 @@ erDiagram
 
 ## Agent groups — the unit of isolation
 
-An agent group is a workspace: a folder under `groups/<name>/` with its own working files, per-group standing instructions (`instructions.prepend.md`) and durable memory (the `memory/` tree), a composed `CLAUDE.md`, and a container configuration (the `container_configs` table — packages, mounts, model and skills config). Every session an agent group owns runs in a container that sees only that workspace. All agent groups are equal — privilege lives on users, not on groups.
+An agent group is a workspace: a folder under `groups/<name>/` with its own working files, per-group standing instructions (`instructions.prepend.md`) and [durable memory](/concepts/agent-memory) (the `memory/` tree), a composed `CLAUDE.md`, and a container configuration (the `container_configs` table — packages, mounts, model and skills config). Every session an agent group owns runs in a container that sees only that workspace. All agent groups are equal — privilege lives on users, not on groups.
 
 ## Messaging groups — a platform conversation
 

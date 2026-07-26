@@ -87,7 +87,7 @@ Be honest about the gap: **anything the agent can legitimately do, it can do whi
 - **Message anyone in its destinations** — including posting attacker-chosen content to your team channel, or leaking conversation context to another chat it legitimately serves.
 - **Read and destroy its whole workspace** — every session of an agent group shares the group folder read-write, including its `memory/` tree and `instructions.prepend.md` — and it can read whatever its allowlisted mounts expose (read-write only where explicitly granted).
 - **Spend through granted credentials** — it can't extract keys, but it can make authenticated API calls with everything its group was granted (per-request approval, where enabled, is the brake).
-- **Poison its own memory** — instructions written to its `memory/` tree or `instructions.prepend.md` today shape every future session of that group.
+- **Poison its own memory** — instructions written to its [`memory/` tree](/concepts/agent-memory) or `instructions.prepend.md` today shape every future session of that group.
 
 The defense against all four is the same and it's yours, not the software's: **scoping**. An agent that talks to strangers should not share a group with your code repo and deploy credentials; chats with different audiences should not share files or memory. The decision guide is [Isolation levels](/concepts/isolation-levels).
 
