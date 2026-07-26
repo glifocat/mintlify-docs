@@ -1,0 +1,147 @@
+---
+title: "Agent memory"
+description: "How NanoClaw stores durable facts in a provider-neutral Markdown tree, loads them into fresh context windows, and keeps them scoped to one agent group."
+keywords: ["agent memory", "persistent memory", "Core Memory", "memory tree", "OKF", "Open Knowledge Format", "provider-neutral", "instructions.prepend.md", "migrate-memory"]
+tag: "NEW"
+---
+
+{/* verified-against: docs/memory.md, container/agent-runner/src/{index.ts,memory/{scaffold.ts,context.ts,session-hook.ts,templates/index.md,templates/system/{index.md,definition.md}},providers/{types.ts,claude.ts}}, container/skills/self-customize/SKILL.md, .claude/skills/migrate-memory/SKILL.md @ f1e66179 (v2.1.53) */}
+
+Every agent group has persistent, file-based memory: plain Markdown files that survive container restarts, session ends, context compaction, and provider switches. There is no memory database or embedding store. The agent reads and edits the same files you can inspect on the host.
+
+On the host, memory lives at `groups/<folder>/memory/`. Inside the agent container, the same directory is available at `/workspace/agent/memory/`.
+
+## The memory tree
+
+NanoClaw creates this scaffold when an agent container boots:
+
+<Tree>
+  <Tree.Folder name="memory" defaultOpen>
+    <Tree.File name="index.md" />
+    <Tree.Folder name="system" defaultOpen>
+      <Tree.File name="index.md" />
+      <Tree.File name="definition.md" />
+    </Tree.Folder>
+  </Tree.Folder>
+</Tree>
+
+The scaffold is idempotent: NanoClaw creates only missing files. It never overwrites the agent's edits or accumulated memory.
+
+Two files have fixed roles:
+
+- **`memory/index.md`** is the top-level map. Its **Core Memory** section holds the few durable facts useful in nearly every conversation; the rest points to more focused files.
+- **`memory/system/definition.md`** explains how the agent should store, retrieve, correct, and organize memory. The agent owns this doctrine and can improve it.
+
+`memory/system/index.md` is a normal folder index. It is not loaded separately.
+
+Everything below that scaffold is flexible. The agent chooses folders and concept types based on your world — people, projects, customers, decisions, or whatever makes related information easiest to find. Every folder that contains durable concepts gets its own concise `index.md`.
+
+## How memory reaches a conversation
+
+Whenever a provider creates a fresh context window, NanoClaw injects `memory/index.md` and `memory/system/definition.md`:
+
+| Event | Memory injected? | Why |
+|---|---|---|
+| Agent starts a new context | Yes | The new context needs the current memory map and rules |
+| You clear the context | Yes | The replacement context starts from current memory |
+| Context compacts | Yes | Durable facts must survive the discarded conversation detail |
+| An existing provider session resumes | No | That context already contains the injected memory |
+
+Resume happens often — usually on each new inbound message — so injecting again would duplicate the same block throughout the conversation.
+
+Each loaded file has a 16,000-character limit. If either file grows past that limit, the injected copy ends with a truncation notice. Keep both files lean: headlines and pointers in the indexes, detail in linked concept files. The agent can follow those links and read deeper files with ordinary filesystem tools when they become relevant.
+
+The session-start hook renders memory inside the container. The trusted host composes stable agent instructions, but it never reads agent-controlled memory content into `CLAUDE.md` or `AGENTS.md`.
+
+## Write portable concept files
+
+The directory is an [Open Knowledge Format](https://github.com/nanocoai/nanoclaw/blob/main/docs/memory.md) (OKF) v0.1 bundle. Store one durable concept per Markdown file and begin it with YAML frontmatter whose first field is `type`:
+
+```markdown
+---
+type: person
+title: "Dana"
+tags: ["atlas", "engineering"]
+---
+
+# Dana
+
+Dana leads the Atlas project and prefers decisions in writing.
+```
+
+`type` uses the vocabulary of your own domain; NanoClaw does not impose a fixed list. Optional fields include `title`, `description`, `tags`, and `resource`. Root and folder `index.md` files, plus `log.md` files, do not need a type.
+
+The format is a convention, not a gate. A Markdown file with missing or malformed frontmatter still works as memory. The agent repairs its metadata when it next reads or edits that file instead of scanning and rewriting the whole tree.
+
+## Put each kind of state in the right place
+
+Memory is one of three different durable surfaces:
+
+| Information | Where it belongs |
+|---|---|
+| Durable facts, people, projects, preferences, and decisions | `memory/` |
+| Role, persona, tone, and standing behavior | `instructions.prepend.md` |
+| Past conversation transcripts | `conversations/` |
+
+For example, “the user's name is Ada” belongs in memory. “Always answer in Spanish” is a standing instruction. The details of yesterday's conversation remain in its transcript unless the agent distills something durable from them.
+
+Keep Core Memory especially selective. It should contain only facts relevant in nearly every conversation. Put everything else in focused files and link them from the nearest index.
+
+## Understand the scope
+
+Memory belongs to an **agent group**, not to one chat or session:
+
+| Boundary | Memory behavior |
+|---|---|
+| Several chats wired to one agent group | Shared memory |
+| Separate sessions or threads in one agent group | Shared memory |
+| Switching the group's provider | The same memory tree carries across |
+| Separate agent groups | Separate memory |
+
+Conversation history follows different rules. Two sessions can have separate histories while reading and writing the same group memory. A provider switch starts a fresh continuation on the new provider, but durable memory stays in place.
+
+If different audiences must not influence or learn from each other's durable state, give them separate agent groups. Session isolation alone is not enough. See [Isolation levels](/concepts/isolation-levels) for the full decision guide.
+
+## Ask the agent to remember
+
+The normal interface is conversational:
+
+```text
+Remember that Atlas releases on Tuesdays and Dana owns the checklist.
+```
+
+The agent can update `memory/` directly without an approval card. You can inspect the result on the host:
+
+```bash
+find groups/scout/memory -maxdepth 3 -type f -print
+sed -n '1,200p' groups/scout/memory/index.md
+```
+
+If a fact is wrong or stale, correct the file directly or tell the agent. The files on disk are authoritative. Host-side edits appear the next time the provider creates a fresh context window — at startup, after clear, or after compaction — rather than being injected into an already resumed context.
+
+Memory edits have no built-in approval trail, and `groups/` is not a Git repository by default. Review the files directly and include the group folder in your own backup plan.
+
+## Security and trust
+
+The agent's group directory is mounted read-write, so an agent can change or delete its own memory. That is what makes conversational remembering work, but it also means a prompt-injected agent can poison the durable state seen by every future session in that group.
+
+Use separate agent groups for different people or trust domains. Review memory used by agents exposed to untrusted audiences, and keep sensitive host files outside their mount allowlist. The [Security model](/concepts/security) explains the wider blast radius and the controls around it.
+
+## Migrate older memory
+
+Older groups may still keep durable state in `.seed.md`, `CLAUDE.md`, `CLAUDE.local.md`, Claude's native auto-memory directory, or an imported provider-memory file. Run the `migrate-memory` skill to:
+
+1. Move standing role and behavior into `instructions.prepend.md`
+2. Distill durable facts into focused concept files
+3. Build indexes so every retained concept is reachable from `memory/index.md`
+4. Preserve staged source files until you approve the result
+
+Normal startup never imports legacy memory automatically. A provider switch also does not need migration once the group uses the shared tree. For the full legacy handoff, see [Migrate from v1 or OpenClaw](/migrate-from-v1).
+
+## Related pages
+
+- [Customize an agent](/guides/customize-an-agent) — change standing instructions, model, and capabilities
+- [Agent providers](/extend/providers) — provider hooks and what carries across a switch
+- [Agent self-modification](/extend/self-modification) — what the agent can edit without approval
+- [Isolation levels](/concepts/isolation-levels) — decide which conversations may share files and memory
+- [Container lifecycle](/concepts/container-lifecycle) — see where the group workspace is mounted

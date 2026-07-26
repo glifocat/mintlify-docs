@@ -19,7 +19,7 @@ Agents can change their own environment — but every change that touches the co
 
 ## Free edits: the agent's own memory
 
-The group folder is mounted read-write at `/workspace/agent/`, so the agent can edit its own durable state without asking anyone: the **`memory/` tree** (durable facts and accumulated memory, scaffolded idempotently at boot for every provider) and **`instructions.prepend.md`** (its standing instructions and persona). This is where "remember that I prefer short answers" lands — in `memory/`. The [self-customize container skill](/reference/skills-catalog#container-skills) teaches exactly this: memory, standing instructions, and workspace files are direct edits, everything else has a workflow.
+The group folder is mounted read-write at `/workspace/agent/`, so the agent can edit its own durable state without asking anyone: the **[`memory/` tree](/concepts/agent-memory)** (durable facts and accumulated memory, scaffolded idempotently at boot for every provider) and **`instructions.prepend.md`** (its standing instructions and persona). This is where "remember that I prefer short answers" lands — in `memory/`. The [self-customize container skill](/reference/skills-catalog#container-skills) teaches exactly this: memory, standing instructions, and workspace files are direct edits, everything else has a workflow.
 
 The boundary is enforced by nested read-only mounts on top of the read-write group dir:
 

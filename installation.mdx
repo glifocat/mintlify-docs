@@ -230,7 +230,7 @@ The highlights:
 | Path | Purpose |
 |---|---|
 | `groups/<folder>/instructions.prepend.md` | The group's standing instructions and persona — this is the file you edit. |
-| `groups/<folder>/memory/` | The agent's durable memory tree, scaffolded at boot and shared by every provider. |
+| `groups/<folder>/memory/` | The agent's [durable memory tree](/concepts/agent-memory), scaffolded at boot and shared by every provider. |
 | `groups/<folder>/CLAUDE.md` | Regenerated at every container spawn from the shared base plus enabled skills. Don't edit it — your changes get overwritten. |
 | `groups/<folder>/container.json` | Per-group container overrides. |
 | `container/CLAUDE.md` | Shared base instructions for all agents, mounted read-only into every container. |
