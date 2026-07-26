@@ -4,7 +4,7 @@ description: "Lock down a NanoClaw install — egress lockdown, the mount allowl
 keywords: ["hardening", "security", "egress lockdown", "NANOCLAW_EGRESS_LOCKDOWN", "mount allowlist", "unknown_sender_policy", "command gate", "container limits"]
 ---
 
-{/* verified-against: src/egress-lockdown.ts, src/modules/mount-security/index.ts, src/modules/permissions/{index.ts,access.ts,sender-approval.ts}, src/command-gate.ts, src/router.ts, src/db/schema.ts, src/config.ts, src/host-sweep.ts, config-examples/mount-allowlist.json, .claude/skills/manage-mounts/SKILL.md, setup/mounts.ts, src/cli/resources/groups.ts @ e926e30e (v2.1.53) */}
+{/* verified-against: src/egress-lockdown.ts, src/modules/mount-security/index.ts, src/modules/permissions/{index.ts,access.ts,sender-approval.ts}, src/command-gate.ts, src/router.ts, src/db/schema.ts, src/config.ts, src/container-runner.ts, container/Dockerfile, src/host-sweep.ts, config-examples/mount-allowlist.json, .claude/skills/manage-mounts/SKILL.md, setup/mounts.ts, src/cli/resources/groups.ts @ f1e66179 (v2.1.53) */}
 
 NanoClaw's isolation boundary is the Docker container: each agent runs in its own container with a scoped workspace mount (see [Container lifecycle](/concepts/container-lifecycle)). There is no micro-VM or alternative sandbox runtime — hardening means tightening what those containers can reach. This page walks the defense-in-depth controls from network to filesystem to people.
 
@@ -18,7 +18,7 @@ By default, agent containers have normal outbound internet access. Set `NANOCLAW
 
 The setup is idempotent and self-healing — NanoClaw creates the network and re-attaches the gateway on every spawn if needed. It also **fails fast**: if lockdown is enabled but the network can't be created or the gateway container can't be attached, NanoClaw throws an `EgressLockdownError` and refuses to spawn the agent rather than silently running it with open egress. If you see that error, start the gateway container (or set `NANOCLAW_EGRESS_LOCKDOWN=false` to opt out).
 
-All three variables can be set in `.env` or the process environment (`src/config.ts:84-88`) — `.env` is the simpler path for a plain "edit and restart" flow; the service definition (launchd plist or systemd unit) still works too, as described in [Configuration](/operate/configuration#applying-changes):
+All three variables can be set in `.env` or the process environment (`src/config.ts:92-95`) — `.env` is the simpler path for a plain "edit and restart" flow; the service definition (launchd plist or systemd unit) still works too, as described in [Configuration](/operate/configuration#applying-changes):
 
 ```bash
 # Linux (systemd unit)
@@ -93,16 +93,27 @@ If the permissions module isn't installed (no `user_roles` table), admin command
 
 ## Cap container resources
 
-These limits bound what a runaway agent can consume. Both can be set in `.env` or the process environment (see [Configuration](/operate/configuration#read-from-env)):
+These limits bound what a runaway agent can consume. All three can be set in `.env` or the process environment (see [Configuration](/operate/configuration#read-from-env)):
 
 | Variable | Default | Limits |
 |---|---|---|
 | `CONTAINER_CPU_LIMIT` | _unset_ | CPU cap per container, passed to `docker run --cpus` (e.g. `2`). Opt-in; unset leaves containers unbounded. |
 | `CONTAINER_MEMORY_LIMIT` | _unset_ | Memory cap per container, passed to `docker run --memory` (e.g. `8g`). A hard cap only on a swapless host — there a runaway is OOM-killed; with swap it can spill past the limit. |
+| `CONTAINER_PIDS_LIMIT` | `2048` | Process/thread cap per container, passed to `docker run --pids-limit`. Unlike the other two this one is **on by default**, as a fork-bomb backstop. cgroups v2 counts threads rather than processes and a browsing agent with several tabs open runs into the high hundreds, so the default sits well clear of normal use. Set it to `0` (or any non-numeric value) to drop the cap. |
 
 <Note>
 There is no env var for a container-count or output-size cap, and no concurrency-cap env var — `CONTAINER_TIMEOUT`, `IDLE_TIMEOUT`, `CONTAINER_MAX_OUTPUT_SIZE`, and `MAX_CONCURRENT_CONTAINERS` were removed from the code. Idle/stuck containers are now caught by the periodic host-sweep loop (`src/host-sweep.ts`) — see [Container killed mid-task](/operate/troubleshooting#container-killed-mid-task).
 </Note>
+
+## Always-on container hardening
+
+Some of the container's posture isn't configurable at all. Every spawn gets the same flags, unconditionally — there is no per-group and no per-install override (`hardeningArgs`, `src/container-runner.ts:261`):
+
+- **`--cap-drop=ALL`** and **`--security-opt no-new-privileges`** — depth against a root-in-container path. Under the normal `--user` mapping they're inert (the capability sets are already empty and the image carries no file capabilities), which is the point: they cost nothing and cover the case where the mapping doesn't apply.
+- **`--init`** — Docker's own init runs as PID 1 and forwards signals to the agent runner. Not optional: the spawn's `--entrypoint bash` override defeats the image's tini, and Linux discards default-action signals sent to PID 1, so without it SIGTERM would be ignored and every `docker stop` would end in SIGKILL after the full grace period.
+- **`--shm-size=1g`** — Docker defaults `/dev/shm` to 64 MB, which silently short-writes past that size. `agent-browser` passes `--disable-dev-shm-usage`, but a third-party Puppeteer or Playwright launcher inside the container may not.
+
+The agent image adds one more that isn't a flag: the build strips the setuid-root bit from every binary Debian ships (`mount`, `su`, `passwd`, and friends), none of which an unprivileged agent needs (`container/Dockerfile:125`).
 
 ## Credentials
 

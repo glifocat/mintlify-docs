@@ -5,6 +5,12 @@ icon: "file-pen"
 rss: true
 ---
 
+<Update label="Container hardening and WhatsApp mention drift" description="2026-07-26" tags={["Updated"]}>
+  The container pages described a posture that no longer matches trunk. Agent spawns now carry a fixed hardening set that no group or install can override ([nanoclaw#2748](https://github.com/nanocoai/nanoclaw/pull/2748)): `--init`, so `docker-init` is PID 1 and SIGTERM actually reaches the runner instead of being discarded — `concepts/container-lifecycle` had the inverse story, Bun as PID 1 with no `--init` — plus `--cap-drop=ALL`, `--security-opt no-new-privileges`, `--shm-size=1g`, and a `--pids-limit` fork-bomb backstop defaulting to `2048`. That default lands as a new `CONTAINER_PIDS_LIMIT` variable on `reference/environment-variables` and a new always-on section on `operate/hardening`, alongside restamped `src/config.ts` line citations.
+
+  Separately, `channels/whatsapp` said dedicated-number groups engage only on an explicit @-mention of the bot's number. A typed `@<agent name>` or `@<bot number>` also triggers, as long as the message doesn't mention-pill anyone else ([nanoclaw#3087](https://github.com/nanocoai/nanoclaw/pull/3087)). Verified against trunk `f1e66179` and channels `6ee516ad`.
+</Update>
+
 <Update label="Dedicated agent memory guide" description="2026-07-26" tags={["New", "Updated"]}>
   Added **`concepts/agent-memory`**, the first single-page explanation of NanoClaw's provider-neutral memory system: the host and container paths, boot scaffold, Core Memory, session-start injection rules, 16,000-character per-file budget, OKF concept format, group sharing boundary, operator workflow, prompt-injection risk, and legacy migration. The page is verified against `nanocoai/nanoclaw@f1e66179` and linked from the entity model, isolation, security, customization, providers, self-modification, installation, and quickstart pages.
 </Update>
