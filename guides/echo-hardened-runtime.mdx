@@ -6,7 +6,7 @@ keywords: ["echo", "hardened runtime", "security", "sandbox", "container image",
 tag: "NEW"
 ---
 
-{/* verified-against: setup/auto.ts, setup/registry-login.ts, setup/registry-login.sh, setup/registry.ts, setup/lib/registry-state.ts, container/Dockerfile, container/pull.sh, container/build.sh, setup/verify.ts, docs/hardened-image.md, versions.json @ 4e83a0a0 (main, #3150 merge). Auth screenshots show the staging identity UI; re-shoot if production auth gets branding. */}
+{/* verified-against: setup/auto.ts, setup/registry-login.ts, setup/registry-login.sh, setup/registry.ts, setup/lib/registry-state.ts, container/Dockerfile, container/pull.sh, container/build.sh, setup/verify.ts, docs/hardened-image.md, versions.json @ 4e83a0a0 (main, #3150 merge). Auth screenshots are production captures (authenticate.nanoclaw.dev, 2026-07-29). */}
 
 <Note>
   The hardened runtime is free and opt-in. Your existing local-build setup keeps working exactly as it does today. Choosing the hardened runtime is additive, not a replacement.
@@ -79,7 +79,7 @@ Choose the hardened runtime while you set up NanoClaw for the first time.
     The page asks you to sign in, or sign up:
 
     <Frame caption="Sign in with email or a linked account.">
-      ![Browser sign-in page with an email field and Google, Microsoft, GitHub, and Apple sign-in options](/images/echo/hardened-runtime/signin-02-sign-in.png)
+      ![Browser sign-in page with an email field and Google and GitHub sign-in options](/images/echo/hardened-runtime/signin-02-sign-in.png)
     </Frame>
 
     Then it shows the code back to you — confirm it matches your terminal:
@@ -172,7 +172,7 @@ Provenance also rides in the image itself: the `dev.nanoclaw.image-source` label
   </Accordion>
 
   <Accordion title="What gets recorded when I use it?">
-    Your verified email address and the fact and time that you fetched an image. If — and only if — you consent to product updates during sign-up, that consent is recorded too. Building locally is unauthenticated and sends nothing.
+    Your verified email address and the fact and time that you fetched an image. If — and only if — you consent to security and project updates during sign-up, that consent is recorded too — the [NanoClaw privacy policy](https://nanoclaw.dev/privacy) covers what happens to your address. Building locally is unauthenticated and sends nothing.
   </Accordion>
 
   <Accordion title="I already run NanoClaw. How do I switch?">
