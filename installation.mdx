@@ -6,7 +6,7 @@ icon: "download"
 keywords: ["requirements", "docker", "node", "pnpm", "bun", "wsl", "launchd", "systemd", "onecli", "nanoclaw.sh", "manual install"]
 ---
 
-{/* verified-against: nanoclaw.sh, setup.sh, setup/probe.sh, setup/auto.ts, setup/index.ts, setup/install-node.sh, setup/install-docker.sh, setup/container.ts, setup/service.ts, setup/set-env.ts, container/Dockerfile, src/container-runtime.ts, src/container-runner.ts, src/claude-md-compose.ts, src/group-init.ts, src/config.ts, src/install-slug.ts, src/session-manager.ts, src/index.ts, package.json @ e926e30e (v2.1.53) */}
+{/* verified-against: nanoclaw.sh, setup.sh, setup/probe.sh, setup/auto.ts, setup/index.ts, setup/install-node.sh, setup/install-docker.sh, setup/container.ts, setup/service.ts, setup/set-env.ts, container/Dockerfile, container/pull.sh, versions.json, src/container-runtime.ts, src/container-runner.ts, src/claude-md-compose.ts, src/group-init.ts, src/config.ts, src/install-slug.ts, src/session-manager.ts, src/index.ts, package.json @ 4e83a0a0 (main) */}
 
 This page is the depth companion to [Quick start](/quickstart): what the installer actually does, how to install by hand, how the background service works, and where everything lands on disk. If you just want a running assistant, run `bash nanoclaw.sh` and follow the wizard — quick start covers that flow end to end.
 
@@ -67,6 +67,8 @@ Two consequences worth knowing:
 - **Agent source is never baked into the image.** The host bind-mounts `container/agent-runner/src` read-only at `/app/src`, so agent-runner changes take effect on the next container spawn without a rebuild. The host's own `src/` is different: the service runs the compiled `dist/`, so host changes need `pnpm run build` and a service restart.
 - **The image is per-checkout**: `nanoclaw-agent-v2-<slug>:latest`, where the slug is the first 8 hex chars of `sha1(projectRoot)`. Two NanoClaw installs on one host never clobber each other's image, service, or containers.
 
+The container step can fetch a pre-built image instead of building one: sign in with your NanoClaw account, and setup pulls the reference pinned as `agent-image` in `versions.json` — implemented by `container/pull.sh` — and retags it to the same local tag a build would produce. The choice persists as `NANOCLAW_HARDENED_IMAGE` in `.env`. See [Get started with the Echo hardened runtime](/guides/echo-hardened-runtime).
+
 **Docker is the only supported runtime.** `src/container-runtime.ts` hardcodes the binary (`CONTAINER_RUNTIME_BIN = 'docker'`) behind a single-file abstraction — all runtime-specific logic lives in that one file, but nothing else is wired up today.
 
 If you render Chinese, Japanese, or Korean text, set `INSTALL_CJK_FONTS=true` in `.env` before the container build — it adds Noto CJK fonts (~200 MB) to the image.
@@ -99,7 +101,7 @@ pnpm run setup -- --step service     # rebuild TypeScript and reinstall the serv
 pnpm run setup -- --step verify      # end-to-end health check
 ```
 
-Available steps: `timezone`, `set-env`, `environment`, `container`, `register`, `pair-telegram`, `groups`, `whatsapp-auth`, `signal-auth`, `mounts`, `service`, `verify`, `onecli`, `auth`, `provider-auth`, `cli-agent`.
+Available steps: `timezone`, `set-env`, `environment`, `container`, `register`, `pair-telegram`, `groups`, `whatsapp-auth`, `signal-auth`, `mounts`, `service`, `verify`, `onecli`, `auth`, `provider-auth`, `cli-agent`, `registry`, `registry-reconcile`.
 
 ### Scripting the wizard
 

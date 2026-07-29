@@ -1,10 +1,10 @@
 ---
 title: "Container configuration"
 description: "Every per-group container config field — storage, defaults, spawn-time consumption, and when changes take effect."
-keywords: ["container config", "container_configs", "container.json", "provider", "model", "effort", "image_tag", "mcp_servers", "additional_mounts", "cli_scope", "skills", "packages"]
+keywords: ["container config", "container_configs", "container.json", "provider", "model", "effort", "image_tag", "mcp_servers", "additional_mounts", "cli_scope", "skills", "packages", "timezone"]
 ---
 
-{/* verified-against: src/db/container-configs.ts, src/container-config.ts, src/container-runner.ts, src/cli/resources/groups.ts, src/cli/dispatch.ts, src/claude-md-compose.ts, src/modules/mount-security/index.ts, src/db/migrations/{014-container-configs,015-cli-scope}.ts, container/agent-runner/src/{config.ts,index.ts,db/messages-in.ts,providers/types.ts} @ e926e30e (v2.1.53) */}
+{/* verified-against: src/db/container-configs.ts, src/container-config.ts, src/container-runner.ts, src/cli/resources/{groups,tasks}.ts, src/cli/dispatch.ts, src/claude-md-compose.ts, src/modules/mount-security/index.ts, src/modules/scheduling/recurrence.ts, src/db/migrations/{014-container-configs,015-cli-scope}.ts, container/agent-runner/src/{config.ts,index.ts,db/messages-in.ts,providers/types.ts} @ 4e83a0a0 */}
 
 Each agent group has one row in the `container_configs` table in the central SQLite database — the source of truth for how that group's containers spawn. You change it with the [`ncl groups config` subcommands](/reference/ncl-cli#groups); the row is created automatically with defaults when the group is created.
 
@@ -16,6 +16,7 @@ Config edits write to the database only — a **running container keeps its old 
 
 - **Packages** are baked into the group's image, not installed at spawn — they need `ncl groups restart --rebuild`.
 - **`cli_scope`** is enforced host-side and read fresh from the database on every CLI request — it takes effect immediately, no restart.
+- **`timezone`** is partly immediate: [scheduled tasks](/guides/scheduled-tasks) read it fresh from the database at trigger time, so a change applies to the next run with no restart. The container's own `TZ` (message timestamps, anything the agent shells out for) is only set at spawn, so that side still needs a restart.
 
 ## Fields
 
@@ -33,6 +34,7 @@ Config edits write to the database only — a **running container keeps its old 
 | `packages_apt` | JSON | `[]` | Per-group image build (not spawn) |
 | `packages_npm` | JSON | `[]` | Per-group image build (not spawn) |
 | `additional_mounts` | JSON | `[]` | Mount validation + `-v` args |
+| `timezone` | string | `NULL` (falls back to the install global) | `container-runner.ts` `TZ` env; `resolveGroupTimezone` for scheduling |
 
 ### provider
 
@@ -106,6 +108,12 @@ Extra host directories mounted into the container:
 ```
 
 `containerPath` is relative — the mount lands at `/workspace/extra/<containerPath>` (defaults to the host path's basename). Every entry is validated at spawn against the allowlist at `~/.config/nanoclaw/mount-allowlist.json`: no allowlist file means **all additional mounts are blocked**, paths matching blocked patterns (`.ssh`, `.aws`, `.env`, …) are always rejected, and read-write requires both `"readonly": false` and an allowed root with `allowReadWrite: true` — otherwise the mount is forced read-only. Rejected mounts are logged and skipped, not fatal. Full allowlist setup in [Hardening](/operate/hardening#gate-additional-mounts).
+
+### timezone
+
+An IANA timezone id (e.g. `Europe/Lisbon`) that overrides the install-global timezone for this group alone. Unset, or an invalid id, falls back to the global default rather than silently running in UTC. Set it with `ncl groups create --timezone <id>` or `ncl groups config update --timezone <id>`; pass `--timezone ""` on `config update` to clear it back to the install default.
+
+It reaches two places: the container's `TZ` env var (spawn-time only), and [scheduled-task](/guides/scheduled-tasks) recurrence, which resolves the group's timezone fresh from the database at every trigger check — so a change to this field changes when a group's schedules fire immediately, ahead of the container-level effects in [When changes take effect](#when-changes-take-effect) above.
 
 ## Per-group images and packages
 

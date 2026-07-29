@@ -4,7 +4,7 @@ description: "What agents can change about themselves — editing their own memo
 keywords: ["self-modification", "install_packages", "add_mcp_server", "memory", "instructions.prepend.md", "approval", "self-customize", "rebuild", "agent memory"]
 ---
 
-{/* verified-against: src/modules/self-mod/{index,request,apply}.ts, src/modules/approvals/primitive.ts, container/agent-runner/src/mcp-tools/self-mod.ts, container/agent-runner/src/mcp-tools/self-mod.instructions.md, container/agent-runner/src/memory/scaffold.ts, container/skills/self-customize/SKILL.md, src/container-runner.ts, src/claude-md-compose.ts, src/group-persona.ts @ e926e30e (v2.1.53) */}
+{/* verified-against: src/modules/self-mod/{index,request,apply}.ts, src/modules/approvals/primitive.ts, container/agent-runner/src/mcp-tools/self-mod.ts, container/agent-runner/src/mcp-tools/self-mod.instructions.md, container/agent-runner/src/memory/scaffold.ts, container/skills/self-customize/SKILL.md, src/container-runner.ts, src/claude-md-compose.ts, src/group-persona.ts @ 4e83a0a0 */}
 
 Agents can change their own environment — but every change that touches the container goes through you. The self-mod module exposes exactly two operations, `install_packages` and `add_mcp_server`, and **both are always approval-gated**: the agent submits a request, an admin gets a card, and nothing changes until someone taps Approve. What an agent can change freely is its own memory and standing instructions.
 
@@ -38,6 +38,8 @@ The request is fire-and-forget. On approval, the host does the whole follow-up i
 3. Kills the container and queues an on-wake message telling the fresh agent to verify the packages and report back to the user
 
 Packages installed this way are baked into the image and available in every future session — unlike a `pnpm install` in the per-session workspace, which needs no approval but doesn't persist into the image or other sessions. The self-customize skill recommends exactly that for one-off tasks, and prototyping in the workspace before promoting a dependency to a container-level install.
+
+On a [hardened-runtime](/guides/echo-hardened-runtime) install, this rebuild layers the per-group image on top of the pulled one rather than building from scratch, and labels the result `derived` (`dev.nanoclaw.image-source`) instead of `hardened` — the vendor's scan covered the base image, not the packages an agent added. `pnpm exec tsx setup/index.ts --step verify` reports how many groups are running one of these derived images (`DERIVED_GROUPS`).
 
 ## `add_mcp_server`: new tools
 

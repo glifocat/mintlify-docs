@@ -4,7 +4,7 @@ description: "Configure a NanoClaw install — environment variables in .env and
 keywords: ["configuration", "environment variables", ".env", "container config", "ASSISTANT_NAME", "LOG_LEVEL", "container_configs"]
 ---
 
-{/* verified-against: src/config.ts, src/env.ts, src/log.ts, src/webhook-server.ts, src/egress-lockdown.ts, src/host-sweep.ts, src/providers/claude.ts, src/container-config.ts, src/db/container-configs.ts, setup/set-env.ts, setup/service.ts @ e926e30e (v2.1.53) */}
+{/* verified-against: src/config.ts, src/env.ts, src/log.ts, src/webhook-server.ts, src/egress-lockdown.ts, src/host-sweep.ts, src/providers/claude.ts, src/container-config.ts, src/db/container-configs.ts, setup/set-env.ts, setup/service.ts, setup/container.ts, container/pull.sh @ 4e83a0a0 */}
 
 NanoClaw has two configuration layers:
 
@@ -53,6 +53,11 @@ These are read from `process.env` at startup. Set them in the service definition
 |---|---|---|
 | `CONTAINER_IMAGE` | per-install tag | Full agent image override (name and tag). |
 | `CONTAINER_IMAGE_BASE` | per-install name | Base image name override. The default includes an install slug so two checkouts on one host don't clobber each other's `nanoclaw-agent` image. |
+| `NANOCLAW_HARDENED_IMAGE` | `false` | Set `true` to fetch the pre-built [Echo hardened image](/guides/echo-hardened-runtime) at the next build/install step instead of building locally (`setup/container.ts:286`). |
+| `NANOCLAW_AGENT_IMAGE_REF` | committed `agent-image` pin in `versions.json` | Override which pullable image reference to fetch (`setup/container.ts:309`). |
+| `NANOCLAW_ALLOW_UNLABELED_IMAGE` | `false` (unset) | Accept a pulled image with no `dev.nanoclaw.agent-runner-lock-sha256` label instead of refusing it (`container/pull.sh:153`). See [Hardening](/operate/hardening#hardened-image-option). |
+
+See the [environment variables reference](/reference/environment-variables) for the full list.
 
 <Note>
 `CONTAINER_TIMEOUT`, `IDLE_TIMEOUT`, `MAX_CONCURRENT_CONTAINERS`, `CONTAINER_MAX_OUTPUT_SIZE`, and `MAX_MESSAGES_PER_PROMPT` were removed from the code and are no longer read — setting any of them has no effect. Container idle/stuck detection is now handled by the periodic host-sweep loop (`src/host-sweep.ts`), not a per-container timeout env var.

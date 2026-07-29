@@ -4,7 +4,7 @@ description: "Lock down a NanoClaw install — egress lockdown, the mount allowl
 keywords: ["hardening", "security", "egress lockdown", "NANOCLAW_EGRESS_LOCKDOWN", "mount allowlist", "unknown_sender_policy", "command gate", "container limits"]
 ---
 
-{/* verified-against: src/egress-lockdown.ts, src/modules/mount-security/index.ts, src/modules/permissions/{index.ts,access.ts,sender-approval.ts}, src/command-gate.ts, src/router.ts, src/db/schema.ts, src/config.ts, src/container-runner.ts, container/Dockerfile, src/host-sweep.ts, config-examples/mount-allowlist.json, .claude/skills/manage-mounts/SKILL.md, setup/mounts.ts, src/cli/resources/groups.ts @ f1e66179 (v2.1.53) */}
+{/* verified-against: src/egress-lockdown.ts, src/modules/mount-security/index.ts, src/modules/permissions/{index.ts,access.ts,sender-approval.ts}, src/command-gate.ts, src/router.ts, src/db/schema.ts, src/config.ts, src/container-runner.ts, container/Dockerfile, src/host-sweep.ts, config-examples/mount-allowlist.json, .claude/skills/manage-mounts/SKILL.md, setup/mounts.ts, src/cli/resources/groups.ts, setup/lib/registry-state.ts @ 4e83a0a0 */}
 
 NanoClaw's isolation boundary is the Docker container: each agent runs in its own container with a scoped workspace mount (see [Container lifecycle](/concepts/container-lifecycle)). There is no micro-VM or alternative sandbox runtime — hardening means tightening what those containers can reach. This page walks the defense-in-depth controls from network to filesystem to people.
 
@@ -47,7 +47,7 @@ Validation rules, in order:
 
 1. **Container path** must be relative, non-empty, and contain no `..` or `:` (prevents path traversal and Docker `-v` option injection). Validated mounts land under `/workspace/extra/`.
 2. **Host path** is tilde-expanded and resolved through symlinks to its real path; it must exist.
-3. **Blocked patterns** — the real path must not match any pattern. Your `blockedPatterns` are merged with a built-in default set (`.ssh`, `.gnupg`, `.aws`, `.kube`, `.docker`, `credentials`, `.env`, `.netrc`, `id_rsa`, `id_ed25519`, and similar) that you can't remove.
+3. **Blocked patterns** — the real path must not match any pattern. Your `blockedPatterns` are merged with a built-in default set (`.ssh`, `.gnupg`, `.aws`, `.kube`, `.docker`, `credentials`, `.env`, `.netrc`, `id_rsa`, `id_ed25519`, `.config/nanoclaw`, `.local/bin`, and similar) that you can't remove. The last two block a container from naming NanoClaw's own host-side state — `.config/nanoclaw` holds the mount and sender allowlists plus the registry account credentials, and `.local/bin` holds host-executed helper binaries the operator invokes by name.
 4. **Allowed roots** — the real path must sit under one of `allowedRoots`.
 5. **Read-only by default** — a mount is read-write only when it explicitly requests it *and* the matching root has `allowReadWrite: true`. Otherwise it's forced read-only.
 
@@ -114,6 +114,20 @@ Some of the container's posture isn't configurable at all. Every spawn gets the 
 - **`--shm-size=1g`** — Docker defaults `/dev/shm` to 64 MB, which silently short-writes past that size. `agent-browser` passes `--disable-dev-shm-usage`, but a third-party Puppeteer or Playwright launcher inside the container may not.
 
 The agent image adds one more that isn't a flag: the build strips the setuid-root bit from every binary Debian ships (`mount`, `su`, `passwd`, and friends), none of which an unprivileged agent needs (`container/Dockerfile:125`).
+
+## Hardened image option
+
+By default your machine builds the agent sandbox image locally. You can opt in to a pre-built, patched image instead — see [Get started with the Echo hardened runtime](/guides/echo-hardened-runtime).
+
+Every agent image carries a `dev.nanoclaw.image-source` label recording where it actually came from (`container/Dockerfile:148-151`, `setup/lib/registry-state.ts`):
+
+| Value | Meaning |
+|---|---|
+| `local` | Built on this machine from the public base. The default. |
+| `hardened` | Pulled from the gated registry — the vendor's scanned bytes, unmodified. |
+| `derived` | A per-group image built on top of a pulled `hardened` image (a group's `install_packages` adding apt or npm packages). The label is overwritten to `derived` because the added bytes were never scanned by the vendor — a derived image can't keep claiming `hardened` (`src/container-runner.ts:593-600`). |
+
+A second label, `dev.nanoclaw.agent-runner-lock-sha256`, records which `container/agent-runner/bun.lock` the baked `node_modules` was built from. `container/pull.sh` checks it before retagging, so a pulled image whose lock doesn't match this checkout fails loudly instead of surfacing as a missing module inside a container.
 
 ## Credentials
 

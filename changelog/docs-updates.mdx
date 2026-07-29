@@ -5,6 +5,10 @@ icon: "file-pen"
 rss: true
 ---
 
+<Update label="Hardened image coverage lands on nine more pages" description="2026-07-29" tags={["Updated"]}>
+  Second pass from the same-day drift sweep — pages that weren't wrong but didn't yet mention the hardened image where readers would look for it. [Hardening](/operate/hardening) gained the provenance-label scheme (`dev.nanoclaw.image-source`: `local` / `hardened` / `derived`, plus the agent-runner lock label) and the two new default-blocked mount patterns. [Credentials](/operate/credentials) documents the registry sign-in as its own credential class: device-code flow, `~/.config/nanoclaw/account.json`, and the docker credential helper that mints a short-lived password per pull. [Configuration](/operate/configuration) and the guide-adjacent pages picked up the three image-source variables, [Installation](/installation) the `registry` / `registry-reconcile` steps and the pull path, [Container lifecycle](/concepts/container-lifecycle) the pull-and-retag alternative, and [Providers](/extend/providers) the pinned-install nuance (Codex overlays onto the pulled image; OpenCode's lockfile change drops the install to a local build). [Container configuration](/reference/container-config) also gained the `timezone` field from the earlier per-group-timezone feature. Every addition verified against `nanocoai/nanoclaw@4e83a0a0`; all nine stamps bumped.
+</Update>
+
 <Update label="Post-launch drift sweep: the hardened image lands across the portal" description="2026-07-29" tags={["Updated", "Fixed"]}>
   Same-day sweep after the hardened-image feature merged upstream ([nanoclaw#3150](https://github.com/nanocoai/nanoclaw/pull/3150)): every page's `verified-against` files were diffed against the merge (`4e83a0a0`), 30 flagged pages adjudicated, four fixed.
 

@@ -5,7 +5,7 @@ tag: "UPDATED"
 keywords: ["providers", "agent provider", "claude", "opencode", "codex", "ollama", "local models", "agent_provider", "model", "effort", "provider selection", "switch provider", "migrate-memory"]
 ---
 
-{/* verified-against: container/agent-runner/src/providers/{types,factory,claude,provider-registry}.ts, container/agent-runner/src/{config,index,poll-loop}.ts, container/agent-runner/src/memory/scaffold.ts, src/container-runner.ts, src/container-config.ts, src/providers/{claude,provider-container-registry}.ts, src/provider-surfaces.test.ts, src/cli/resources/{groups,sessions}.ts, .claude/skills/{add-opencode,add-ollama-provider,add-codex,migrate-memory}/SKILL.md, .claude/skills/add-codex/REMOVE.md, src/{group-init,group-persona,group-skills}.ts, setup/auto.ts, setup/providers/registry.ts, setup/provider-auth.ts, docs/ollama.md, docs/provider-migration.md, container/cli-tools.json @ trunk e926e30e (v2.1.53); opencode.ts, codex.ts, codex-app-server.ts, codex-agents-md.ts, codex-host-contribution.test.ts, exchange-archive.ts, setup/providers/codex.ts @ providers branch f2b75837 */}
+{/* verified-against: container/agent-runner/src/providers/{types,factory,claude,provider-registry}.ts, container/agent-runner/src/{config,index,poll-loop}.ts, container/agent-runner/src/memory/scaffold.ts, src/container-runner.ts, src/container-config.ts, src/providers/{claude,provider-container-registry}.ts, src/provider-surfaces.test.ts, src/cli/resources/{groups,sessions}.ts, .claude/skills/{add-opencode,add-ollama-provider,add-codex,migrate-memory}/SKILL.md, .claude/skills/add-codex/REMOVE.md, src/{group-init,group-persona,group-skills}.ts, setup/auto.ts, setup/providers/registry.ts, setup/provider-auth.ts, setup/lib/container-build.ts, docs/ollama.md, docs/provider-migration.md, container/cli-tools.json, container/build.sh @ trunk 4e83a0a0; opencode.ts, codex.ts, codex-app-server.ts, codex-agents-md.ts, codex-host-contribution.test.ts, exchange-archive.ts, setup/providers/codex.ts @ providers branch f2b75837 */}
 
 A **provider** is the agent CLI that runs inside a group's container — the thing that actually plans, calls tools, and writes replies. By default that's Claude Code via the Claude Agent SDK. The provider is pluggable: the agent runner selects an implementation from an open registry at startup, and the trunk ships only `claude` (plus a `mock` provider for tests).
 
@@ -56,6 +56,10 @@ Codex owns its agent surfaces (`providesAgentSurfaces`), so the host skips the d
 
 **Auth is vault-only**, the same invariant as every other provider: the credential — a ChatGPT subscription token or an OpenAI API key — lives in the [OneCLI vault](/operate/credentials) under an `api.openai.com` / `chatgpt.com` host pattern, and the gateway injects it on the wire while the container sees only an `onecli-managed` stub `auth.json`. Nothing goes in `.env`, and the host strips `OPENAI_API_KEY` from the Codex process. Run the walk-through with `pnpm exec tsx setup/index.ts --step provider-auth codex` (ChatGPT browser/device login or API key) — the same path the [setup picker](#choosing-a-provider-during-setup) uses. Model and effort come from the group's [container config](/reference/container-config) (`ncl groups config update --model/--effort`), never env.
 
+<Note>
+On a pinned [hardened-runtime](/guides/echo-hardened-runtime) install, adding Codex works without leaving the pre-built image: its CLI lands via `container/cli-tools.json`, and the rebuild applies that manifest as an overlay layer on top of the pulled image rather than starting a build from scratch. Adding OpenCode instead edits `container/agent-runner/bun.lock` (the pinned `@opencode-ai/sdk` dependency) — the agent runner's own dependencies are baked into the base layer, so the lockfile guard refuses to overlay a changed lockfile and the rebuild drops to a local build (`./container/build.sh build`) instead.
+</Note>
+
 ### Ollama (`/add-ollama-provider`)
 
 No files copied, no rebuild of provider code. The skill first checks that `ContainerConfig` supports the `env` and `blockedHosts` fields (patching `src/container-config.ts` and `src/container-runner.ts` if not), then writes the group's container config:
@@ -96,6 +100,8 @@ A provider implementation declares a handful of optional capabilities. The runne
 ## Choosing a provider during setup
 
 [Setup](/quickstart) asks which agent runtime should power your assistant. Claude is the default — press Enter and the standard Claude auth runs. **Codex** is offered as an inline install: pick it and setup runs its installer, rebuilds the image, and walks its vault-only auth (a ChatGPT subscription or an OpenAI API key). OpenCode and Ollama aren't in the picker; add them after setup with their `/add-*` skills.
+
+Setup also asks, earlier and separately, where the sandbox image itself comes from — see the [Echo hardened runtime](/guides/echo-hardened-runtime). That question is scoped to Claude: it's only offered when the planned provider is Claude, and picking any other provider builds the sandbox locally instead.
 
 The pick is **not** an install-wide default — it sets the provider on the first agent group as a per-group database property. Every group's provider is independent, and a spawned subagent inherits its creator's provider so a single-provider install never spawns a child on a runtime it can't reach.
 
