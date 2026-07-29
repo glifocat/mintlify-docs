@@ -1,0 +1,164 @@
+---
+title: "Get started with the Echo hardened runtime"
+sidebarTitle: "Hardened runtime"
+description: "Turn on the free, opt-in Echo hardened runtime for your NanoClaw agents."
+keywords: ["echo", "hardened runtime", "security", "sandbox", "container image", "vulnerabilities", "opt-in", "partnership"]
+tag: "NEW"
+---
+
+{/* verified-against: nanoclaw.sh @ 879835bf (clone + install command only) — the Echo runtime selection, sign-in flow, and verify step have no upstream code to check yet; re-verify this whole page against the shipped feature and restamp before it leaves draft */}
+
+<Note>
+  The hardened runtime is free and opt-in. Your existing DIY local setup keeps working exactly as it does today. Choosing the hardened runtime is additive, not a replacement.
+</Note>
+
+## What the hardened runtime is
+
+Every NanoClaw agent runs inside an isolated sandbox. The **Echo hardened runtime** is a locked-down version of that sandbox, secured all the way down to the software it runs on. Through the NanoClaw and Echo partnership, NanoClaw is the first open-source agent framework to offer its community a hardened agent environment. Echo rebuilds the software inside the agent environment from scratch, including only the essential components, which cuts the count of known vulnerabilities from thousands down to near zero. Echo hosts and maintains this environment as a single source of truth and keeps it patched over time. Echo's own agents research newly disclosed vulnerabilities, build fixes, run compatibility testing, and open pull requests for human review before anything ships. Only these components are baked into the hardened runtime:
+
+- Chromium browser
+- node
+- bun
+- pnpm
+- corepack
+- git
+- curl
+- unzip
+
+Nothing else is included.
+
+## Why you would want it
+
+- **Smaller attack surface.** Stripping the environment down to essential components takes the known-vulnerability count from thousands to near zero.
+- **Maintained for you.** Echo keeps the runtime patched as a single source of truth, so you are not tracking and rebuilding it yourself.
+- **Zero cost.** The hardened runtime is free.
+- **Fully optional.** If you prefer to build and manage your own local runtime, that path stays fully supported.
+
+<Warning>
+  The hardened runtime greatly reduces exposure to known vulnerabilities. It is not a guarantee against all risk, and no environment is fully immune from attack. Run it as one layer of a broader security posture.
+</Warning>
+
+## Prerequisites
+
+- A machine that meets the standard NanoClaw [installation](/installation) requirements.
+- A NanoClaw sign-in. You create an account or log in during setup. There is no separate paid plan to purchase.
+
+{/* [PLACEHOLDER: confirm any additional prerequisites for the hardened runtime, pending eng] */}
+
+## Enable it during a new install
+
+Choose the hardened runtime while you set up NanoClaw for the first time.
+
+<Steps>
+  <Step title="Start the installer">
+    Follow the standard [quick start](/quickstart) to clone the repository and launch the installer.
+
+    ```bash
+    git clone https://github.com/nanocoai/nanoclaw.git
+    cd nanoclaw
+    bash nanoclaw.sh
+    ```
+  </Step>
+  <Step title="Choose the hardened runtime">
+    When the installer asks which runtime you want, select the Echo hardened runtime instead of the DIY local runtime.
+
+    {/* [STEP: exact installer prompt wording and selection key, pending eng] */}
+
+    <Frame caption="[SCREENSHOT: runtime selection prompt in the installer (pending live UI)]">
+      ![Installer runtime selection (placeholder)](/images/echo/hardened-runtime/install-01-runtime-choice.png)
+    </Frame>
+  </Step>
+  <Step title="Sign in to NanoClaw">
+    Turning the hardened runtime on takes a quick sign-in. Complete the login when the installer prompts you.
+
+    {/* [STEP: exact sign-in click-path, screen by screen, pending eng] */}
+
+    <Frame caption="[SCREENSHOT: NanoClaw sign-in, screen 1 (pending live UI)]">
+      ![NanoClaw sign-in step 1 (placeholder)](/images/echo/hardened-runtime/signin-01.png)
+    </Frame>
+
+    <Frame caption="[SCREENSHOT: NanoClaw sign-in, screen 2 (pending live UI)]">
+      ![NanoClaw sign-in step 2 (placeholder)](/images/echo/hardened-runtime/signin-02.png)
+    </Frame>
+
+    <Frame caption="[SCREENSHOT: sign-in confirmation (pending live UI)]">
+      ![NanoClaw sign-in confirmation (placeholder)](/images/echo/hardened-runtime/signin-03-confirmation.png)
+    </Frame>
+  </Step>
+  <Step title="Finish the install">
+    Let the installer finish. It provisions your agents on the hardened runtime so they are ready to run.
+
+    {/* [PLACEHOLDER: note any post-sign-in provisioning wait or output, pending eng] */}
+  </Step>
+</Steps>
+
+## Already running NanoClaw?
+
+The hardened runtime is additive, so existing installs are never switched over automatically. Your current DIY local runtime keeps working exactly as it does now until you choose to opt in.
+
+<Note>
+  The exact upgrade path for existing installs is being finalized.
+</Note>
+
+{/* [STEP: exact existing-user upgrade / opt-in steps, pending eng. This is one of two open blockers.] */}
+
+## Prefer to run your own local runtime?
+
+That path is fully supported and is not going anywhere. The DIY local runtime is not deprecated, and it is not turned off for existing users. If you would rather build and manage the environment yourself, keep doing exactly that. The hardened runtime is simply an additional option.
+
+## Verify the hardened runtime is on
+
+After setup, confirm your agents are running on the hardened runtime.
+
+{/* [STEP: exact verification command or UI indicator, pending eng] */}
+
+```bash
+# [PLACEHOLDER: exact verify command, pending eng]
+# Expected output should indicate the hardened runtime is active.
+```
+
+{/* [PLACEHOLDER: describe where in the dashboard or ncl output the hardened status appears, pending eng] */}
+
+## Troubleshooting and FAQ
+
+<AccordionGroup>
+  <Accordion title="Is the hardened runtime really free?">
+    Yes. The hardened runtime is free and opt-in. There is no paid tier to unlock it.
+  </Accordion>
+
+  <Accordion title="Do I have to use it?">
+    No. The DIY local runtime stays fully supported. The hardened runtime is an additional option, not a requirement, and existing installs are not changed unless you opt in.
+  </Accordion>
+
+  <Accordion title="Does this make my agents impossible to attack?">
+    No. The hardened runtime reduces exposure to known vulnerabilities to near zero by stripping the environment down to essential components. It does not remove all risk, and no environment is fully immune from attack.
+  </Accordion>
+
+  <Accordion title="What software is included?">
+    Chromium browser, node, bun, pnpm, corepack, git, curl, and unzip. Nothing else is baked in.
+  </Accordion>
+
+  <Accordion title="Who keeps it patched?">
+    Echo maintains the runtime as a single source of truth. Echo's agents research new vulnerabilities, build fixes, run compatibility testing, and open pull requests for human review before changes ship.
+  </Accordion>
+
+  <Accordion title="I already run NanoClaw. How do I switch?">
+    The upgrade path for existing installs is being finalized.
+
+    {/* [PLACEHOLDER: existing-user upgrade steps, pending eng] */}
+  </Accordion>
+</AccordionGroup>
+
+## Learn more
+
+NanoClaw is open source and available at [github.com/nanocoai/nanoclaw](https://github.com/nanocoai/nanoclaw).
+
+<CardGroup cols={2}>
+  <Card title="Quick start" icon="rocket" href="/quickstart">
+    Get NanoClaw running in one command.
+  </Card>
+
+  <Card title="Security model" icon="shield" href="/concepts/security">
+    How NanoClaw isolates and protects your agents.
+  </Card>
+</CardGroup>
