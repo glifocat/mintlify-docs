@@ -14,9 +14,15 @@ tag: "NEW"
 
 ## What the hardened runtime is
 
-Every NanoClaw agent runs inside an isolated sandbox container. By default, your machine builds that sandbox image locally from a public base — a 3–10 minute build that you own keeping patched. The **Echo hardened runtime** replaces the local build with a pre-built, patched image: through the NanoClaw and Echo partnership, Echo rebuilds the sandbox software from minimal components and keeps it patched on its own CVE cadence, and NanoClaw delivers it from a gated registry, pinned by digest so the bytes you run are exactly the bytes that were scanned. NanoClaw is the first open-source agent framework to offer its community a hardened agent environment.
+Every NanoClaw agent runs inside an isolated sandbox container. By default, your machine builds that sandbox image locally from a public base — a 3–10 minute build that you own keeping patched.
 
-The image bakes the sandbox's essential components: Chromium (with the fonts and libraries it needs), Node 22, Bun, pnpm, git, curl, unzip, tini, the agent runner's dependencies, and the bundled agent CLIs, including Claude Code.
+The **Echo hardened runtime** replaces the local build with a pre-built, patched image. Through the NanoClaw and Echo partnership, Echo rebuilds the sandbox software from minimal components and keeps it patched on its own CVE cadence; NanoClaw delivers it from a gated registry, pinned by digest, so the bytes you run are exactly the bytes that were scanned. NanoClaw is the first open-source agent framework to offer its community a hardened agent environment.
+
+The image bakes the sandbox's essential components:
+
+- **Runtime and tools** — Node 22, Bun, pnpm, git, curl, unzip, and tini
+- **Browser** — Chromium, with the fonts and libraries it needs
+- **Agent layer** — the agent runner's dependencies and the bundled agent CLIs, including Claude Code
 
 <Info>
   The pre-built image currently ships for the **Claude** provider. If you pick a different provider during setup, the installer builds the sandbox locally instead, and a group that later switches providers will prompt before leaving the pre-built image.
@@ -113,7 +119,14 @@ After setup, confirm what your agents are actually running:
 pnpm exec tsx setup/index.ts --step registry
 ```
 
-The status report shows the image source for this install (`pull a pinned image` or `build here`), what is actually on this machine, the pinned reference, and who is signed in. Provenance also rides in the image itself: the `dev.nanoclaw.image-source` label reads `hardened` for the pulled image, `local` for a local build, and `derived` for a per-group image extended on top of the pulled one.
+The status report shows:
+
+- **Image source** — how this install gets its image: `pull a pinned image` or `build here`
+- **On this machine** — what is actually present locally
+- **Pinned** — the image reference this install tracks
+- **Signed in as** — the account, if any
+
+Provenance also rides in the image itself: the `dev.nanoclaw.image-source` label reads `hardened` for the pulled image, `local` for a local build, and `derived` for a per-group image extended on top of the pulled one.
 
 ## Troubleshooting and FAQ
 
@@ -131,7 +144,11 @@ The status report shows the image source for this install (`pull a pinned image`
   </Accordion>
 
   <Accordion title="What software is included?">
-    Chromium with its fonts and libraries, Node 22, Bun, pnpm, git, curl, unzip, tini, the agent runner's dependencies, and the bundled agent CLIs, including Claude Code.
+    The essential components of the sandbox:
+
+    - **Runtime and tools** — Node 22, Bun, pnpm, git, curl, unzip, and tini
+    - **Browser** — Chromium, with the fonts and libraries it needs
+    - **Agent layer** — the agent runner's dependencies and the bundled agent CLIs, including Claude Code
   </Accordion>
 
   <Accordion title="Who keeps it patched?">
