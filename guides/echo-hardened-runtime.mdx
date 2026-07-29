@@ -6,7 +6,7 @@ keywords: ["echo", "hardened runtime", "security", "sandbox", "container image",
 tag: "NEW"
 ---
 
-{/* verified-against: setup/auto.ts, setup/registry-login.ts, setup/registry-login.sh, setup/registry.ts, setup/lib/registry-state.ts, container/Dockerfile, container/pull.sh, container/build.sh, setup/verify.ts, docs/hardened-image.md @ 84d89989 (feat/hardened-agent-image, PRE-MERGE — re-verify and restamp at the merge SHA before this page ships). Partnership process claims (who builds and patches the image, vulnerability counts) come from the partnership brief, not code. */}
+{/* verified-against: setup/auto.ts, setup/registry-login.ts, setup/registry-login.sh, setup/registry.ts, setup/lib/registry-state.ts, container/Dockerfile, container/pull.sh, container/build.sh, setup/verify.ts, docs/hardened-image.md, versions.json @ d9745d09 (feat/hardened-agent-image, PRE-MERGE — re-verify and restamp at the merge SHA before this page ships; the branch force-pushes, diff with three dots). */}
 
 <Note>
   The hardened runtime is free and opt-in. Your existing local-build setup keeps working exactly as it does today. Choosing the hardened runtime is additive, not a replacement.
@@ -32,7 +32,7 @@ The image bakes the sandbox's essential components:
 
 - **Smaller attack surface.** Stripping the environment down to essential components takes the known-vulnerability count from thousands to near zero.
 - **Patched for you.** Echo rebuilds the image on its own CVE cadence, so patch currency in layers you did not write — OS packages, Chromium, glibc — is no longer your job.
-- **Faster setup.** Fetching the image takes about 2 minutes; a local build takes 3–10.
+- **No local build.** Fetching replaces the 3–10 minute local build with a single download of roughly 800 MB. On a slow connection the local build can be the quicker path, and both stay available.
 - **Zero cost.** The hardened runtime is free — authenticating with NanoClaw is all it takes. There is no paid tier.
 - **Fully optional.** Building locally stays supported, unauthenticated, and untracked.
 
@@ -63,7 +63,7 @@ Choose the hardened runtime while you set up NanoClaw for the first time.
     ```
   </Step>
   <Step title="Choose the image source">
-    The wizard asks **"Where should your assistant's sandbox image come from?"**. Pick **"Fetch a pre-built, patched image"** — the pre-selected, recommended choice — instead of **"Build it here"**.
+    The wizard asks **"Where should your assistant's sandbox image come from?"**. Pick **"Fetch the hardened image, built by Echo"** — the pre-selected, recommended choice — instead of **"Build it here"**.
 
     <Frame caption="The wizard's sandbox image choice — the pre-built, patched image is the recommended default.">
       ![Setup wizard asking where the sandbox image should come from, with the pre-built patched image option selected and the build-it-here alternative below](/images/echo/hardened-runtime/install-01-runtime-choice.png)
