@@ -33,7 +33,7 @@ The image bakes the sandbox's essential components:
 - **Smaller attack surface.** Stripping the environment down to essential components takes the known-vulnerability count from thousands to near zero.
 - **Patched for you.** Echo rebuilds the image on its own CVE cadence, so patch currency in layers you did not write — OS packages, Chromium, glibc — is no longer your job.
 - **Faster setup.** Fetching the image takes about 2 minutes; a local build takes 3–10.
-- **Zero cost.** The hardened runtime needs only a free NanoClaw account. There is no paid tier.
+- **Zero cost.** The hardened runtime is free — authenticating with NanoClaw is all it takes. There is no paid tier.
 - **Fully optional.** Building locally stays supported, unauthenticated, and untracked.
 
 <Warning>
@@ -43,7 +43,7 @@ The image bakes the sandbox's essential components:
 ## Prerequisites
 
 - A machine that meets the standard NanoClaw [installation](/installation) requirements.
-- A free NanoClaw account. You create it or sign in during setup; there is no separate paid plan to purchase.
+- A NanoClaw sign-in. You authenticate (or sign up) during setup; there is no separate paid plan to purchase.
 - Agents on the Claude provider (see the note above).
 
 Fetching the image requires authenticating with NanoClaw: your email address and the fact that you fetched an image are recorded. Building locally sends nothing.
@@ -76,16 +76,16 @@ Choose the hardened runtime while you set up NanoClaw for the first time.
       ![Terminal sign-in card printed by the wizard, with the authentication link and short code](/images/echo/hardened-runtime/signin-01-terminal-card.png)
     </Frame>
 
-    The page shows the code back to you — confirm it matches:
-
-    <Frame caption="The browser confirms the code from your terminal.">
-      ![Browser device-activation page asking to confirm the code shown in the terminal](/images/echo/hardened-runtime/signin-02-confirm-code.png)
-    </Frame>
-
-    Then sign in, or create your free account:
+    The page asks you to sign in, or sign up:
 
     <Frame caption="Sign in with email or a linked account.">
-      ![Browser sign-in page with an email field and Google, Microsoft, GitHub, and Apple sign-in options](/images/echo/hardened-runtime/signin-03-sign-in.png)
+      ![Browser sign-in page with an email field and Google, Microsoft, GitHub, and Apple sign-in options](/images/echo/hardened-runtime/signin-02-sign-in.png)
+    </Frame>
+
+    Then it shows the code back to you — confirm it matches your terminal:
+
+    <Frame caption="The browser confirms the code from your terminal.">
+      ![Browser device-activation page asking to confirm the code shown in the terminal](/images/echo/hardened-runtime/signin-03-confirm-code.png)
     </Frame>
 
     <Frame caption="Done — the terminal picks it up from here.">
@@ -140,7 +140,7 @@ Provenance also rides in the image itself: the `dev.nanoclaw.image-source` label
 
 <AccordionGroup>
   <Accordion title="Is the hardened runtime really free?">
-    Yes. The hardened runtime is free and opt-in — a free NanoClaw account is all it takes. There is no paid tier to unlock it.
+    Yes. The hardened runtime is free and opt-in — authentication is all it takes. There is no paid tier to unlock it.
   </Accordion>
 
   <Accordion title="Do I have to use it?">
@@ -172,7 +172,7 @@ Provenance also rides in the image itself: the `dev.nanoclaw.image-source` label
   </Accordion>
 
   <Accordion title="What gets recorded when I use it?">
-    Your verified email address and the fact and time that you fetched an image. Building locally is unauthenticated and sends nothing.
+    Your verified email address and the fact and time that you fetched an image. If — and only if — you consent to product updates during sign-up, that consent is recorded too. Building locally is unauthenticated and sends nothing.
   </Accordion>
 
   <Accordion title="I already run NanoClaw. How do I switch?">
