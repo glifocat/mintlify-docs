@@ -6,7 +6,7 @@ icon: "bolt"
 keywords: ["setup", "install", "getting started", "nanoclaw.sh", "setup wizard", "first agent", "things to try"]
 ---
 
-{/* verified-against: nanoclaw.sh, setup.sh, setup/auto.ts, setup/probe.sh, setup/install-node.sh, setup/channels/*.ts, setup/providers/registry.ts, scripts/init-first-agent.ts, .claude/skills/setup/SKILL.md, package.json, container/agent-runner/src/providers/claude.ts, container/agent-runner/src/mcp-tools/agents.ts, src/modules/agent-to-agent/create-agent.ts, src/session-manager.ts, src/claude-md-compose.ts, src/channels/cli.ts @ e926e30e (v2.1.53) */}
+{/* verified-against: nanoclaw.sh, setup.sh, setup/auto.ts, setup/probe.sh, setup/install-node.sh, setup/channels/*.ts, setup/providers/registry.ts, scripts/init-first-agent.ts, .claude/skills/setup/SKILL.md, package.json, container/agent-runner/src/providers/claude.ts, container/agent-runner/src/mcp-tools/agents.ts, src/modules/agent-to-agent/create-agent.ts, src/session-manager.ts, src/claude-md-compose.ts, src/channels/cli.ts @ 4e83a0a0 */}
 
 About 15 minutes from a fresh machine to an assistant you can message — one command, a handful of prompts, and one thing you bring yourself: a credential for your AI provider (a Claude or Codex subscription, or an API key). The script installs everything else.
 
@@ -34,12 +34,12 @@ Everything else — Homebrew on macOS, Node 22, pnpm, Docker, the OneCLI vault �
   <Step title="Answer the wizard">
     Press Enter on **Standard setup** (or pick **Advanced** to override defaults), then the wizard walks through:
 
-    <Frame caption="The wizard right after the system check — the sandbox build that follows is the long step (3–10 minutes on a first build).">
+    <Frame caption="The wizard right after the system check — the sandbox step that follows is the long one (a ~20 minute image fetch, or a 3–10 minute local build).">
       <img src="/images/setup-wizard.png" alt="Terminal running the NanoClaw setup wizard: the NanoClaw splash art, Standard setup selected, the system check passed, and the sandbox build starting" />
     </Frame>
 
     1. **System check** — verifies your environment
-    2. **Sandbox build** — builds the agent container image. First build pulls a base image and takes 3–10 minutes on a fresh machine.
+    2. **Sandbox image** — choose where the agent sandbox image comes from. The recommended default fetches the pre-built [Echo hardened image](/guides/echo-hardened-runtime): a quick browser sign-in to NanoClaw, then a download that currently takes around 20 minutes. Or pick **Build it here** — no account, 3–10 minutes on a fresh machine.
     3. **OneCLI vault** — installs the credential vault, or offers to reuse an existing OneCLI instance. Your agent never sees your API keys; the vault injects them into approved requests as they leave the sandbox.
     4. **Choose your agent runtime and connect** — Claude is the default: press Enter, then sign in with your Claude subscription (opens a browser), paste an OAuth token (`sk-ant-oat…`), or paste an API key (`sk-ant-api…`). Or pick **Codex** to install it inline and authenticate with a ChatGPT subscription or OpenAI API key — either way the credential lands in the vault, never the container
     5. **Access rules** — writes the assistant's filesystem access rules (empty to start — the sandbox only sees what you explicitly share later)

@@ -5,6 +5,17 @@ icon: "file-pen"
 rss: true
 ---
 
+<Update label="Post-launch drift sweep: the hardened image lands across the portal" description="2026-07-29" tags={["Updated", "Fixed"]}>
+  Same-day sweep after the hardened-image feature merged upstream ([nanoclaw#3150](https://github.com/nanocoai/nanoclaw/pull/3150)): every page's `verified-against` files were diffed against the merge (`4e83a0a0`), 30 flagged pages adjudicated, four fixed.
+
+  - **`quickstart`** — the wizard's sandbox step now describes both image paths: the recommended pre-built Echo image (sign-in, then a download that currently takes around 20 minutes) and the 3–10 minute local build. The walkthrough gained the sign-in step it was missing.
+  - **`operate/upgrading`** — image refresh guidance now branches by install: `./container/build.sh` on local builds, `pull` on pinned installs (the bare form exits `3` there), and the refresh trigger includes the `agent-image` pin moving in `versions.json`.
+  - **`guides/scheduled-tasks`** — task times follow the owning group's timezone override (`ncl groups config update --timezone`, applies immediately) before the install default; the restart-required note now applies only to the default.
+  - **`reference/environment-variables`** — the six new registry and hardened-image variables documented, and seven stale `setup/auto.ts` / `setup/container.ts` line citations recomputed (the file grew 253 lines under the feature).
+
+  The Echo guide itself got a same-day correction: fetching takes around 20 minutes today, matching the installer's own wording. Ten more pages carry smaller hardened-image gaps (hardening, credentials, configuration, installation, container-lifecycle, providers, and friends) — queued as a second pass.
+</Update>
+
 <Update label="Echo hardened runtime guide" description="2026-07-29" tags={["New"]}>
   Added **`guides/echo-hardened-runtime`**: the Echo partnership's opt-in hardened runtime for agent sandboxes — what it is, the minimal component set it ships, how to enable it during a new install, and what stays the same if you keep the DIY local runtime. Sits in the Operate group next to [Hardening](/operate/hardening).
 </Update>

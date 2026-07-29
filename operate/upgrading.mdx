@@ -4,7 +4,7 @@ description: "Update NanoClaw and its skills with /update-nanoclaw and /update-s
 keywords: ["upgrade", "update", "update-nanoclaw", "update-skills", "migrate-nanoclaw", "upstream", "merge", "rollback"]
 ---
 
-{/* verified-against: .claude/skills/update-nanoclaw/SKILL.md, .claude/skills/update-skills/SKILL.md, .claude/skills/migrate-nanoclaw/SKILL.md, versions.json, scripts/upgrade-state.ts, src/upgrade-state.ts @ e926e30e (v2.1.53) */}
+{/* verified-against: .claude/skills/update-nanoclaw/SKILL.md, .claude/skills/update-skills/SKILL.md, .claude/skills/migrate-nanoclaw/SKILL.md, versions.json, scripts/upgrade-state.ts, src/upgrade-state.ts @ 4e83a0a0 */}
 
 Don't update with a raw `git pull`. NanoClaw records each sanctioned upgrade in `data/upgrade-state.json`, and a startup tripwire refuses to boot if the running code's version doesn't match that marker. The supported path is the `/update-nanoclaw` skill, which handles the merge, validation, and the marker stamp for you.
 
@@ -18,7 +18,7 @@ Run `/update-nanoclaw` in a Claude Code session at your project root. The skill 
 4. **Preview.** Shows upstream commits since your last sync and buckets the changed files: skills, host source (`src/`), container (`container/`, triggers a rebuild), and build config (lockfile changes trigger a dependency install). You then pick a path: full merge (default), selective cherry-pick, rebase, or abort.
 5. **Conflict preview.** Dry-runs the merge (`git merge --no-commit --no-ff`, then abort) so you see which files would conflict before committing to anything.
 6. **Merge and resolve.** Applies your chosen path. On conflicts it opens only the conflicted files, resolves the markers, and keeps your local customizations intact.
-7. **Validation.** Runs `pnpm run build` and `pnpm test`. If `container/` files changed, it also rebuilds the container image with `./container/build.sh`.
+7. **Validation.** Runs `pnpm run build` and `pnpm test`. If `container/` files changed — or, on an install that pulls the [hardened image](/guides/echo-hardened-runtime), the `agent-image` pin in `versions.json` moved — it also refreshes the container image: `./container/build.sh` on a local-build install, `./container/build.sh pull` on a pinned one. The bare form exits `3` on a pinned install rather than silently replacing the pulled image with a local build.
 8. **OneCLI pins.** If the `onecli-gateway` or `onecli-cli` pin in `versions.json` moved since your backup tag, the skill surfaces it and walks you through the OneCLI upgrade ([`docs/onecli-upgrades.md`](https://github.com/nanocoai/nanoclaw/blob/main/docs/onecli-upgrades.md)) before the restart — the gateway and CLI are external components, so the running versions must be bumped to match the merged code. No pin change and the step is skipped.
 9. **Breaking changes.** Scans the new `CHANGELOG.md` entries for `[BREAKING]` lines, each of which names a migration skill (`Run /<skill-name> to …`); the skill lists them and offers to run the ones you pick. A breaking change that points to a `docs/` page instead of a skill is one you follow by hand.
 10. **Skill updates.** Detects which channel and provider adapters are wired into the barrels and offers to continue into `/update-skills` — the per-skill selection happens there, not in the update itself.
@@ -46,7 +46,7 @@ To refresh skills without a full upstream update, run `/update-skills`. Its flow
 3. **Selection.** You pick which skills to re-apply.
 4. **Re-apply.** Invokes each selected skill's own `/add-<name>` apply, which fetches the latest files and overwrites the copied-in code.
 5. **Validation.** `pnpm run build` and `pnpm test` — each channel and provider skill ships a registration test that asserts the barrel still registers the adapter.
-6. **Container rebuild.** If a re-applied skill changed files under `container/` (e.g. a provider's in-container runtime), the skill rebuilds the agent image with `./container/build.sh` — until then new sessions keep running the old image, so the rebuild is what makes the change live, not the file copy. A channel-adapter-only refresh skips this.
+6. **Container rebuild.** If a re-applied skill changed files under `container/` (e.g. a provider's in-container runtime), the skill refreshes the agent image — `./container/build.sh` on a local-build install, `pull` on a pinned one — until then new sessions keep running the old image, so the refresh is what makes the change live, not the file copy. A channel-adapter-only refresh skips this.
 
 Restart the service afterwards to pick up the refreshed host code.
 
@@ -66,7 +66,7 @@ If you've diverged far from upstream — many local commits, deep changes to cor
 The skill validates the build and tests itself, but a few things are worth checking by hand:
 
 - **Restart the service.** Unit and label names are per-install; the skill prints the exact command (derived from `setup/lib/install-slug.sh`) for macOS, Linux, or a manual `pnpm run dev`.
-- **Container rebuild.** If `container/` changed, the image was rebuilt — running agent containers keep the old image until their session ends; new sessions use the new one.
+- **Container rebuild.** If `container/` changed, the image was rebuilt (or re-pulled, on a hardened-image install) — running agent containers keep the old image until their session ends; new sessions use the new one.
 - **Send a test message** on each channel you use, and check `logs/nanoclaw.log` for errors.
 - **Tripwire trips on start?** The marker wasn't stamped (validation failed, or the update bypassed the skill). Fix the underlying issue, then stamp manually: `pnpm exec tsx scripts/upgrade-state.ts set`.
 

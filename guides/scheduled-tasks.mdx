@@ -5,7 +5,7 @@ description: "Hands-on tutorial: have your agent schedule a recurring task in ch
 keywords: ["scheduled tasks", "ncl tasks", "cron", "recurrence", "process_after", "series_id", "host sweep", "wakeAgent", "task script", "timezone"]
 ---
 
-{/* verified-against: src/cli/resources/tasks.ts, container/agent-runner/src/mcp-tools/scheduling.instructions.md, src/modules/scheduling/{create,db,recurrence,run-log}.ts, container/agent-runner/src/scheduling/task-script.ts, container/agent-runner/src/poll-loop.ts, container/agent-runner/src/timezone.ts, src/host-sweep.ts, src/session-manager.ts, src/config.ts, src/container-runner.ts @ e926e30e (v2.1.53) */}
+{/* verified-against: src/cli/resources/tasks.ts, container/agent-runner/src/mcp-tools/scheduling.instructions.md, src/modules/scheduling/{create,db,recurrence,run-log}.ts, container/agent-runner/src/scheduling/task-script.ts, container/agent-runner/src/poll-loop.ts, container/agent-runner/src/timezone.ts, src/host-sweep.ts, src/session-manager.ts, src/config.ts, src/container-runner.ts, src/cli/resources/groups.ts @ 4e83a0a0 */}
 
 v2 has no scheduler service. A scheduled task is a row in an isolated per-task session's `messages_in` table with `kind='task'` and a `process_after` timestamp — the same inbox machinery, swept by the same host sweep, as any chat message. You drive it through the `ncl tasks` CLI: ask the agent in chat and it runs `ncl tasks` on your behalf, or run the commands yourself from the host. This tutorial assumes a working install with a wired agent (see [your first agent](/guides/first-agent)).
 
@@ -82,14 +82,16 @@ Be honest about what this saves: the container still wakes on every firing (the 
 
 When you say "9am", three layers have to agree on whose 9am. The chain: the host resolves `TIMEZONE` once at startup — `process.env.TZ`, then the `.env` file's `TZ`, then the system locale, falling back to `UTC`, each candidate validated as a real IANA identifier (`src/config.ts`). Every container is spawned with `-e TZ=<that value>` (`src/container-runner.ts`), and the agent-runner's `timezone.ts` resolves the same way inside.
 
-The result: naive timestamps the agent passes (`2026-06-11T09:00:00`, no offset) and **cron expressions** — both at schedule time and when the host sweep computes the next recurrence — are all interpreted in that one instance timezone. To pin it:
+The result: naive timestamps the agent passes (`2026-06-11T09:00:00`, no offset) and **cron expressions** — both at schedule time and when the host sweep computes the next recurrence — are interpreted in the task's timezone: the owning group's override when one is set, otherwise that instance value (`src/modules/scheduling/create.ts`). To pin the install default:
 
 ```bash
 # in .env (or the host's environment)
 TZ=Europe/Madrid
 ```
 
-Restart the host after changing it; the value is read once at startup.
+Restart the host after changing it; the install default is read once at startup.
+
+A group can override the default without touching `.env`: `ncl groups config update <group> --timezone Europe/Lisbon` (or pass `--timezone` on `ncl groups create`). Scheduled-task times follow the override immediately — no restart — and the group's containers spawn with it as `TZ` (`src/cli/resources/groups.ts`, `src/container-runner.ts:485`). Pass `""` to clear back to the install default.
 
 </Step>
 <Step title="Inspect from the host">
