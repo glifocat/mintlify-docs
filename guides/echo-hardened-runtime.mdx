@@ -6,7 +6,7 @@ keywords: ["echo", "hardened runtime", "security", "sandbox", "container image",
 tag: "NEW"
 ---
 
-{/* verified-against: setup/auto.ts, setup/registry-login.ts, setup/registry-login.sh, setup/registry.ts, setup/lib/registry-state.ts, container/Dockerfile, container/pull.sh, container/build.sh, setup/verify.ts, docs/hardened-image.md, versions.json @ d9745d09 (feat/hardened-agent-image, PRE-MERGE — re-verify and restamp at the merge SHA before this page ships; the branch force-pushes, diff with three dots). */}
+{/* verified-against: setup/auto.ts, setup/registry-login.ts, setup/registry-login.sh, setup/registry.ts, setup/lib/registry-state.ts, container/Dockerfile, container/pull.sh, container/build.sh, setup/verify.ts, docs/hardened-image.md, versions.json @ 4e83a0a0 (main, #3150 merge). Auth screenshots show the staging identity UI; re-shoot if production auth gets branding. */}
 
 <Note>
   The hardened runtime is free and opt-in. Your existing local-build setup keeps working exactly as it does today. Choosing the hardened runtime is additive, not a replacement.
@@ -32,7 +32,7 @@ The image bakes the sandbox's essential components:
 
 - **Smaller attack surface.** Stripping the environment down to essential components takes the known-vulnerability count from thousands to near zero.
 - **Patched for you.** Echo rebuilds the image on its own CVE cadence, so patch currency in layers you did not write — OS packages, Chromium, glibc — is no longer your job.
-- **No local build.** Fetching replaces the 3–10 minute local build with a single download of roughly 800 MB. On a slow connection the local build can be the quicker path, and both stay available.
+- **No local build.** Fetching swaps the 3–10 minute local build for a single download of roughly 800 MB, which currently takes around 20 minutes. Building locally is often the quicker path today; both stay available.
 - **Zero cost.** The hardened runtime is free — authenticating with NanoClaw is all it takes. There is no paid tier.
 - **Fully optional.** Building locally stays supported, unauthenticated, and untracked.
 
