@@ -5,6 +5,10 @@ icon: "file-pen"
 rss: true
 ---
 
+<Update label="Echo hardened runtime guide" description="2026-07-29" tags={["New"]}>
+  Added **`guides/echo-hardened-runtime`**: the Echo partnership's opt-in hardened runtime for agent sandboxes — what it is, the minimal component set it ships, how to enable it during a new install, and what stays the same if you keep the DIY local runtime. Sits in the Operate group next to [Hardening](/operate/hardening).
+</Update>
+
 <Update label="Container hardening and WhatsApp mention drift" description="2026-07-26" tags={["Updated"]}>
   The container pages described a posture that no longer matches trunk. Agent spawns now carry a fixed hardening set that no group or install can override ([nanoclaw#2748](https://github.com/nanocoai/nanoclaw/pull/2748)): `--init`, so `docker-init` is PID 1 and SIGTERM actually reaches the runner instead of being discarded — `concepts/container-lifecycle` had the inverse story, Bun as PID 1 with no `--init` — plus `--cap-drop=ALL`, `--security-opt no-new-privileges`, `--shm-size=1g`, and a `--pids-limit` fork-bomb backstop defaulting to `2048`. That default lands as a new `CONTAINER_PIDS_LIMIT` variable on `reference/environment-variables` and a new always-on section on `operate/hardening`, alongside restamped `src/config.ts` line citations.
 
