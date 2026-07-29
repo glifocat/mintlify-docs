@@ -2,48 +2,45 @@
 title: "Get started with the Echo hardened runtime"
 sidebarTitle: "Hardened runtime"
 description: "Turn on the free, opt-in Echo hardened runtime for your NanoClaw agents."
-keywords: ["echo", "hardened runtime", "security", "sandbox", "container image", "vulnerabilities", "opt-in", "partnership"]
+keywords: ["echo", "hardened runtime", "security", "sandbox", "container image", "vulnerabilities", "opt-in", "partnership", "pre-built image"]
 tag: "NEW"
 ---
 
-{/* verified-against: nanoclaw.sh @ 879835bf (clone + install command only) — the Echo runtime selection, sign-in flow, and verify step have no upstream code to check yet; re-verify this whole page against the shipped feature and restamp before it leaves draft */}
+{/* verified-against: setup/auto.ts, setup/registry-login.ts, setup/registry-login.sh, setup/registry.ts, setup/lib/registry-state.ts, container/Dockerfile, container/pull.sh, container/build.sh, setup/verify.ts, docs/hardened-image.md @ 84d89989 (feat/hardened-agent-image, PRE-MERGE — re-verify and restamp at the merge SHA before this page ships). Partnership process claims (who builds and patches the image, vulnerability counts) come from the partnership brief, not code. */}
 
 <Note>
-  The hardened runtime is free and opt-in. Your existing DIY local setup keeps working exactly as it does today. Choosing the hardened runtime is additive, not a replacement.
+  The hardened runtime is free and opt-in. Your existing local-build setup keeps working exactly as it does today. Choosing the hardened runtime is additive, not a replacement.
 </Note>
 
 ## What the hardened runtime is
 
-Every NanoClaw agent runs inside an isolated sandbox. The **Echo hardened runtime** is a locked-down version of that sandbox, secured all the way down to the software it runs on. Through the NanoClaw and Echo partnership, NanoClaw is the first open-source agent framework to offer its community a hardened agent environment. Echo rebuilds the software inside the agent environment from scratch, including only the essential components, which cuts the count of known vulnerabilities from thousands down to near zero. Echo hosts and maintains this environment as a single source of truth and keeps it patched over time. Echo's own agents research newly disclosed vulnerabilities, build fixes, run compatibility testing, and open pull requests for human review before anything ships. Only these components are baked into the hardened runtime:
+Every NanoClaw agent runs inside an isolated sandbox container. By default, your machine builds that sandbox image locally from a public base — a 3–10 minute build that you own keeping patched. The **Echo hardened runtime** replaces the local build with a pre-built, patched image: through the NanoClaw and Echo partnership, Echo rebuilds the sandbox software from minimal components and keeps it patched on its own CVE cadence, and NanoClaw delivers it from a gated registry, pinned by digest so the bytes you run are exactly the bytes that were scanned. NanoClaw is the first open-source agent framework to offer its community a hardened agent environment.
 
-- Chromium browser
-- node
-- bun
-- pnpm
-- corepack
-- git
-- curl
-- unzip
+The image bakes the sandbox's essential components: Chromium (with the fonts and libraries it needs), Node 22, Bun, pnpm, git, curl, unzip, tini, the agent runner's dependencies, and the bundled agent CLIs, including Claude Code.
 
-Nothing else is included.
+<Info>
+  The pre-built image currently ships for the **Claude** provider. If you pick a different provider during setup, the installer builds the sandbox locally instead, and a group that later switches providers will prompt before leaving the pre-built image.
+</Info>
 
 ## Why you would want it
 
 - **Smaller attack surface.** Stripping the environment down to essential components takes the known-vulnerability count from thousands to near zero.
-- **Maintained for you.** Echo keeps the runtime patched as a single source of truth, so you are not tracking and rebuilding it yourself.
-- **Zero cost.** The hardened runtime is free.
-- **Fully optional.** If you prefer to build and manage your own local runtime, that path stays fully supported.
+- **Patched for you.** Echo rebuilds the image on its own CVE cadence, so patch currency in layers you did not write — OS packages, Chromium, glibc — is no longer your job.
+- **Faster setup.** Fetching the image takes about 2 minutes; a local build takes 3–10.
+- **Zero cost.** The hardened runtime needs only a free NanoClaw account. There is no paid tier.
+- **Fully optional.** Building locally stays supported, unauthenticated, and untracked.
 
 <Warning>
-  The hardened runtime greatly reduces exposure to known vulnerabilities. It is not a guarantee against all risk, and no environment is fully immune from attack. Run it as one layer of a broader security posture.
+  The hardened runtime greatly reduces exposure to known vulnerabilities. It is not a guarantee against all risk, and no environment is fully immune from attack. Run it as one layer of a broader security posture — it does not replace [egress lockdown, mount allowlists, or resource limits](/operate/hardening), which contain what an agent can do at runtime.
 </Warning>
 
 ## Prerequisites
 
 - A machine that meets the standard NanoClaw [installation](/installation) requirements.
-- A NanoClaw sign-in. You create an account or log in during setup. There is no separate paid plan to purchase.
+- A free NanoClaw account. You create it or sign in during setup; there is no separate paid plan to purchase.
+- Agents on the Claude provider (see the note above).
 
-{/* [PLACEHOLDER: confirm any additional prerequisites for the hardened runtime, pending eng] */}
+Fetching the image requires authenticating with NanoClaw: your email address and the fact that you fetched an image are recorded. Building locally sends nothing.
 
 ## Enable it during a new install
 
@@ -59,93 +56,102 @@ Choose the hardened runtime while you set up NanoClaw for the first time.
     bash nanoclaw.sh
     ```
   </Step>
-  <Step title="Choose the hardened runtime">
-    When the installer asks which runtime you want, select the Echo hardened runtime instead of the DIY local runtime.
+  <Step title="Choose the image source">
+    The wizard asks **"Where should your assistant's sandbox image come from?"**. Pick **"Fetch a pre-built, patched image"** — the pre-selected, recommended choice — instead of **"Build it here"**.
 
-    {/* [STEP: exact installer prompt wording and selection key, pending eng] */}
-
-    <Frame caption="[SCREENSHOT: runtime selection prompt in the installer (pending live UI)]">
-      ![Installer runtime selection (placeholder)](/images/echo/hardened-runtime/install-01-runtime-choice.png)
+    <Frame caption="[SCREENSHOT: sandbox image source prompt in the setup wizard (pending capture)]">
+      ![Setup wizard asking where the sandbox image should come from (placeholder)](/images/echo/hardened-runtime/install-01-runtime-choice.png)
     </Frame>
   </Step>
   <Step title="Sign in to NanoClaw">
-    Turning the hardened runtime on takes a quick sign-in. Complete the login when the installer prompts you.
+    The terminal prints a link and a short code, and your browser opens on its own — if it doesn't, open the link on any device. The page shows the code back to you; confirm it to finish. The code is valid for 5 minutes.
 
-    {/* [STEP: exact sign-in click-path, screen by screen, pending eng] */}
-
-    <Frame caption="[SCREENSHOT: NanoClaw sign-in, screen 1 (pending live UI)]">
-      ![NanoClaw sign-in step 1 (placeholder)](/images/echo/hardened-runtime/signin-01.png)
+    <Frame caption="[SCREENSHOT: terminal sign-in card with link and code (pending capture)]">
+      ![Terminal sign-in card with the code and link (placeholder)](/images/echo/hardened-runtime/signin-01.png)
     </Frame>
 
-    <Frame caption="[SCREENSHOT: NanoClaw sign-in, screen 2 (pending live UI)]">
-      ![NanoClaw sign-in step 2 (placeholder)](/images/echo/hardened-runtime/signin-02.png)
+    <Frame caption="[SCREENSHOT: browser sign-in page showing the code (pending capture)]">
+      ![Browser page confirming the device code (placeholder)](/images/echo/hardened-runtime/signin-02.png)
     </Frame>
 
-    <Frame caption="[SCREENSHOT: sign-in confirmation (pending live UI)]">
-      ![NanoClaw sign-in confirmation (placeholder)](/images/echo/hardened-runtime/signin-03-confirmation.png)
+    <Frame caption="[SCREENSHOT: sign-in confirmation (pending capture)]">
+      ![Sign-in confirmation (placeholder)](/images/echo/hardened-runtime/signin-03-confirmation.png)
     </Frame>
+
+    If authentication doesn't finish, setup says so and builds the sandbox locally instead — nothing breaks, and you can [opt in later](#already-running-nanoclaw).
   </Step>
   <Step title="Finish the install">
-    Let the installer finish. It provisions your agents on the hardened runtime so they are ready to run.
-
-    {/* [PLACEHOLDER: note any post-sign-in provisioning wait or output, pending eng] */}
+    Let the installer finish. It pulls the image by digest, verifies it matches your checkout, and tags it as this install's sandbox image, so your agents are ready to run on it.
   </Step>
 </Steps>
 
 ## Already running NanoClaw?
 
-The hardened runtime is additive, so existing installs are never switched over automatically. Your current DIY local runtime keeps working exactly as it does now until you choose to opt in.
+The hardened runtime is additive, so existing installs are never switched over automatically. Opt in whenever you like, from your checkout:
 
-<Note>
-  The exact upgrade path for existing installs is being finalized.
-</Note>
+```bash
+bash setup/registry-login.sh   # same browser sign-in as above
+./container/build.sh pull      # fetch the pinned image
+```
 
-{/* [STEP: exact existing-user upgrade / opt-in steps, pending eng. This is one of two open blockers.] */}
+To go back to building locally:
 
-## Prefer to run your own local runtime?
+```bash
+pnpm exec tsx setup/index.ts --step registry -- --opt-out
+./container/build.sh build
+```
 
-That path is fully supported and is not going anywhere. The DIY local runtime is not deprecated, and it is not turned off for existing users. If you would rather build and manage the environment yourself, keep doing exactly that. The hardened runtime is simply an additional option.
+## Prefer to build your own local runtime?
+
+That path is fully supported and is not going anywhere. The local build is not deprecated, needs no account, and sends nothing to anyone. If you would rather build and manage the sandbox image yourself, keep doing exactly that. The hardened runtime is simply an additional option.
 
 ## Verify the hardened runtime is on
 
-After setup, confirm your agents are running on the hardened runtime.
-
-{/* [STEP: exact verification command or UI indicator, pending eng] */}
+After setup, confirm what your agents are actually running:
 
 ```bash
-# [PLACEHOLDER: exact verify command, pending eng]
-# Expected output should indicate the hardened runtime is active.
+pnpm exec tsx setup/index.ts --step registry
 ```
 
-{/* [PLACEHOLDER: describe where in the dashboard or ncl output the hardened status appears, pending eng] */}
+The status report shows the image source for this install (`pull a pinned image` or `build here`), what is actually on this machine, the pinned reference, and who is signed in. Provenance also rides in the image itself: the `dev.nanoclaw.image-source` label reads `hardened` for the pulled image, `local` for a local build, and `derived` for a per-group image extended on top of the pulled one.
 
 ## Troubleshooting and FAQ
 
 <AccordionGroup>
   <Accordion title="Is the hardened runtime really free?">
-    Yes. The hardened runtime is free and opt-in. There is no paid tier to unlock it.
+    Yes. The hardened runtime is free and opt-in — a free NanoClaw account is all it takes. There is no paid tier to unlock it.
   </Accordion>
 
   <Accordion title="Do I have to use it?">
-    No. The DIY local runtime stays fully supported. The hardened runtime is an additional option, not a requirement, and existing installs are not changed unless you opt in.
+    No. The local build stays fully supported. The hardened runtime is an additional option, not a requirement, and existing installs are not changed unless you opt in.
   </Accordion>
 
   <Accordion title="Does this make my agents impossible to attack?">
-    No. The hardened runtime reduces exposure to known vulnerabilities to near zero by stripping the environment down to essential components. It does not remove all risk, and no environment is fully immune from attack.
+    No. The hardened runtime reduces exposure to known vulnerabilities by stripping the environment down to essential components. It does not remove all risk, and no environment is fully immune from attack. Runtime containment — [egress lockdown, mount allowlists, resource limits](/operate/hardening) — still does the heavy lifting.
   </Accordion>
 
   <Accordion title="What software is included?">
-    Chromium browser, node, bun, pnpm, corepack, git, curl, and unzip. Nothing else is baked in.
+    Chromium with its fonts and libraries, Node 22, Bun, pnpm, git, curl, unzip, tini, the agent runner's dependencies, and the bundled agent CLIs, including Claude Code.
   </Accordion>
 
   <Accordion title="Who keeps it patched?">
-    Echo maintains the runtime as a single source of truth. Echo's agents research new vulnerabilities, build fixes, run compatibility testing, and open pull requests for human review before changes ship.
+    Echo rebuilds and patches the image on its own CVE cadence — Echo's own agents research newly disclosed vulnerabilities, build fixes, run compatibility testing, and open pull requests for human review before anything ships. NanoClaw pins the result by digest and serves it from a gated registry.
+  </Accordion>
+
+  <Accordion title="Does it work with providers other than Claude?">
+    Not yet. The pre-built image bundles the Claude tooling; installs on other providers build the sandbox locally, and switching a group to another provider prompts before leaving the pre-built image.
+  </Accordion>
+
+  <Accordion title="Can I still add packages to a group?">
+    Yes. `install_packages` keeps working — it builds a small per-group image on top of the pulled one. That group's image then reports `derived` instead of `hardened`, since the vendor's scan covered the base, not your additions.
+  </Accordion>
+
+  <Accordion title="What gets recorded when I use it?">
+    Your verified email address and the fact and time that you fetched an image. Building locally is unauthenticated and sends nothing.
   </Accordion>
 
   <Accordion title="I already run NanoClaw. How do I switch?">
-    The upgrade path for existing installs is being finalized.
-
-    {/* [PLACEHOLDER: existing-user upgrade steps, pending eng] */}
+    Run `bash setup/registry-login.sh` from your checkout, sign in, then `./container/build.sh pull`. Your install is never switched automatically.
   </Accordion>
 </AccordionGroup>
 
@@ -154,8 +160,8 @@ After setup, confirm your agents are running on the hardened runtime.
 NanoClaw is open source and available at [github.com/nanocoai/nanoclaw](https://github.com/nanocoai/nanoclaw).
 
 <CardGroup cols={2}>
-  <Card title="Quick start" icon="rocket" href="/quickstart">
-    Get NanoClaw running in one command.
+  <Card title="Hardening" icon="shield-check" href="/operate/hardening">
+    Runtime containment: egress lockdown, mount allowlists, and limits.
   </Card>
 
   <Card title="Security model" icon="shield" href="/concepts/security">
