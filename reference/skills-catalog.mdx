@@ -4,12 +4,12 @@ description: "Every skill that ships with NanoClaw — host-side workspace skill
 keywords: ["skills", "catalog", "reference", "add-channel", "providers", "tools", "container skills", "workspace skills", "slash commands"]
 ---
 
-{/* verified-against: .claude/skills/ and container/skills/ listings + each skill's SKILL.md frontmatter @ 4e83a0a0 */}
+{/* verified-against: .claude/skills/ and container/skills/ listings + each skill's SKILL.md frontmatter @ 4446b5bd */}
 
 NanoClaw ships two kinds of skills:
 
 - **Host-side workspace skills** (`.claude/skills/`) — invoked from your coding harness in your NanoClaw checkout. They install channels, providers, and tools, or operate and maintain your install. 48 skills total: 17 channel installs, 3 provider installs, 11 tool installs, and 17 operational skills.
-- **Container skills** (`container/skills/`) — 6 skills mounted into every agent container at `/app/skills`. The agent loads them at runtime; you don't invoke them yourself.
+- **Container skills** (`container/skills/`) — 5 skills mounted into every agent container at `/app/skills`. The agent loads them at runtime; you don't invoke them yourself.
 
 <Note>
 The `/name` form used throughout this page is Claude Code's. Codex invokes the same skills as `$name` and does not accept `/name`; OpenCode loads them through its own `skill` tool, with no typed form. The skill files are the same ones in every case. A few skills still phrase their steps in Claude Code's tool vocabulary, which other harnesses follow best-effort.
@@ -28,7 +28,7 @@ Each skill wires up one messaging channel. See [Channels](/channels/overview) fo
 | `/add-emacs` | Adds [Emacs](/channels/more-channels#emacs) as a channel — interactive chat buffer and org-mode integration over a local HTTP bridge, no bot token needed |
 | `/add-gchat` | Adds the [Google Chat](/channels/more-channels#google-chat) channel via Chat SDK |
 | `/add-github` | Adds the [GitHub](/channels/more-channels#github) channel via Chat SDK — PR and issue comment threads as conversations |
-| `/add-imessage` | Adds the [iMessage](/channels/imessage) channel via Chat SDK — local (macOS) or remote (Photon API) mode |
+| `/add-imessage` | Adds the [iMessage](/channels/imessage) channel — local backend (this Mac's `chat.db`, macOS only) or hosted backend (a native iMessage line via [photon.codes](https://photon.codes)) |
 | `/add-linear` | Adds the [Linear](/channels/more-channels#linear) channel via Chat SDK — issue comment threads as conversations |
 | `/add-matrix` | Adds the [Matrix](/channels/more-channels#matrix) channel via Chat SDK — works with any homeserver |
 | `/add-resend` | Adds the [Resend](/channels/more-channels#resend-email) email channel via Chat SDK |
@@ -103,10 +103,9 @@ Mounted into every agent container at `/app/skills`. The agent picks them up aut
 | `frontend-engineer` | Enforces a build-test-verify workflow for web projects — never done until built, tested, responsive, accessible, and visually verified |
 | `onecli-gateway` | Transparent HTTPS proxy that injects stored credentials into outbound calls — the agent makes plain HTTP requests and the gateway handles auth |
 | `self-customize` | Lets the agent customize itself — add capabilities, install packages, add MCP servers, edit code or its memory files |
-| `vercel-cli` | Deploys apps to Vercel and manages Vercel projects, domains, and environment variables |
 | `welcome` | Introduces the agent to a newly connected channel — triggered automatically when a channel is first wired |
 
-Channel-specific formatting skills (`slack-formatting`, `whatsapp-formatting`) are not part of the base image — they live on the `channels` branch and install alongside their channel via `/add-slack` and `/add-whatsapp`.
+Channel-specific formatting skills (`slack-formatting`, `whatsapp-formatting`) are not part of the base image — they live on the `channels` branch and install alongside their channel via `/add-slack` and `/add-whatsapp`. The `vercel-cli` container skill is also opt-in: `/add-vercel` ships it together with the Vercel CLI instead of baking either into every image.
 
 ## Related pages
 

@@ -6,7 +6,7 @@ icon: "download"
 keywords: ["requirements", "docker", "node", "pnpm", "bun", "wsl", "launchd", "systemd", "onecli", "nanoclaw.sh", "manual install"]
 ---
 
-{/* verified-against: nanoclaw.sh, setup.sh, setup/probe.sh, setup/auto.ts, setup/index.ts, setup/install-node.sh, setup/install-docker.sh, setup/container.ts, setup/service.ts, setup/set-env.ts, container/Dockerfile, container/pull.sh, versions.json, src/container-runtime.ts, src/container-runner.ts, src/claude-md-compose.ts, src/group-init.ts, src/config.ts, src/install-slug.ts, src/session-manager.ts, src/index.ts, package.json @ 4e83a0a0 (main) */}
+{/* verified-against: nanoclaw.sh, setup.sh, setup/probe.sh, setup/auto.ts, setup/index.ts, setup/install-node.sh, setup/install-docker.sh, setup/container.ts, setup/service.ts, setup/set-env.ts, container/Dockerfile, container/pull.sh, versions.json, src/container-runtime.ts, src/container-runner.ts, src/claude-md-compose.ts, src/group-init.ts, src/config.ts, src/install-slug.ts, src/session-manager.ts, src/index.ts, package.json @ 4446b5bd (main) */}
 
 This page is the depth companion to [Quick start](/quickstart): what the installer actually does, how to install by hand, how the background service works, and where everything lands on disk. If you just want a running assistant, run `bash nanoclaw.sh` and follow the wizard — quick start covers that flow end to end.
 
@@ -60,7 +60,7 @@ Every run writes two logs: a progression log at `logs/setup.log` (one entry per 
 NanoClaw deliberately splits runtimes:
 
 - **Host**: Node 20+ and pnpm. The wizard compiles TypeScript with `tsc` and the service runs `node dist/index.js`.
-- **Agent container**: Bun 1.3.12 runs the agent-runner TypeScript directly — no build step. The image (from `container/Dockerfile`) is based on `node:22-slim` with Chromium for browser automation and globally installed CLIs — `@anthropic-ai/claude-code`, `agent-browser`, and `vercel`, each pinned to an exact version for reproducibility. The versions live in `container/cli-tools.json` (installed by `install-cli-tools.sh`).
+- **Agent container**: Bun 1.3.12 runs the agent-runner TypeScript directly — no build step. The image (from `container/Dockerfile`) is based on `node:22-slim` with Chromium for browser automation and globally installed CLIs — `@anthropic-ai/claude-code` and `agent-browser`, each pinned to an exact version for reproducibility (the Vercel CLI is opt-in via `/add-vercel`). The versions live in `container/cli-tools.json` (installed by `install-cli-tools.sh`).
 
 Two consequences worth knowing:
 

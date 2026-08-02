@@ -4,7 +4,7 @@ description: "Every environment variable NanoClaw reads — .env keys, host proc
 keywords: ["environment variables", ".env", "configuration", "ASSISTANT_NAME", "LOG_LEVEL", "NANOCLAW_SKIP", "NANOCLAW_EGRESS_LOCKDOWN", "setup", "reference"]
 ---
 
-{/* verified-against: src/config.ts, src/env.ts, src/log.ts, src/webhook-server.ts, src/egress-lockdown.ts, src/host-sweep.ts, src/container-runner.ts, src/providers/claude.ts, setup/auto.ts, setup/onecli.ts, setup/lib/setup-config.ts, setup/lib/claude-assist.ts, setup/lib/diagnostics.ts, setup/signal-auth.ts, setup/container.ts, setup/migrate-v2/select-channels.ts, migrate-v2.sh, setup/registry-login.ts, setup/lib/registry-state.ts, container/pull.sh, container/agent-runner/src/{timezone.ts,providers/claude.ts} @ 4e83a0a0 */}
+{/* verified-against: src/config.ts, src/env.ts, src/log.ts, src/webhook-server.ts, src/egress-lockdown.ts, src/host-sweep.ts, src/container-runner.ts, src/providers/claude.ts, setup/auto.ts, setup/onecli.ts, setup/lib/setup-config.ts, setup/lib/claude-assist.ts, setup/lib/diagnostics.ts, setup/signal-auth.ts, setup/container.ts, setup/migrate-v2/select-channels.ts, migrate-v2.sh, setup/registry-login.ts, setup/lib/registry-state.ts, container/pull.sh, container/agent-runner/src/{timezone.ts,providers/claude.ts} @ 4446b5bd */}
 
 Exhaustive list of every environment variable the NanoClaw host, setup wizard, and agent runner read. For how to actually set these — `.env` editing, service definitions, restart commands — see [Configuration](/operate/configuration).
 
@@ -69,7 +69,7 @@ Consumed by the setup wizard (`pnpm run setup:auto`) and migration scripts, not 
 | `NANOCLAW_REGISTRY_ENROLL_CODE` | — | `setup/registry-login.ts:67` | Redeem an enrollment code without a browser (for CI). |
 | `NANOCLAW_ALLOW_UNLABELED_IMAGE` | — | `container/pull.sh:153` | Accept a pulled image with no agent-runner lock label — needed for `docker save`/`load` or third-party images. |
 | `NANOCLAW_SETUP_ASSIST_MODE` | `false` | `setup/lib/setup-config.ts:136` | Use non-interactive Claude assist on step failure instead of interactive handoff. |
-| `NANOCLAW_SKIP_CLAUDE_ASSIST` | — | `setup/lib/claude-assist.ts:97` | Set `1` to disable Claude-assisted failure recovery entirely (CI/scripted runs). |
+| `NANOCLAW_SKIP_CLAUDE_ASSIST` | — | `setup/lib/claude-assist.ts:97` | Set `1` to disable assisted failure recovery entirely (CI/scripted runs). On a non-Claude install, the picked provider’s own failure assist runs first, with Claude as a guarded fallback. |
 | `NANOCLAW_NO_DIAGNOSTICS` | — | `setup/lib/diagnostics.ts:54` | Set `1` to disable setup diagnostics reporting. |
 | `SIGNAL_CLI_PATH` | `signal-cli` (on `PATH`) | `setup/signal-auth.ts:51` | Path to the `signal-cli` binary for the Signal channel flow. |
 
@@ -90,4 +90,4 @@ Read inside the agent container by the agent runner. The host injects only `TZ` 
 | `CLAUDE_CONFIG_DIR` | `~/.claude` | `agent-runner/src/providers/claude.ts:311` | Base directory the runner scans for Claude Code project transcripts. |
 | `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `165000` | `agent-runner/src/providers/claude.ts:404` | Token window at which Claude Code auto-compacts context. Raise for 1M-context model variants. |
 
-Line numbers reference [`nanocoai/nanoclaw`](https://github.com/nanocoai/nanoclaw) at `4e83a0a0` (v2.1.53) and will drift with future releases.
+Line numbers reference [`nanocoai/nanoclaw`](https://github.com/nanocoai/nanoclaw) at `4446b5bd` (v2.1.54) and will drift with future releases.

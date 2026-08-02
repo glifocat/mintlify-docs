@@ -5,6 +5,17 @@ icon: "file-pen"
 rss: true
 ---
 
+<Update label="v2.1.54 sweep: iMessage goes local-or-hosted" description="2026-08-02" tags={["Updated"]}>
+  Drift sweep for the [v2.1.54 release](/changelog) (upstream `4446b5bd`, channels `c6cdc212`).
+
+  - **`channels/imessage`** — rewritten for the unified channel ([nanoclaw#3164](https://github.com/nanocoai/nanoclaw/pull/3164)): local (`chat.db` + Full Disk Access) and hosted (native `spectrum-ts` line via photon.codes) backends, the Photon device-login wizard with its manual dashboard opt-in, the first-text requirement, hosted media handling, the deterministic backend-resolution ladder, and a full `PHOTON_*` configuration table. The removed remote mode, `IMESSAGE_LOCAL`/`IMESSAGE_SERVER_URL`/`IMESSAGE_API_KEY`, and `imessage-cloud` are flagged as a breaking change. [Channels overview](/channels/overview) and the [skills catalog](/reference/skills-catalog) rows now match.
+  - **Vercel CLI is opt-in** — [installation](/installation), [container lifecycle](/concepts/container-lifecycle), and the [skills catalog](/reference/skills-catalog) no longer list `vercel` among the image's baked-in CLIs; the `vercel-cli` container skill moved out of the base image and ships with `/add-vercel`.
+  - **Hardened-image fetch time** — the [quickstart](/quickstart) and the [Echo hardened runtime guide](/guides/echo-hardened-runtime) no longer say the fetch takes around 20 minutes; it's now a few minutes, matching the installer's wording.
+  - **`reference/environment-variables`** — the failure-assist row notes that a non-Claude install dispatches assist to its picked provider first ([nanoclaw#3170](https://github.com/nanocoai/nanoclaw/pull/3170)).
+
+  Product changelog gained the [v2.1.54 entry](/changelog). All edited pages restamped at `4446b5bd`; channel anchors at `c6cdc212`.
+</Update>
+
 <Update label="Hardened image coverage lands on nine more pages" description="2026-07-29" tags={["Updated"]}>
   Second pass from the same-day drift sweep — pages that weren't wrong but didn't yet mention the hardened image where readers would look for it. [Hardening](/operate/hardening) gained the provenance-label scheme (`dev.nanoclaw.image-source`: `local` / `hardened` / `derived`, plus the agent-runner lock label) and the two new default-blocked mount patterns. [Credentials](/operate/credentials) documents the registry sign-in as its own credential class: device-code flow, `~/.config/nanoclaw/account.json`, and the docker credential helper that mints a short-lived password per pull. [Configuration](/operate/configuration) and the guide-adjacent pages picked up the three image-source variables, [Installation](/installation) the `registry` / `registry-reconcile` steps and the pull path, [Container lifecycle](/concepts/container-lifecycle) the pull-and-retag alternative, and [Providers](/extend/providers) the pinned-install nuance (Codex overlays onto the pulled image; OpenCode's lockfile change drops the install to a local build). [Container configuration](/reference/container-config) also gained the `timezone` field from the earlier per-group-timezone feature. Every addition verified against `nanocoai/nanoclaw@4e83a0a0`; all nine stamps bumped.
 </Update>

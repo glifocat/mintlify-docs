@@ -5,6 +5,22 @@ icon: "tag"
 rss: true
 ---
 
+<Update label="v2.1.54" description="2026-08-01" tags={["Breaking", "Feature", "Fix"]}>
+  - **Breaking: iMessage unified — one `imessage` channel, local or hosted backends** — `/add-imessage` now installs a single channel with two pluggable backends: local (this Mac's `chat.db`) or hosted (a native Photon line via photon.codes, no Mac relay), chosen at install or via `IMESSAGE_BACKEND=local|hosted`. The legacy Chat-SDK remote mode (`IMESSAGE_SERVER_URL`/`IMESSAGE_API_KEY`) is removed (#3164)
+  - **Breaking: agent memory is provider-agnostic** — every provider now shares one OKF-compatible `memory/` tree instead of provider-native memory stores, with persona moved to `instructions.prepend.md`; memory reloads automatically on startup, `/clear`, and compaction. Groups still on legacy memory need `/migrate-memory` before their next spawn (#3012)
+  - **Hardened agent images are an opt-in setup path** — setup can fetch a digest-pinned, multi-architecture image built and patched by Echo instead of building locally, with architecture, lockfile-label, and provenance checks before it's retagged onto the same local name a build would use. Building locally stays fully supported and needs no account (#3150)
+  - **Agent containers get more hardening by default** — every spawn now runs with `--cap-drop=ALL`, `no-new-privileges`, and Docker's `--init`; a new `CONTAINER_PIDS_LIMIT` (default 2048) backstops fork bombs (#2748)
+  - **Per-agent-group timezone override** — `ncl groups config update --timezone <IANA>` overrides the install timezone for that group's scheduling, run-log stamps, and container `TZ`; passing `""` clears it back to the install default (#3125)
+  - **New groups can inherit an instance-wide default provider** — `DEFAULT_AGENT_PROVIDER` sets the provider a freshly created agent group starts on; it's stamped once at creation, and a group's own `ncl groups config update --provider` still overrides it (#2906)
+  - **Agent templates can seed scheduled tasks** — a template's `tasks/*.md` files define a cron schedule, an optional script gate, and a prompt; template-seeded tasks are created paused so you can review them before activating (#3022)
+  - **MCP server approval cards show the full payload** — `add_mcp_server` cards now render every field being applied (name, command, args, env), not just name and command, so an approver can no longer authorize args or env they never saw; secret-shaped values are redacted with a fingerprint (#2998)
+  - The Vercel CLI is no longer baked into every agent image — install it with `/add-vercel` when a group actually needs to deploy (#3159)
+  - Duplicate replies after mid-turn context compaction fixed — the SDK's `compact_boundary` event no longer surfaces as a synthetic result the poll loop mistakes for unwrapped output (#3083)
+  - Claude rate-limit telemetry only aborts a turn on an actual rejection — informational `rate_limit_event` updates no longer abort healthy turns, and a rejection is classified as transient rate-limit or billing exhaustion instead of always reading as quota (#3077)
+  - Setup dispatches failure help to the picked provider — a failed step during a non-Claude install no longer pushes you to install and sign in to the Claude CLI just to see what went wrong; Claude remains a guarded fallback only when it's already installed and signed in (#3170)
+  - Telegram deep links use `telegram.me` instead of `t.me` (#3043)
+</Update>
+
 <Update label="v2.1.53" description="2026-07-13" tags={["Feature", "Skill"]}>
   - **Setup wizard channel installs are SKILL.md-driven** — the bespoke per-channel setup modules (`setup/channels/<channel>.ts`) are deleted; `/setup` now drives the same `/add-<channel>` skills you run by hand, through a thin generic driver (render + ask + run, no phasing). The skills carry the whole flow in `nc:` directive fences: operator-facing prompts (`nc:operator`), command output captured into variables (`nc:run` capture), `when:` guards for either/or paths, precondition gates (`effect:check`), and a human barrier for manual UI steps. A lone `?` at any prompt hands off to Claude for help (#2958, #2972)
   - **Host-only mount verbs** — `ncl groups config add-mount` / `remove-mount` edit a group's additional mounts from the host socket; never runnable from inside a container. The gmail/gcal/rtk tool skills now use them instead of raw SQL (#3035)

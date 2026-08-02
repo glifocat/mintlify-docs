@@ -4,7 +4,7 @@ description: "How NanoClaw channels work: the built-in CLI channel, the adapter 
 keywords: ["channels", "adapters", "channel registry", "chat sdk", "webhook", "add-telegram", "add-discord", "add-slack", "manage-channels"]
 ---
 
-{/* verified-against: src/channels/{adapter,channel-registry,channel-defaults,index,chat-sdk-bridge,cli}.ts, src/webhook-server.ts, setup/auto.ts, setup/channels/run-channel-skill.ts, .claude/skills/{manage-channels,add-telegram}/SKILL.md @ 4e83a0a0; channels branch src/channels/ @ 6ee516ad */}
+{/* verified-against: src/channels/{adapter,channel-registry,channel-defaults,index,chat-sdk-bridge,cli}.ts, src/webhook-server.ts, setup/auto.ts, setup/channels/run-channel-skill.ts, .claude/skills/{manage-channels,add-telegram}/SKILL.md @ 4446b5bd; channels branch src/channels/ @ c6cdc212 */}
 
 NanoClaw trunk ships channel **infrastructure** — the adapter interface, the registry, the Chat SDK bridge, the webhook server — plus one built-in channel: `cli`, an always-on local-terminal channel that needs no credentials. Every platform adapter (Telegram, Discord, Slack, WhatsApp, …) lives on the `channels` branch of the repo and is installed on demand with an `/add-<channel>` skill. Your fork only contains the channels you actually use.
 
@@ -28,7 +28,7 @@ The adapter normalizes platform events into inbound messages; the router matches
 Adapters come in two flavors:
 
 - **Chat SDK adapters** — wrap a [Chat SDK](https://github.com/vercel/chat) platform adapter (the `chat` npm package and its `@chat-adapter/*` family) via the bridge in `src/channels/chat-sdk-bridge.ts`. The bridge handles mention detection, attachments, reply context, interactive question cards, and splitting long messages to fit platform limits. Discord, Slack, Telegram, Teams, and most others use this pattern.
-- **Native adapters** — implement the `ChannelAdapter` interface directly. Used where no Chat SDK adapter fits: WhatsApp (Baileys), Signal (signal-cli), WeChat, Delta Chat, Emacs, and the built-in CLI channel.
+- **Native adapters** — implement the `ChannelAdapter` interface directly. Used where no Chat SDK adapter fits: WhatsApp (Baileys), Signal (signal-cli), WeChat, Delta Chat, Emacs, iMessage’s hosted backend (`spectrum-ts`), and the built-in CLI channel.
 
 ## What an `/add-<channel>` skill does
 
@@ -55,7 +55,7 @@ Everything on the `channels` branch right now. "Setup wizard" means the first-ru
 | Discord | Yes | `/add-discord` | Chat SDK; Gateway listener — no public URL needed; thread-based |
 | Slack | Yes | `/add-slack` | Chat SDK; Socket Mode (default, no public URL) or webhook delivery; thread-based |
 | Signal | Yes | `/add-signal` | Native; requires signal-cli with a linked account |
-| iMessage | Yes | `/add-imessage` | Chat SDK; local mode (macOS Full Disk Access) or remote mode (Photon API) |
+| iMessage | Yes | `/add-imessage` | Local backend: Chat SDK on this Mac (Full Disk Access); hosted backend: native adapter via photon.codes (`spectrum-ts`) |
 | Microsoft Teams | Yes | `/add-teams` | Chat SDK; webhook-based; thread-based |
 | Google Chat | — | `/add-gchat` | Chat SDK; thread-based |
 | GitHub | — | `/add-github` | Chat SDK; issue and PR conversations via webhook |
