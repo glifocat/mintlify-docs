@@ -1,62 +1,119 @@
 ---
 title: "iMessage"
-description: "Connect NanoClaw to iMessage via the Chat SDK adapter — local mode on your own Mac with Full Disk Access, or remote mode through a Photon API server."
-keywords: ["imessage", "add-imessage", "photon", "full disk access", "chat.db", "macos", "chat sdk", "apple messages"]
+description: "Connect NanoClaw to iMessage — one channel, two backends: local on your own Mac with Full Disk Access, or a hosted iMessage line via photon.codes."
+keywords: ["imessage", "add-imessage", "photon", "photon.codes", "spectrum-ts", "IMESSAGE_BACKEND", "full disk access", "chat.db", "macos", "apple messages", "hosted imessage"]
 ---
 
-{/* verified-against: setup/channels/imessage-configure.sh, .claude/skills/add-imessage/SKILL.md @ 4e83a0a0; channels branch src/channels/imessage.ts @ 6ee516ad */}
+{/* verified-against: .claude/skills/add-imessage/SKILL.md, .claude/skills/add-imessage/docs.md, setup/channels/imessage-configure.sh, scripts/photon-setup.ts, setup/auto.ts, setup/verify.ts @ 4446b5bd; channels branch src/channels/imessage.ts @ c6cdc212 */}
 
-The iMessage adapter connects NanoClaw to Apple's Messages network. It's built on the Chat SDK bridge (`chat-adapter-imessage` 0.1.1, pinned — a community adapter) and runs in one of two modes:
+NanoClaw connects to Apple's Messages network through a single `imessage` channel with two pluggable backends. You pick one at install time (or force it with `IMESSAGE_BACKEND=local|hosted`); only one runs per install.
 
-- **Local** — NanoClaw runs on a Mac and sends and receives as that Mac's signed-in iMessage account, reading the Messages database (`chat.db`) directly. No extra service, but macOS only, and the Node binary needs **Full Disk Access**.
-- **Remote (Photon API)** — NanoClaw talks over HTTP to a [Photon](https://photon.codes) server that owns an iMessage account on another Mac. Use this when your NanoClaw host is Linux, or when you'd rather keep your daily-driver Mac's chat history out of the loop.
+- **Local** — the Chat SDK bridge over `chat-adapter-imessage` (0.1.1, pinned), reading **this Mac's** signed-in iMessage account (`chat.db`) directly. macOS only, and the Node binary needs **Full Disk Access**. No third-party service — your messages never leave your machine — but NanoClaw must run on the Mac that's signed in.
+- **Hosted** — a native adapter connecting through [Photon](https://photon.codes), a managed service that owns the iMessage line, delivery, and abuse prevention. The `spectrum-ts` SDK (11.0.0, pinned) holds a long-lived gRPC stream to Photon in-process on the host — no Mac relay, no webhook, no public URL. Works on any OS, and Photon offers a free tier to start with.
 
-The wizard defaults to local on macOS; off macOS, remote is the only option.
+| | Local | Hosted (via photon.codes) |
+| --- | --- | --- |
+| Runs on | macOS only (reads `chat.db`) | any OS |
+| iMessage line | your own Apple ID | Photon-managed number |
+| Setup | grant Full Disk Access | device-login wizard |
+| Package | `chat-adapter-imessage@0.1.1` | `spectrum-ts@11.0.0` |
+| Credentials | `IMESSAGE_ENABLED=true` | `PHOTON_PROJECT_ID` / `PHOTON_PROJECT_SECRET` |
+
+<Warning>
+**Breaking change in v2.1.54.** The legacy Chat-SDK remote mode (`IMESSAGE_SERVER_URL` / `IMESSAGE_API_KEY`) and the `IMESSAGE_LOCAL` selector are removed. An install that used remote mode should re-run `/add-imessage` and pick the hosted backend, then remove the legacy keys from `.env` — the re-run does not strip them.
+</Warning>
 
 ## Prerequisites
 
 - A working NanoClaw install ([quickstart](/quickstart))
-- **Local mode:** a Mac signed in to iMessage, and the ability to grant Full Disk Access in System Settings (the wizard walks you through it)
-- **Remote mode:** a Photon server URL and API key, copied from your Photon dashboard
+- **Local backend:** a Mac signed in to iMessage, and the ability to grant Full Disk Access in System Settings (the wizard walks you through it)
+- **Hosted backend:** a [photon.codes](https://photon.codes) account (the wizard signs you in — free tier works) and the phone number you iMessage from, in `+`E.164 format
 
 ## Install
 
-iMessage is offered in the first-run setup wizard, or add it later by running `/add-imessage` in Claude Code. The wizard flow:
+iMessage is offered in the first-run setup wizard ("local Mac or hosted iMessage"), or add it later by running `/add-imessage` in your coding harness. The flow:
 
 <Steps>
-  <Step title="Pick a mode">
-    Local (this Mac) or remote (Photon API). On macOS the wizard pre-selects local; off macOS, remote is the only option offered.
-  </Step>
-  <Step title="Grant Full Disk Access (local) or enter Photon credentials (remote)">
-    **Local:** the wizard opens the folder containing your `node` binary in Finder, then walks you through **System Settings → Privacy & Security → Full Disk Access** → click **+** → drag the `node` file in → toggle it on. Confirm in the wizard once granted. Without this, the adapter can't read `chat.db` and inbound messages never arrive.
-
-    **Remote:** paste your Photon server URL (must start with `http://` or `https://`) and API key. If credentials already exist in `.env`, the wizard offers to reuse them.
-  </Step>
-  <Step title="Enter your iMessage handle">
-    The phone number or email you iMessage from — phone in `+`E.164 format (e.g. `+14155551234`), or any email iMessage recognises. This becomes the platform ID wired to your first agent, and where the welcome message goes.
+  <Step title="Pick a backend">
+    `local` (this Mac) or `hosted` (Photon). Local hard-requires macOS — the skill checks for Darwin and stops if you pick local anywhere else.
   </Step>
   <Step title="Adapter install">
-    The `/add-imessage` skill copies the adapter from the `channels` branch, installs the pinned package, builds, writes the mode keys to `.env` (synced to `data/env/env`), and restarts the service. Idempotent: safe to re-run.
+    The skill copies the unified adapter from the `channels` branch and installs the backend's pinned package — `chat-adapter-imessage@0.1.1` for local, `spectrum-ts@11.0.0` for hosted. Idempotent: safe to re-run.
+  </Step>
+  <Step title="Backend setup">
+    **Local:** grant Full Disk Access (below), then enter the phone number or email you iMessage from — this becomes the platform ID wired to your first agent.
+
+    **Hosted:** enter your phone number in `+`E.164 format (email handles are local-only), then the wizard runs the Photon device login (below).
+  </Step>
+  <Step title="Configuration write + restart">
+    `setup/channels/imessage-configure.sh <backend>` writes the backend selection to `.env` — `local` sets `IMESSAGE_BACKEND=local` and `IMESSAGE_ENABLED=true`; `hosted` sets `IMESSAGE_BACKEND=hosted` and removes `IMESSAGE_ENABLED` — and the service restarts.
   </Step>
   <Step title="Name the agent and get the welcome message">
-    The wizard asks for your operator role and an agent name (default `Nano`), wires your handle to your first agent group, and sends a welcome iMessage.
+    The wizard asks for your operator role and an agent name (default `Nano`), wires your handle to your first agent group, and sends a welcome iMessage. On the hosted backend the welcome only goes out after you've texted the line once — see the warning below.
   </Step>
 </Steps>
 
-To wire more conversations later, run `/manage-channels`. Contacts are identified by phone number or email; group chat IDs are assigned internally by iMessage. Group chats are supported.
+To wire more conversations later, run `/manage-channels`. Group chats are supported; on the hosted backend a group's ID is the opaque Spectrum space ID, discovered when the group first messages the line.
+
+## Local backend: Full Disk Access
+
+The adapter reads the signed-in account's `chat.db`, which requires **Full Disk Access** granted to the Node binary NanoClaw runs under. The wizard opens the folder containing your `node` binary in Finder, then walks you through **System Settings → Privacy & Security → Full Disk Access** → click **+** → drag the `node` file in → toggle it on. Without this, inbound messages never arrive.
+
+The grant binds to the one binary you dragged in, resolved via `which node` at setup time. If you switch Node versions (e.g. with `nvm`), the path changes and the grant no longer covers the binary NanoClaw runs under — re-grant for the new one.
+
+## Hosted backend: Photon device login
+
+The wizard drives `scripts/photon-setup.ts`, which walks you through connecting a Photon project:
+
+1. **Sign in** — the terminal prints a URL and a short code (valid for about 30 minutes). Complete the sign-in on any device; the token is cached with `0600` permissions at `data/photon-auth.json`, so re-runs skip this step.
+2. **Project provisioning** — the wizard creates or reuses a Photon project and its secret, regenerating the secret only when the API doesn't return one.
+3. **Add yourself in the dashboard** — a manual step: in the Photon dashboard, add your phone number as a user and accept the invite that arrives on your phone. This opt-in can only be granted through the dashboard invite flow; the wizard polls (10 minutes by default) until it lands rather than reporting success early.
+4. **Credentials written** — `PHOTON_PROJECT_ID` and `PHOTON_PROJECT_SECRET` land in `.env`; the assigned iMessage number is recorded in `data/photon-auth.json`.
+
+<Warning>
+The hosted line cannot send the first message. Text the agent's number once from your phone before expecting anything outbound — until then, sends fail (Photon reports `Target not allowed for this project`), including the setup welcome message.
+</Warning>
+
+### Media and features (hosted)
+
+- **Inbound attachments and voice notes** are read off the stream (with retry on transient failures) and staged into the session inbox, capped by `PHOTON_MAX_INLINE_ATTACHMENT_BYTES` (default 20 MB). Over-cap or failed attachments are skipped and annotated in the message text.
+- **Outbound files** are sent as native attachments, before their caption text.
+- **Markdown** is on by default (`PHOTON_MARKDOWN=true`) — iMessage renders it natively.
+- **Tapbacks** work in both directions, and the adapter reports typing indicators and read receipts.
+- **Interactive questions** (`ask_user_question`) arrive as messages whose answer commands are derived from the option labels (e.g. `/approve`, `/reject`).
+
+## Configuration reference
+
+Set in `.env`. The first two select the backend; the `PHOTON_*` vars apply to hosted only. The two `*_HOST` overrides are read by the setup wizard from its process environment (or `--dashboard-host` / `--spectrum-host` flags), not from `.env`.
+
+| Env var | Default | Meaning |
+| --- | --- | --- |
+| `IMESSAGE_BACKEND` | — | `local` or `hosted`. Explicit selection always wins. |
+| `IMESSAGE_ENABLED` | — | `true` enables the local backend. |
+| `PHOTON_PROJECT_ID` | — (required for hosted) | Spectrum project ID |
+| `PHOTON_PROJECT_SECRET` | — (required for hosted) | Project secret |
+| `PHOTON_MARKDOWN` | `true` | Send agent replies as markdown; `false` sends plain text |
+| `PHOTON_TELEMETRY` | `false` | Enable Spectrum SDK telemetry |
+| `PHOTON_MAX_INLINE_ATTACHMENT_BYTES` | `20971520` (20 MB) | Max inbound attachment size the adapter reads and caches |
+| `PHOTON_DASHBOARD_HOST` | `https://app.photon.codes` | Dashboard API host (setup wizard) |
+| `PHOTON_SPECTRUM_HOST` | `https://spectrum.photon.codes` | Spectrum API host (setup wizard) |
 
 ## Platform notes
 
-- **Mode is resolved from `.env`** — `IMESSAGE_LOCAL` set to anything but `false` means local. Local mode additionally requires `IMESSAGE_ENABLED=true`; remote requires `IMESSAGE_SERVER_URL` (plus `IMESSAGE_API_KEY`). If the required keys for the active mode are missing, the adapter factory returns nothing and the channel silently doesn't start.
-- **Switching modes is clean** — re-running setup (or `/add-imessage`) writes the new mode's keys and strips the opposite mode's, so stale values can't confuse the adapter.
-- **Full Disk Access binds to one specific binary** — the grant applies to the `node` file you dragged in, resolved via `which node` at setup time. If you switch Node versions (e.g. with `nvm`), the path changes and the grant no longer covers the binary NanoClaw runs under — re-grant for the new one.
-- **No threads** — the adapter sets `supportsThreads: false`; thread IDs map 1:1 to conversations. Wirings with `per-thread` session mode behave like `shared` here — see the [entity model](/concepts/entity-model).
+- **Backend resolution is deterministic** — an explicit `IMESSAGE_BACKEND` wins; otherwise Photon credentials imply hosted and `IMESSAGE_ENABLED` implies local. If both are configured without the selector, hosted wins and the adapter logs a warning. If neither backend has its credentials, the channel is skipped (a debug-level log line names both credential paths — visible only with `LOG_LEVEL=debug`).
+- **Switching backends** — re-running `/add-imessage` (or `imessage-configure.sh` directly) rewrites `IMESSAGE_BACKEND`, and the explicit selector always beats leftover keys, so stale credentials from the other backend are ignored. Switching to hosted also removes `IMESSAGE_ENABLED`; switching to local leaves the `PHOTON_*` keys in place.
+- **Engage defaults** — DMs engage on every message; in group chats the agent engages when its name is mentioned; unknown senders fall under the `strict` policy. See the [entity model](/concepts/entity-model) for how to change these per wiring.
+- **Platform IDs** — DMs use the counterpart's bare handle (`+15551234567`, or an email on local); hosted groups use the opaque Spectrum space ID.
+- **No threads** — the adapter sets `supportsThreads: false` on both backends; thread IDs map 1:1 to conversations, so `per-thread` session mode behaves like `shared` here.
 
 ## Troubleshooting
 
-- **iMessage channel never starts** — the factory bails without its required keys. Local mode (`IMESSAGE_LOCAL` unset or anything but `false`) needs `IMESSAGE_ENABLED=true` in `.env`; remote (`IMESSAGE_LOCAL=false`) needs `IMESSAGE_SERVER_URL`. A missing `IMESSAGE_API_KEY` doesn't block startup — it surfaces later as an authentication failure against Photon. Check `.env` and confirm it's synced to `data/env/env`, then restart.
-- **Inbound messages never arrive (local mode)** — Full Disk Access is missing, or granted to a different `node` binary than the one the service runs under. Run `open "$(dirname "$(which node)")"`, re-drag that `node` file into **Full Disk Access**, and restart the service.
-- **"local mode requires macOS"** — the installer hard-fails on Linux/WSL (the wizard's version of the same error reads "Local iMessage mode only works on macOS"). Choose remote mode (Photon API), or run setup from a Mac.
-- **"Couldn't finish connecting" at the end of setup** — the welcome message didn't go out. Double-check Full Disk Access (local) or your Photon server URL and API key (remote), then re-run setup.
+- **iMessage channel never starts** — the adapter needs its backend's credentials: local needs `IMESSAGE_ENABLED=true`, hosted needs both `PHOTON_PROJECT_ID` and `PHOTON_PROJECT_SECRET`. When they're missing the channel is skipped quietly — the log line naming both paths is debug-level, so set `LOG_LEVEL=debug` to see it. On hosted, `grep "Photon channel connected" logs/nanoclaw.log` confirms the stream is up.
+- **Inbound messages never arrive (local)** — Full Disk Access is missing, or granted to a different `node` binary than the one the service runs under. Run `open "$(dirname "$(which node)")"`, re-drag that `node` file into **Full Disk Access**, and restart the service.
+- **`Target not allowed for this project` (hosted)** — the recipient hasn't opted in to the line. Add the number as a user in the Photon dashboard, accept the invite on that phone, and text the line once.
+- **Device login timed out or the code expired (hosted)** — the URL and code last about 30 minutes, and a failed login caches nothing. Re-run `/add-imessage` for a fresh URL and code; once a login has succeeded, re-runs skip sign-in via the cached token and reuse the already-provisioned project.
+- **`spectrum-ts` not installed (hosted)** — the backend's package didn't land. Re-run `/add-imessage` and pick hosted; the install step is idempotent.
+- **Installed but silent** — run the adapter's registration test from your NanoClaw checkout: `pnpm exec vitest run src/channels/imessage-registration.test.ts`.
+- **"Couldn't finish connecting" at the end of setup** — the welcome message didn't go out. Local: double-check Full Disk Access. Hosted: confirm you accepted the dashboard invite and have texted the line once.
 
 For service-level checks (logs, restarts, wiring queries), see [troubleshooting](/operate/troubleshooting).
