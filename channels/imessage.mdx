@@ -4,7 +4,7 @@ description: "Connect NanoClaw to iMessage — one channel, two backends: local 
 keywords: ["imessage", "add-imessage", "photon", "photon.codes", "spectrum-ts", "IMESSAGE_BACKEND", "full disk access", "chat.db", "macos", "apple messages", "hosted imessage"]
 ---
 
-{/* verified-against: .claude/skills/add-imessage/SKILL.md, .claude/skills/add-imessage/docs.md, setup/channels/imessage-configure.sh, scripts/photon-setup.ts, setup/auto.ts, setup/verify.ts @ 4446b5bd; channels branch src/channels/imessage.ts @ c6cdc212 */}
+{/* verified-against: .claude/skills/add-imessage/SKILL.md, .claude/skills/add-imessage/docs.md, setup/channels/imessage-configure.sh, scripts/photon-setup.ts, setup/auto.ts, setup/verify.ts @ 639577c3; channels branch src/channels/imessage.ts @ c6cdc212 */}
 
 NanoClaw connects to Apple's Messages network through a single `imessage` channel with two pluggable backends. You pick one at install time (or force it with `IMESSAGE_BACKEND=local|hosted`); only one runs per install.
 
@@ -67,8 +67,8 @@ The wizard drives `scripts/photon-setup.ts`, which walks you through connecting 
 
 1. **Sign in** — the terminal prints a URL and a short code (valid for about 30 minutes). Complete the sign-in on any device; the token is cached with `0600` permissions at `data/photon-auth.json`, so re-runs skip this step.
 2. **Project provisioning** — the wizard creates or reuses a Photon project and its secret, regenerating the secret only when the API doesn't return one.
-3. **Add yourself in the dashboard** — a manual step: in the Photon dashboard, add your phone number as a user and accept the invite that arrives on your phone. This opt-in can only be granted through the dashboard invite flow; the wizard polls (10 minutes by default) until it lands rather than reporting success early.
-4. **Credentials written** — `PHOTON_PROJECT_ID` and `PHOTON_PROJECT_SECRET` land in `.env`; the assigned iMessage number is recorded in `data/photon-auth.json`.
+3. **Credentials written** — `PHOTON_PROJECT_ID` and `PHOTON_PROJECT_SECRET` land in `.env` before the opt-in step.
+4. **Opt in with one text** — the wizard registers your phone number with the project (it finds or creates the user entry itself) and prints the iMessage line Photon assigned to it. Send one message from your phone to that line: Photon marks the number opted in only after that first text. The wizard polls (10 minutes by default) until the opt-in lands rather than reporting success early. Re-runs reuse the existing registration, and an already-opted-in number passes immediately. The assigned number is recorded in `data/photon-auth.json` at the end.
 
 <Warning>
 The hosted line cannot send the first message. Text the agent's number once from your phone before expecting anything outbound — until then, sends fail (Photon reports `Target not allowed for this project`), including the setup welcome message.
@@ -110,10 +110,10 @@ Set in `.env`. The first two select the backend; the `PHOTON_*` vars apply to ho
 
 - **iMessage channel never starts** — the adapter needs its backend's credentials: local needs `IMESSAGE_ENABLED=true`, hosted needs both `PHOTON_PROJECT_ID` and `PHOTON_PROJECT_SECRET`. When they're missing the channel is skipped quietly — the log line naming both paths is debug-level, so set `LOG_LEVEL=debug` to see it. On hosted, `grep "Photon channel connected" logs/nanoclaw.log` confirms the stream is up.
 - **Inbound messages never arrive (local)** — Full Disk Access is missing, or granted to a different `node` binary than the one the service runs under. Run `open "$(dirname "$(which node)")"`, re-drag that `node` file into **Full Disk Access**, and restart the service.
-- **`Target not allowed for this project` (hosted)** — the recipient hasn't opted in to the line. Add the number as a user in the Photon dashboard, accept the invite on that phone, and text the line once.
+- **`Target not allowed for this project` (hosted)** — the recipient's number isn't opted in to the line. Send one message from that phone to the line assigned to it, then retry. If the number was never registered, re-run `/add-imessage`; `photon-setup.ts status` re-checks the opt-in live.
 - **Device login timed out or the code expired (hosted)** — the URL and code last about 30 minutes, and a failed login caches nothing. Re-run `/add-imessage` for a fresh URL and code; once a login has succeeded, re-runs skip sign-in via the cached token and reuse the already-provisioned project.
 - **`spectrum-ts` not installed (hosted)** — the backend's package didn't land. Re-run `/add-imessage` and pick hosted; the install step is idempotent.
 - **Installed but silent** — run the adapter's registration test from your NanoClaw checkout: `pnpm exec vitest run src/channels/imessage-registration.test.ts`.
-- **"Couldn't finish connecting" at the end of setup** — the welcome message didn't go out. Local: double-check Full Disk Access. Hosted: confirm you accepted the dashboard invite and have texted the line once.
+- **"Couldn't finish connecting" at the end of setup** — the welcome message didn't go out. Local: double-check Full Disk Access. Hosted: confirm you texted the assigned line once from your phone — that first text is the opt-in.
 
 For service-level checks (logs, restarts, wiring queries), see [troubleshooting](/operate/troubleshooting).

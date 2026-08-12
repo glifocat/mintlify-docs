@@ -4,11 +4,11 @@ description: "Every skill that ships with NanoClaw — host-side workspace skill
 keywords: ["skills", "catalog", "reference", "add-channel", "providers", "tools", "container skills", "workspace skills", "slash commands"]
 ---
 
-{/* verified-against: .claude/skills/ and container/skills/ listings + each skill's SKILL.md frontmatter @ 4446b5bd */}
+{/* verified-against: .claude/skills/ and container/skills/ listings + each skill's SKILL.md frontmatter @ 639577c3 */}
 
 NanoClaw ships two kinds of skills:
 
-- **Host-side workspace skills** (`.claude/skills/`) — invoked from your coding harness in your NanoClaw checkout. They install channels, providers, and tools, or operate and maintain your install. 48 skills total: 17 channel installs, 3 provider installs, 11 tool installs, and 17 operational skills.
+- **Host-side workspace skills** (`.claude/skills/`) — invoked from your coding harness in your NanoClaw checkout. They install channels, providers, and tools, or operate and maintain your install. 45 skills total: 17 channel installs, 3 provider installs, 10 tool installs, and 15 operational skills.
 - **Container skills** (`container/skills/`) — 5 skills mounted into every agent container at `/app/skills`. The agent loads them at runtime; you don't invoke them yourself.
 
 <Note>
@@ -60,13 +60,12 @@ Each skill adds a capability or MCP tool to your agents. See [Tools](/extend/too
 | `/add-atomic-chat-tool` | Adds the Atomic Chat MCP server so agents can call local models served by the Atomic Chat desktop app via its OpenAI-compatible API |
 | `/add-clidash` | Adds clidash — a zero-dependency, read-only web dashboard that derives its tabs and tables at runtime from any CLI that lists resources as JSON, pre-wired for NanoClaw's `ncl` CLI |
 | `/add-dashboard` | Adds a monitoring dashboard — installs `@nanoco/nanoclaw-dashboard` and a pusher that sends periodic JSON snapshots |
-| `/add-gcal-tool` | Adds Google Calendar as an MCP tool (list calendars, list/search/create events, free/busy) using OneCLI-managed OAuth — no raw credentials reach the container |
-| `/add-gmail-tool` | Adds Gmail as an MCP tool (read, search, send, label, draft) using OneCLI-managed OAuth — tokens injected at request time |
 | `/add-karpathy-llm-wiki` | Adds a persistent wiki knowledge base to a group, based on Karpathy's LLM Wiki pattern |
 | `/add-macos-statusbar` | Adds a macOS menu bar status indicator with Start, Stop, and Restart controls (macOS only) |
 | `/add-mnemon` | Adds persistent graph-based memory via mnemon — agents recall past context before responding and remember insights after each turn |
 | `/add-ollama-tool` | Adds the Ollama MCP server so agents can call local models and optionally manage the Ollama model library |
 | `/add-rtk` | Installs the rtk token-compression proxy into agent containers — routes Bash tool calls through rtk for 60–90% token savings on dev commands |
+| `/add-tavily-tool` | Adds Tavily Search and Extract as keyless remote MCP tools through the pinned `mcp-remote` bridge — no API key, OneCLI not involved |
 | `/add-vercel` | Adds Vercel deployment capability — installs the Vercel CLI in agent containers with OneCLI credential injection for `api.vercel.com` |
 
 ## Operational skills
@@ -77,7 +76,6 @@ Setup, maintenance, migration, and day-to-day administration of your install.
 | --- | --- |
 | `/customize` | Adds new capabilities or modifies NanoClaw behavior — interactive skill that asks questions to understand what you want |
 | `/debug` | Debugs container agent issues — logs, session DBs, mounts, authentication problems, and common failures |
-| `/get-qodo-rules` | Loads org- and repo-level coding rules from Qodo before code tasks begin, so generation follows team standards |
 | `/init-first-agent` | Walks you through creating the first agent for a DM channel — resolves your channel identity, wires the DM group, and triggers a welcome DM |
 | `/init-onecli` | Installs and initializes OneCLI Agent Vault, migrating existing `.env` credentials to the vault |
 | `/learn` | Distills a reusable skill from a source — a directory, URL, pasted notes, or the work just done in the conversation — or refines an existing one, writing a `.claude/skills/<name>/SKILL.md` to the project's skill guidelines. Creates or refines skills; it doesn't install them from a registry |
@@ -87,7 +85,6 @@ Setup, maintenance, migration, and day-to-day administration of your install.
 | `/migrate-from-v1` | Finishes migrating a NanoClaw v1 install into v2 after `migrate-v2.sh` — seeds the owner, reconciles container configs, helps port custom v1 code |
 | `/migrate-memory` | Carries an agent group's memory across a provider switch (e.g. Claude ↔ Codex) — run after `ncl groups config update --provider`; reads the source provider's memory store, distills it into the target's, and restarts the group |
 | `/migrate-nanoclaw` | Extracts your customizations from a fork, generates a replayable migration guide, and upgrades to upstream by reapplying them on a clean base |
-| `/qodo-pr-resolver` | Reviews and resolves PR issues with Qodo — AI-powered code review fixes for GitHub, GitLab, Bitbucket, and Azure DevOps |
 | `/setup` | Runs initial NanoClaw setup — install, configure, first-time setup |
 | `/update-nanoclaw` | Brings upstream updates into a customized install with preview, selective cherry-pick, and low token usage |
 | `/update-skills` | Re-applies your installed skills to pull their latest code from upstream |

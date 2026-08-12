@@ -4,7 +4,7 @@ description: "Every environment variable NanoClaw reads — .env keys, host proc
 keywords: ["environment variables", ".env", "configuration", "ASSISTANT_NAME", "LOG_LEVEL", "NANOCLAW_SKIP", "NANOCLAW_EGRESS_LOCKDOWN", "setup", "reference"]
 ---
 
-{/* verified-against: src/config.ts, src/env.ts, src/log.ts, src/webhook-server.ts, src/egress-lockdown.ts, src/host-sweep.ts, src/container-runner.ts, src/providers/claude.ts, setup/auto.ts, setup/onecli.ts, setup/lib/setup-config.ts, setup/lib/claude-assist.ts, setup/lib/diagnostics.ts, setup/signal-auth.ts, setup/container.ts, setup/migrate-v2/select-channels.ts, migrate-v2.sh, setup/registry-login.ts, setup/lib/registry-state.ts, container/pull.sh, container/agent-runner/src/{timezone.ts,providers/claude.ts} @ 4446b5bd */}
+{/* verified-against: src/config.ts, src/env.ts, src/log.ts, src/webhook-server.ts, src/egress-lockdown.ts, src/host-sweep.ts, src/container-runner.ts, src/providers/claude.ts, setup/auto.ts, setup/onecli.ts, setup/lib/setup-config.ts, setup/lib/claude-assist.ts, setup/lib/diagnostics.ts, setup/signal-auth.ts, setup/container.ts, setup/migrate-v2/select-channels.ts, migrate-v2.sh, setup/registry-login.ts, setup/lib/registry-state.ts, container/pull.sh, container/agent-runner/src/{timezone.ts,providers/claude.ts} @ 639577c3 */}
 
 Exhaustive list of every environment variable the NanoClaw host, setup wizard, and agent runner read. For how to actually set these — `.env` editing, service definitions, restart commands — see [Configuration](/operate/configuration).
 
@@ -84,10 +84,10 @@ Read inside the agent container by the agent runner. The host injects only `TZ` 
 | Variable | Default | Read in | Effect |
 |---|---|---|---|
 | `TZ` | injected from host `TIMEZONE` | `agent-runner/src/timezone.ts:68` | Timezone for timestamps and scheduling inside the container. |
-| `NANOCLAW_CONVERSATIONS_DIR` | `/workspace/agent/conversations` | `agent-runner/src/providers/claude.ts:260` | Where pre-compaction conversation transcripts are archived as Markdown. |
-| `CLAUDE_TRANSCRIPT_ROTATE_BYTES` | `12582912` (12 MiB) | `agent-runner/src/providers/claude.ts:290` | Transcript size past which the session is rotated instead of resumed — cold resumes of huge transcripts would outlive the idle ceiling. |
-| `CLAUDE_TRANSCRIPT_ROTATE_AGE_DAYS` | `14` | `agent-runner/src/providers/claude.ts:298` | Age trigger for transcript rotation, measured from the first entry. Zero or negative disables the age check; size alone governs. |
-| `CLAUDE_CONFIG_DIR` | `~/.claude` | `agent-runner/src/providers/claude.ts:311` | Base directory the runner scans for Claude Code project transcripts. |
-| `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `165000` | `agent-runner/src/providers/claude.ts:404` | Token window at which Claude Code auto-compacts context. Raise for 1M-context model variants. |
+| `NANOCLAW_CONVERSATIONS_DIR` | `/workspace/agent/conversations` | `agent-runner/src/providers/claude.ts:309` | Where pre-compaction conversation transcripts are archived as Markdown. |
+| `CLAUDE_TRANSCRIPT_ROTATE_BYTES` | `12582912` (12 MiB) | `agent-runner/src/providers/claude.ts:339` | Transcript size past which the session is rotated instead of resumed — cold resumes of huge transcripts would outlive the idle ceiling. |
+| `CLAUDE_TRANSCRIPT_ROTATE_AGE_DAYS` | `14` | `agent-runner/src/providers/claude.ts:347` | Age trigger for transcript rotation, measured from the first entry. Zero or negative disables the age check; size alone governs. |
+| `CLAUDE_CONFIG_DIR` | `~/.claude` | `agent-runner/src/providers/claude.ts:360` | Base directory the runner scans for Claude Code project transcripts. |
+| `CLAUDE_CODE_AUTO_COMPACT_WINDOW` | `165000` | `agent-runner/src/providers/claude.ts:453` | Token window at which Claude Code auto-compacts context. Raise for 1M-context model variants. |
 
 Line numbers reference [`nanocoai/nanoclaw`](https://github.com/nanocoai/nanoclaw) at `4446b5bd` (v2.1.54) and will drift with future releases.

@@ -4,7 +4,7 @@ description: "Update NanoClaw and its skills with /update-nanoclaw and /update-s
 keywords: ["upgrade", "update", "update-nanoclaw", "update-skills", "migrate-nanoclaw", "upstream", "merge", "rollback"]
 ---
 
-{/* verified-against: .claude/skills/update-nanoclaw/SKILL.md, .claude/skills/update-skills/SKILL.md, .claude/skills/migrate-nanoclaw/SKILL.md, versions.json, scripts/upgrade-state.ts, src/upgrade-state.ts @ 4e83a0a0 */}
+{/* verified-against: .claude/skills/update-nanoclaw/SKILL.md, .claude/skills/update-skills/SKILL.md, .claude/skills/migrate-nanoclaw/SKILL.md, versions.json, scripts/upgrade-state.ts, src/upgrade-state.ts @ 639577c3 */}
 
 Don't update with a raw `git pull`. NanoClaw records each sanctioned upgrade in `data/upgrade-state.json`, and a startup tripwire refuses to boot if the running code's version doesn't match that marker. The supported path is the `/update-nanoclaw` skill, which handles the merge, validation, and the marker stamp for you.
 
@@ -12,7 +12,7 @@ Don't update with a raw `git pull`. NanoClaw records each sanctioned upgrade in 
 
 Run `/update-nanoclaw` in a Claude Code session at your project root. The skill works in stages, and nothing is committed until you've seen a preview:
 
-1. **Self-refresh.** It fetches upstream and refreshes its own skill folder first, so the newest update process runs the update.
+1. **Self-refresh.** It fetches upstream and reads the upstream copy of its own SKILL.md (`git show`, no working-tree change); if that version differs, it follows the newer instructions — the merge later brings them into the checkout.
 2. **Preflight.** Stops if the working tree is dirty — commit or stash first. Adds the `upstream` remote if it's missing.
 3. **Safety net.** Creates a backup branch (`backup/pre-update-<hash>-<timestamp>`) and tag (`pre-update-<hash>-<timestamp>`) before touching anything.
 4. **Preview.** Shows upstream commits since your last sync and buckets the changed files: skills, host source (`src/`), container (`container/`, triggers a rebuild), and build config (lockfile changes trigger a dependency install). You then pick a path: full merge (default), selective cherry-pick, rebase, or abort.
@@ -20,7 +20,7 @@ Run `/update-nanoclaw` in a Claude Code session at your project root. The skill 
 6. **Merge and resolve.** Applies your chosen path. On conflicts it opens only the conflicted files, resolves the markers, and keeps your local customizations intact.
 7. **Validation.** Runs `pnpm run build` and `pnpm test`. If `container/` files changed — or, on an install that pulls the [hardened image](/guides/echo-hardened-runtime), the `agent-image` pin in `versions.json` moved — it also refreshes the container image: `./container/build.sh` on a local-build install, `./container/build.sh pull` on a pinned one. The bare form exits `3` on a pinned install rather than silently replacing the pulled image with a local build.
 8. **OneCLI pins.** If the `onecli-gateway` or `onecli-cli` pin in `versions.json` moved since your backup tag, the skill surfaces it and walks you through the OneCLI upgrade ([`docs/onecli-upgrades.md`](https://github.com/nanocoai/nanoclaw/blob/main/docs/onecli-upgrades.md)) before the restart — the gateway and CLI are external components, so the running versions must be bumped to match the merged code. No pin change and the step is skipped.
-9. **Breaking changes.** Scans the new `CHANGELOG.md` entries for `[BREAKING]` lines, each of which names a migration skill (`Run /<skill-name> to …`); the skill lists them and offers to run the ones you pick. A breaking change that points to a `docs/` page instead of a skill is one you follow by hand.
+9. **Breaking changes.** Scans the new `CHANGELOG.md` entries for `[BREAKING]` lines. Each names either a migration skill (`Run /<skill-name> to …`) or a migration guide (`Follow [the migration guide](docs/<guide>.md)`). The skill lists both kinds and offers to run the ones you pick — for a guide, it reads the referenced page, summarizes it, and executes its fix and verification steps. Unresolved items from either kind land in the same follow-up list.
 10. **Skill updates.** Detects which channel and provider adapters are wired into the barrels and offers to continue into `/update-skills` — the per-skill selection happens there, not in the update itself.
 11. **Marker stamp.** On success, stamps the upgrade marker (`pnpm exec tsx scripts/upgrade-state.ts set "" update-nanoclaw`) so the tripwire passes on next start.
 12. **Summary.** Prints the backup tag, conflicts resolved, and the restart command for your platform.

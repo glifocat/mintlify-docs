@@ -4,7 +4,7 @@ description: "What a NanoClaw skill is in v2 — SKILL.md workflows that a codin
 keywords: ["skills", "extend", "SKILL.md", "registry branches", "channels branch", "providers branch", "REMOVE.md", "container skills", "additive fetch"]
 ---
 
-{/* verified-against: CONTRIBUTING.md, docs/skills-model.md, docs/skill-guidelines.md, .claude/skills/{add-telegram,add-codex,add-gmail-tool,manage-mounts}/SKILL.md, .claude/skills/{add-telegram,add-gmail-tool}/REMOVE.md, container/skills/, src/container-runner.ts, setup/providers/index.ts, setup/channels/run-channel-skill.ts @ 4e83a0a0 */}
+{/* verified-against: CONTRIBUTING.md, docs/skills-model.md, docs/skill-guidelines.md, .claude/skills/{add-telegram,add-codex,add-tavily-tool,manage-mounts}/SKILL.md, .claude/skills/add-telegram/REMOVE.md, container/skills/, src/container-runner.ts, setup/providers/index.ts, setup/channels/run-channel-skill.ts @ 639577c3 */}
 
 A NanoClaw skill is a **SKILL.md instruction workflow** in `.claude/skills/` that a coding harness (Claude Code, Codex, OpenCode) executes in your checkout. When you invoke `add-telegram` or `manage-mounts`, the coding harness reads the skill's instructions and performs them: copying files, appending an import, installing a dependency, running a test. There is no manifest.yaml and no skill state file. The skill *is* the markdown — the mechanical steps in trunk install skills also carry `nc:` directive fences, so the setup wizard can apply the same document a coding harness would read, and anything it can't apply mechanically falls back to the prose beside it. Two readers, one document.
 
@@ -54,7 +54,7 @@ The `/name` form below is Claude Code's. Codex invokes the same skill as `$add-t
 | --- | --- | --- |
 | **Channel installs** | `/add-telegram` | The flow above: copy the adapter from the `channels` branch, append the barrel import, pin the dependency, run the registration test. See [Channels overview](/channels/overview). |
 | **Provider installs** | `/add-codex` | Same pattern against the `providers` branch, but multi-point: a provider spans three trees — the host, the container's agent-runner, and setup — so the skill appends an import to each of the three provider barrels and runs a registration guard per tree. See [Providers](/extend/providers). |
-| **Tool installs** | `/add-gmail-tool` | Wires an MCP server into selected agent groups with vault-managed credentials: the container only ever sees `onecli-managed` placeholder stubs, and the OneCLI gateway injects real OAuth tokens in flight. See [Tools](/extend/tools). |
+| **Tool installs** | `/add-tavily-tool` | Wires an MCP server into selected agent groups: pins the `mcp-remote` bridge in the container manifest and registers the server per group with `ncl groups config add-mcp-server`, giving the agent `tavily_search` and `tavily_extract` with no API key. See [Tools](/extend/tools). |
 | **Operational skills** | `/manage-mounts` | Pure instruction workflows — no code copied, nothing fetched. The SKILL.md walks the coding harness through a task, like editing the mount allowlist through the setup CLI and restarting the service. |
 
 <Note>

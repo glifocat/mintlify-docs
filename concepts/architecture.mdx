@@ -5,7 +5,7 @@ description: "How NanoClaw works from the top down: a host process that routes m
 keywords: ["architecture", "host process", "router", "delivery", "host sweep", "inbound.db", "outbound.db", "container", "agent-runner", "poll loop", "IPC"]
 ---
 
-{/* verified-against: src/index.ts, src/router.ts, src/delivery.ts, src/session-manager.ts, src/host-sweep.ts, src/container-runner.ts, src/claude-md-compose.ts, src/group-persona.ts, src/webhook-server.ts, container/agent-runner/src/{index,poll-loop,formatter,compact-instructions}.ts @ 4e83a0a0 */}
+{/* verified-against: src/index.ts, src/router.ts, src/delivery.ts, src/session-manager.ts, src/host-sweep.ts, src/container-runner.ts, src/claude-md-compose.ts, src/group-persona.ts, src/webhook-server.ts, container/agent-runner/src/{index,poll-loop,formatter,compact-instructions}.ts @ 639577c3 */}
 
 NanoClaw is one Node.js host process plus one Docker container per active session. The host owns the channels, the routing, and the container lifecycle; the agent runs inside the container and never talks to the network on NanoClaw's behalf. Between them sits the core idea: **every message is a row in SQLite**. There is no internal message bus, no RPC, no shared memory — the host writes rows the container reads, the container writes rows the host reads, and everything else is polling.
 
@@ -64,11 +64,12 @@ On the outbound side, `src/delivery.ts` drains `messages_out`: an in-flight set 
 3. **Container runtime** — verifies Docker is running and removes orphan containers from a previous run.
 4. **Channel adapters** — every adapter registered via the channel barrel is initialized; adapters with missing credentials are skipped with a warning.
 5. **Delivery adapter bridge** — connects the delivery system to the adapter registry for `deliver()` and `setTyping()`.
-6. **Delivery polls** — the active poll (1s, sessions with a running container) and the sweep poll (60s, all active sessions).
-7. **Host sweep** — the 60-second maintenance loop described below.
-8. **`ncl` CLI socket server** — admin commands over a Unix socket at `data/ncl.sock` (see [ncl CLI](/reference/ncl-cli)).
+6. **Host modules** — runs the start callbacks that modules registered through the host lifecycle registry (`onHostStart`/`onHostShutdown`); a failed module start aborts host startup.
+7. **Delivery polls** — the active poll (1s, sessions with a running container) and the sweep poll (60s, all active sessions).
+8. **Host sweep** — the 60-second maintenance loop described below.
+9. **`ncl` CLI socket server** — admin commands over a Unix socket at `data/ncl.sock` (see [ncl CLI](/reference/ncl-cli)).
 
-Modules (permissions, scheduling, approvals, agent-to-agent, typing, and so on) self-register through barrel imports before `main()` runs — they hook into the router and delivery pipeline rather than being called by name from core.
+Modules (permissions, scheduling, approvals, agent-to-agent, typing, and so on) self-register through barrel imports before `main()` runs — registration is inert until step 6 starts them — and they hook into the router and delivery pipeline rather than being called by name from core.
 
 <Note>
 There is no HTTP API. The webhook server (`src/webhook-server.ts`) starts lazily when the first Chat SDK adapter registers and listens on `WEBHOOK_PORT` (default 3000). It routes by path: `/webhook/{routingPath}` reaches a Chat SDK adapter (the routing path defaults to the adapter name; a second instance of one platform gets its own path), and `/webhook/{path}` reaches a raw handler that a module registered with `registerWebhookHandler()` for non–Chat SDK webhooks — raw routes take priority. The admin surface is the `ncl` CLI over the Unix socket, not HTTP.
@@ -82,7 +83,7 @@ The poll loop (`poll-loop.ts`) drives everything:
 
 - Every second it reads pending `messages_in` rows. Batches containing only `trigger=0` (accumulated context) rows don't wake the agent — they ride along with the next real trigger.
 - A batch is marked `processing`, formatted into XML (`<message>`, `<task>`, `<webhook>` blocks with a timezone header — `formatter.ts`), and sent to the provider as one prompt.
-- While the query streams, a 500ms follow-up poll pushes newly arrived messages into the open stream instead of restarting the provider subprocess.
+- While the query streams, a 500ms follow-up poll pushes newly arrived messages into the open stream instead of restarting the provider subprocess. The push only fires when at least one new message is a trigger; accumulated context alone never engages a warm query.
 - Result text must wrap output in `<message to="name">` blocks; each block becomes a `messages_out` row addressed to a named destination. Bare text is treated as scratchpad and never sent.
 - The provider's session ID (continuation) is persisted to `outbound.db` so the next container resumes the conversation, and a `PreCompact` hook injects instructions that preserve routing context through context compaction.
 - On every provider event the runner touches `/workspace/.heartbeat` — the host's only liveness signal.

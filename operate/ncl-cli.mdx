@@ -5,7 +5,7 @@ description: "Administer a running NanoClaw host from the terminal — inspect a
 keywords: ["ncl", "cli", "admin", "unix socket", "cli_scope", "groups", "wirings", "sessions", "approvals"]
 ---
 
-{/* verified-against: src/cli/client.ts, src/cli/dispatch.ts, src/cli/socket-server.ts, src/cli/crud.ts, src/cli/format.ts, src/cli/transport-errors.ts, src/cli/commands/help.ts, src/cli/resources/{approvals,destinations,dropped-messages,groups,members,messaging-groups,policies,roles,sessions,tasks,user-dms,users,wirings}.ts, src/db/container-configs.ts, bin/ncl, setup/service.ts @ 4e83a0a0 */}
+{/* verified-against: src/cli/client.ts, src/cli/dispatch.ts, src/cli/socket-server.ts, src/cli/crud.ts, src/cli/format.ts, src/cli/transport-errors.ts, src/cli/commands/help.ts, src/cli/resources/{approvals,destinations,dropped-messages,groups,members,messaging-groups,policies,roles,sessions,tasks,user-dms,users,wirings}.ts, src/db/container-configs.ts, bin/ncl, setup/service.ts @ 639577c3 */}
 
 `ncl` is the admin CLI for a running NanoClaw host. It sends one request frame over a Unix socket at `data/ncl.sock` and prints the response — every command reads or mutates the host's central database live, no restart needed. The socket is `chmod 0600`, so only the user that started the host can connect.
 
@@ -28,7 +28,7 @@ The general shape is:
 ncl <resource> <verb> [target] [--key value ...] [--json]
 ```
 
-Positional words join into the command name. A trailing positional becomes the target ID only if the ID contains no dashes — the dispatcher trims a single dash-segment, so `ncl groups get abc123` works, but a real NanoClaw ID (a UUID, four hyphens) does not resolve. In practice, always pass `--id <uuid>`. Flags map to columns; hyphens and underscores are interchangeable (`--agent-group-id` = `--agent_group_id`). Run `ncl help` to list every resource, `ncl <resource> help` for its verbs, columns, and enums, and `ncl <resource> help <verb>` (or `--help` on any command) for a single verb's flags.
+Positional words join into the command name: the dispatcher matches the longest registered command, and everything after it is the target ID — dashes intact, so `ncl groups get abc123` and dashed ids like `ncl tasks cancel task-374f-…` both resolve. `--id <uuid>` works everywhere too. Flags map to columns; hyphens and underscores are interchangeable (`--agent-group-id` = `--agent_group_id`). Run `ncl help` to list every resource, `ncl <resource> help` for its verbs, columns, and enums, and `ncl <resource> help <verb>` (or `--help` on any command) for a single verb's flags.
 
 ## Output and errors
 
@@ -49,10 +49,10 @@ Or, if installed as a service:
 The same command surface is exposed to agents inside containers. What an agent may do is controlled per group by `cli_scope` in its container config:
 
 - **`disabled`** — all `ncl` commands are rejected.
-- **`group`** (default) — the agent only sees the `groups`, `sessions`, `destinations`, and `members` resources, pinned to its own group: IDs are auto-filled, rows from other groups are filtered out, and it cannot change its own `cli_scope`.
+- **`group`** (default) — the agent only sees the `groups`, `sessions`, `destinations`, `members`, and `tasks` resources, pinned to its own group: IDs are auto-filled, rows from other groups are filtered out, and it cannot change its own `cli_scope`. It also gets `wirings get`/`wirings update` for the current conversation's wiring only — the id is force-filled, and updates may only change `engage_mode`/`engage_pattern`.
 - **`global`** — full access to every resource.
 
-Regardless of scope, mutating verbs (`create`, `update`, `delete`, `grant`, `restart`, ...) are approval-gated for agents: the agent gets `approval-pending` and an admin receives a card showing the exact command. From the host socket, the same verbs run immediately — the socket file permissions are the auth boundary. Change the scope with:
+Across most resources, mutating verbs (`create`, `update`, `delete`, `grant`, `restart`, ...) are approval-gated for agents: the agent gets `approval-pending` and an admin receives a card showing the exact command. The exception is `tasks` — every tasks verb, including `create` and `cancel`, is open to agents, since a task is scoped to the agent's own group. From the host socket, the same verbs run immediately — the socket file permissions are the auth boundary. Change the scope with:
 
 ```bash
 ncl groups config update --id <group-id> --cli-scope disabled
@@ -85,7 +85,7 @@ ncl groups config add-package --id <group-id> --apt ffmpeg
 ncl groups config add-mount --id <group-id> --host ~/projects/site --container /workspace/extra/site --ro
 ```
 
-`config update` accepts `--provider`, `--model`, `--effort`, `--image-tag`, `--assistant-name`, `--max-messages-per-prompt`, and `--cli-scope`. `config add-mount` and `remove-mount` are operator-only — they run from the host socket, never from inside a container — and mounts still pass the [allowlist check](/operate/hardening#gate-additional-mounts) at spawn.
+`config update` accepts `--provider`, `--model`, `--effort`, `--image-tag`, `--assistant-name`, `--max-messages-per-prompt`, `--cli-scope`, and `--timezone`. `add-mcp-server` also takes `--url` in place of `--command`/`--args` for a remote Streamable HTTP server. `config add-mount` and `remove-mount` are operator-only — they run from the host socket, never from inside a container — and mounts still pass the [allowlist check](/operate/hardening#gate-additional-mounts) at spawn.
 
 ### messaging-groups and wirings
 

@@ -5,7 +5,7 @@ tag: "UPDATED"
 keywords: ["ncl", "cli", "reference", "commands", "flags", "groups", "wirings", "sessions", "roles", "members", "destinations", "approvals", "cli_scope"]
 ---
 
-{/* verified-against: src/cli/dispatch.ts, src/cli/crud.ts, src/cli/client.ts, src/cli/format.ts, src/cli/transport-errors.ts, src/cli/registry.ts, src/cli/frame.ts, src/cli/commands/help.ts, src/cli/resources/{approvals,destinations,dropped-messages,groups,members,messaging-groups,policies,roles,sessions,tasks,user-dms,users,wirings}.ts, src/channels/channel-defaults.ts, bin/ncl @ 4e83a0a0 */}
+{/* verified-against: src/cli/dispatch.ts, src/cli/crud.ts, src/cli/client.ts, src/cli/format.ts, src/cli/transport-errors.ts, src/cli/registry.ts, src/cli/frame.ts, src/cli/commands/help.ts, src/cli/resources/{approvals,destinations,dropped-messages,groups,members,messaging-groups,policies,roles,sessions,tasks,user-dms,users,wirings}.ts, src/channels/channel-defaults.ts, bin/ncl @ 639577c3 */}
 
 Exhaustive reference for the `ncl` admin CLI. For a task-oriented walkthrough, see [The ncl admin CLI](/operate/ncl-cli).
 
@@ -19,7 +19,7 @@ ncl <resource> <verb> [target] [--key value ...] [--json]
 
 Conventions that apply to every command:
 
-- **Positional IDs only work without dashes.** Positional words join into the command name; the dispatcher trims one trailing dash-segment as the target ID. `ncl groups get abc123` works, but a real UUID (four hyphens) does not — always pass `--id <uuid>`.
+- **Positional IDs keep their dashes.** The dispatcher matches the longest registered command that prefixes the words, and everything after it is the target ID — dashes intact. `ncl groups get abc123` and `ncl tasks cancel task-374f-…-442` both resolve; `--id <uuid>` still works everywhere.
 - **Kebab and snake case are interchangeable.** `--agent-group-id` and `--agent_group_id` are the same flag; hyphens normalize to underscores.
 - **`list` accepts column filters and `--limit`.** Any non-generated column is a filter (`ncl sessions list --container-status running`), except a column literally named `id` — the list handler always skips the `id` arg, so `ncl users list --id ...` is silently ignored (affects users). Filters combine with AND. Default `--limit` is 200 (minimum 1). No ordering or offset flags.
 - **`get`, `update`, `delete` require `--id`** — the value of the resource's ID column.
@@ -39,7 +39,7 @@ Agent callers are also subject to the group's `cli_scope` (set via `ncl groups c
 | `cli_scope` | Effect on agent callers |
 | --- | --- |
 | `disabled` | All CLI access rejected (`forbidden`). |
-| `group` (default) | Only `groups`, `sessions`, `destinations`, `members` (plus `help`). Group args (`--agent-group-id`, `--group`, and `--id` on groups/destinations) are auto-filled to the caller's group and rejected if they point elsewhere. `list`/`get` results are filtered to the caller's group. Changing `cli_scope` is blocked. |
+| `group` (default) | Only `groups`, `sessions`, `destinations`, `members`, `tasks` (plus `help`), and two wiring commands: `wirings get`/`wirings update`, always targeted at the current conversation's wiring — the id is force-filled from the (messaging group, agent group) pair, and updates may only change `engage_mode`/`engage_pattern` (still approval-gated). Group args (`--agent-group-id`, `--group`, and `--id` on groups/destinations) are auto-filled to the caller's group and rejected if they point elsewhere. `list`/`get` results are filtered to the caller's group. Changing `cli_scope` is blocked. |
 | `global` | Full resource access; mutations still require approval. |
 
 ## approvals
@@ -83,13 +83,13 @@ Agent groups — logical agent identities with their own workspace folder, histo
 | --- | --- | --- | --- |
 | list | `ncl groups list` | open | |
 | get | `ncl groups get --id <id>` | open | |
-| create | `ncl groups create --name <name> --folder <folder>` | approval | `--name` and `--folder` required; `--folder` must be unique and is immutable. |
+| create | `ncl groups create --folder <folder> [--name <name>] [--template <ref>] [--timezone <iana-id>]` | approval | `--folder` required and immutable; `--name` defaults to the folder. Idempotent on `--folder` — creating an existing folder returns the existing row. New ids are prefixed (`ag-<uuid>`). |
 | update | `ncl groups update --id <id> --name <name>` | approval | `name` is the only updatable column. |
 | delete | `ncl groups delete --id <id>` | approval | Custom cascading handler (not the generic single-table delete): removes sessions, destinations, approvals, role grants, memberships, and wirings in one FK-ordered transaction. Does **not** kill running containers or clean up `groups/<folder>/` and `data/v2-sessions/<id>/` on disk. |
 | restart | `ncl groups restart --id <id> [--rebuild] [--message <text>]` | approval | Host caller: restarts all running containers in the group. Agent caller: `--id` auto-filled, only the calling session restarts. `--rebuild` rebuilds the image first (required after package changes). `--message` queues an on-wake instruction so the fresh container starts and acts on it; without it the container stays stopped until the next user message. |
-| config get | `ncl groups config get --id <id>` | open | Shows `agent_group_id`, `provider`, `model`, `effort`, `image_tag`, `assistant_name`, `max_messages_per_prompt`, `skills`, `mcp_servers`, `packages_apt`, `packages_npm`, `additional_mounts`, `cli_scope`, `updated_at`. |
-| config update | `ncl groups config update --id <id> [--provider] [--model] [--effort] [--image-tag] [--assistant-name] [--max-messages-per-prompt] [--cli-scope <disabled\|group\|global>]` | approval | At least one flag required. Changes are saved but take effect only after `ncl groups restart`. |
-| config add-mcp-server | `ncl groups config add-mcp-server --id <id> --name <server> --command <cmd> [--args <json-array>] [--env <json-object>]` | approval | Restart required to take effect. |
+| config get | `ncl groups config get --id <id>` | open | Shows `agent_group_id`, `provider`, `model`, `effort`, `image_tag`, `assistant_name`, `max_messages_per_prompt`, `skills`, `mcp_servers`, `packages_apt`, `packages_npm`, `additional_mounts`, `cli_scope`, `timezone`, `updated_at`. |
+| config update | `ncl groups config update --id <id> [--provider] [--model] [--effort] [--image-tag] [--assistant-name] [--max-messages-per-prompt] [--cli-scope <disabled\|group\|global>] [--timezone <iana-id>]` | approval | At least one flag required. Most changes take effect after `ncl groups restart`; `--timezone` grounds task scheduling immediately (empty string clears it back to the install default). |
+| config add-mcp-server | `ncl groups config add-mcp-server --id <id> --name <server> --command <cmd> [--args <json-array>] [--env <json-object>]` or `--url <url>` | approval | Exactly one of `--command`/`--url`. Server name: 1-64 chars of `[A-Za-z0-9_-]`. `--url` is a remote Streamable HTTP endpoint — HTTPS required (plain HTTP only for localhost / `host.docker.internal`), and URLs with embedded credentials, fragments, or secret-looking query params are rejected. Restart required to take effect. |
 | config remove-mcp-server | `ncl groups config remove-mcp-server --id <id> --name <server>` | approval | Restart required to take effect. |
 | config add-package | `ncl groups config add-package --id <id> --apt <pkg> \| --npm <pkg>` | approval | At least one of `--apt`/`--npm`. Requires `ncl groups restart --rebuild`. |
 | config remove-package | `ncl groups config remove-package --id <id> --apt <pkg> \| --npm <pkg>` | approval | Requires `ncl groups restart --rebuild`. |
@@ -116,6 +116,7 @@ One chat or channel on one platform. Identity is the unique `(channel_type, plat
 | create | `ncl messaging-groups create --channel-type <type> --platform-id <pid> [flags]` | approval |
 | update | `ncl messaging-groups update --id <id> [flags]` | approval |
 | delete | `ncl messaging-groups delete --id <id>` | approval |
+| send | `ncl messaging-groups send --channel-type <type> --platform-id <pid> --text <message> [--instance] [--sender-id] [--sender]` | approval |
 
 | Flag | Type | Notes |
 | --- | --- | --- |
@@ -166,9 +167,9 @@ Scheduled tasks — the CLI home for what used to be the agent's `schedule_task`
 
 | Operation | Invocation | Access |
 | --- | --- | --- |
-| list | `ncl tasks list [--status <pending\|paused>] [--group <id>] [--all]` | open |
-| get | `ncl tasks get --id <series-id>` | open |
-| create | `ncl tasks create --prompt <text> [--name <name>] [--process-after <when>] [--recurrence <cron>] [--script <bash>] [--group <id>]` | open |
+| list | `ncl tasks list [--status <pending\|paused>] [--group <id>] [--session <id>] [--all]` | open |
+| get | `ncl tasks get --id <series-id> [--session <id>]` | open |
+| create | `ncl tasks create --prompt <text> [--name <name>] [--process-after <when>] [--recurrence <cron>] [--script <bash>] [--group <id>] [--dangerously-override-recurrence-limit]` | open |
 | update | `ncl tasks update --id <series-id> [--prompt] [--process-after] [--recurrence] [--script]` | open |
 | run | `ncl tasks run --id <series-id>` | open |
 | pause / resume | `ncl tasks pause --id <series-id>` / `ncl tasks resume --id <series-id>` | open |
@@ -180,7 +181,7 @@ Scheduled tasks — the CLI home for what used to be the agent's `schedule_task`
 | --- | --- |
 | `--prompt` | Required on create. The prompt the agent wakes to. |
 | `--process-after` | First/next run time — ISO 8601, offset, or naive-local in the instance timezone. Required for one-shots; with `--recurrence` the first run is derived from the cron grid. |
-| `--recurrence` | Cron expression, evaluated in the instance timezone. On `update`, `"null"`/`"none"` clears it (back to one-shot). |
+| `--recurrence` | Cron expression, evaluated in the instance timezone. On `update`, `"null"`/`"none"` clears it (back to one-shot). Recurrences over 4 fires/day are refused unless the task has a `--script` gate or you pass `--dangerously-override-recurrence-limit`. |
 | `--name` | Short label folded into a readable series id (`<slug>-<hex>`). |
 | `--script` | Pre-task gate bash script — runs first; the agent only wakes if the script's last stdout line is JSON with `"wakeAgent": true`. |
 | `--group` | Agent group id (host callers). Auto-filled to the caller's own group inside a container. |
@@ -217,7 +218,7 @@ Messaging-platform identities — one row per sender per channel (no cross-chann
 
 ## wirings
 
-Connects a messaging group to an agent group — which agent handles which chat. Many-to-many in both directions.
+Connects a messaging group to an agent group — which agent handles which chat. Many-to-many in both directions. Under `group` CLI scope, agents get self-service access to the wiring of their current conversation only: `wirings get` and `wirings update` (limited to `engage_mode`/`engage_pattern`; the id is force-filled, updates stay approval-gated).
 
 | Operation | Invocation | Access |
 | --- | --- | --- |
@@ -228,8 +229,9 @@ Connects a messaging group to an agent group — which agent handles which chat.
 
 | Flag | Type | Notes |
 | --- | --- | --- |
-| `--messaging-group-id` | string | Required on create. References `messaging_groups.id`. Not updatable. |
-| `--agent-group-id` | string | Required on create. References `agent_groups.id`. Not updatable. |
+| `--messaging-group-id` | string | On create: pass this, or the natural key instead (`--channel-type` + `--platform-id` [+ `--instance`]). Not updatable. Create is idempotent on the (messaging group, agent group) pair. |
+| `--agent-group-id` | string | On create: pass this or `--agent-group <folder>`. References `agent_groups.id`. Not updatable. |
+| `--priority` | number | Updatable, default 0. Fanout order when several agents are wired to one chat — higher first. |
 | `--engage-mode` | enum | Updatable. Omitted engage flags default from the target channel adapter's declaration for the chat context (DM vs group), falling back to `mention` when the channel declares none. `mention` — only when @mentioned or in DMs. `mention-sticky` — after one mention in a thread, responds to all subsequent messages there. `pattern` — matches every message against `engage_pattern`. |
 | `--engage-pattern` | string | Updatable. Regex, required when `engage_mode=pattern`; use `.` for always-on. Ignored in mention modes. |
 | `--sender-scope` | enum | Updatable, default `all`. `all` — any sender (subject to `unknown_sender_policy`). `known` — only users with a role or membership in the agent group. |
