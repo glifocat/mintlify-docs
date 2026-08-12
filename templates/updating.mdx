@@ -54,20 +54,29 @@ Two collision rules keep operator state safe:
 
 ## Reading the plan
 
-Each line names a surface, the action, and whether the live copy has drifted:
+A header names the plugin and target group, then the run's status, then one aligned line per surface — **action, surface, name**, with any flags in parentheses:
 
 ```text
-plugin       plugins/sdr                    update      replaced wholesale from the template
-persona      instructions.prepend.md        update      CUSTOMIZED
-skill        sdr-agent                      update
-skill        old-play                       remove
-context      additional_context/pricing.md  create
-mcp-server   hubspot                        unchanged
-mcp-server   exa                            skip        a server you added has this name; the plugin version was not installed
-task         morning-digest                 update
+Restamp "sdr" → group "SDR Agent" (3f2c8a91-7b4d-4e1a-9c02-5f8ab6d31e77)
+DRY RUN — nothing was changed. Re-run with --yes to apply. Pass --new to stamp a separate agent instead.
+
+  update    plugin     plugins/sdr  (replaced wholesale from the template)
+  update    persona    instructions.prepend.md  (CUSTOMIZED — local edits lost)
+  update    skill      sdr-agent
+  remove    skill      old-play
+  create    context    additional_context/pricing.md
+  unchanged mcp-server hubspot
+  skip      mcp-server exa  (a server you added has this name; the plugin version was not installed)
+  update    task       morning-digest  (series tsk-9d2f1a7c; status "paused" kept)
 ```
 
-Actions are `create`, `update`, `remove`, `skip`, and `unchanged`. Surfaces are `plugin`, `persona`, `context`, `skill`, `mcp-server`, and `task`.
+Actions are `create`, `update`, `remove`, `skip`, and `unchanged`. Surfaces are `plugin`, `persona`, `context`, `skill`, `mcp-server`, and `task`. If the reader skipped or ignored anything, a `Template reader notices:` block follows the table.
+
+Applying swaps the status line for `Restamp applied. Run ncl groups restart --id <id> for skill and MCP changes to take effect.` — or `Nothing to apply — the group already matches the template.` when every surface was already current.
+
+<Note>
+This is the human rendering an operator sees. A restamp requested by the agent through [self-modification](/extend/self-modification) reports as JSON instead.
+</Note>
 
 **CUSTOMIZED** means the live copy differs from what the *previous* template version stamped, so applying discards your local edits to that file. The baseline for that comparison is the previous plugin copy still sitting at `plugins/<name>/` — no separate bookkeeping exists to drift out of sync.
 
@@ -83,13 +92,13 @@ Because `plugins/<name>/` **is** the baseline, edits made directly inside it hos
 - **Plugin-owned servers are locked.** `ncl groups config add-mcp-server` and `remove-mcp-server`, and the agent's own `add_mcp_server` tool, refuse to edit a server owned by a plugin. Removing one by hand doesn't stick either — it reappears on the next restamp. Update the template instead.
 - **New context files need a restamp.** Context extras are copied at stamp time, so files added to a template later don't reach an already-created agent on their own.
 
-## Related
+## Related pages
 
-<Columns cols={2}>
+<CardGroup cols={2}>
 <Card title="Using a template" icon="wand-magic-sparkles" href="/templates/using-templates">
 Stamping an agent for the first time.
 </Card>
 <Card title="Building and submitting a template" icon="pen-ruler" href="/templates/building-and-submitting">
 Changing a template so there is something to restamp.
 </Card>
-</Columns>
+</CardGroup>

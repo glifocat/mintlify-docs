@@ -116,8 +116,10 @@ Applied to every `env` and `headers` value at stamp time. The literal `"placehol
 
 | Condition | Result |
 | --- | --- |
-| Value matches `sk-`, `ghp_`, `github_pat_`, `xox<a>-`, `AKIA`, or `-----BEGIN ` | **Whole template rejected**, with the key named |
-| Key matches `TOKEN`, `SECRET`, `PASSWORD`, `API_KEY`, `CREDENTIAL`, `PRIVATE_KEY`, or `AUTH`, and the value is not `"placeholder"` | Warning in `templateReport`; the stamp proceeds |
+| Value matches `sk-`, `ghp_`, `github_pat_`, `xox[a-z]-`, `AKIA`, or `-----BEGIN ` | **Whole template rejected**, with the key named |
+| Key matches `TOKEN`, `SECRET`, `PASSWD`, `PASSWORD`, `API_KEY`, `APIKEY`, `CREDENTIAL`, `PRIVATE_KEY`, `PRIVATEKEY`, or `AUTH`, and the value is not `"placeholder"` | Warning in `templateReport`; the stamp proceeds |
+
+Key matching is case-insensitive and matches anywhere in the name, so `MY_SLACK_TOKEN_V2` matches on `TOKEN`.
 
 <Note>
 The registry's `check-templates.mjs` **fails** on the second case rather than warning, so a template that stamps cleanly locally can still be rejected by CI. See [Building and submitting a template](/templates/building-and-submitting).
@@ -129,9 +131,11 @@ As defense in depth, stored MCP config is re-validated whenever the container co
 
 Each immediate child **directory** of `skills/` containing a regular `SKILL.md` is one skill. Stray regular files in `skills/` are ignored. A skill is skipped, with a reason, when:
 
-- there is no `SKILL.md`, or it is a symlink or not a regular file
+- there is no `SKILL.md`, or it is not a regular file
 - `SKILL.md` has no YAML frontmatter, or the frontmatter is unclosed, invalid YAML, or not a mapping
 - `name` or `description` is missing or empty
+
+Symlinks are not in this list: the whole-tree walk runs before skills are read and rejects the entire template on the first symlink it finds, so a symlinked `SKILL.md` never degrades to a skipped skill.
 
 The whole folder is copied into the group's skills overlay, keyed to that group and never shared. Executable bits are preserved.
 
@@ -204,9 +208,9 @@ stdio servers that shipped inside a plugin get the Agent Plugins runtime contrac
 
 Servers added by `ncl` or through an approval carry no plugin marker and pass through untouched.
 
-## Related
+## Related pages
 
-<Columns cols={2}>
+<CardGroup cols={2}>
 <Card title="Building and submitting a template" icon="pen-ruler" href="/templates/building-and-submitting">
 The narrative version, with examples, registry standards, and the checks script.
 </Card>
@@ -219,4 +223,4 @@ The per-group config MCP servers are written into.
 <Card title="ncl CLI" icon="terminal" href="/reference/ncl-cli">
 `groups create --template` and the restamp flags.
 </Card>
-</Columns>
+</CardGroup>

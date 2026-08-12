@@ -78,7 +78,7 @@ If the reader skipped or ignored anything — a non-conforming skill, an unsuppo
 
 ```json
 {
-  "id": "ag-3f2c…",
+  "id": "3f2c8a91-7b4d-4e1a-9c02-5f8ab6d31e77",
   "name": "SDR Agent",
   "folder": "sdr-agent",
   "templateReport": [
@@ -89,6 +89,12 @@ If the reader skipped or ignored anything — a non-conforming skill, an unsuppo
 ```
 
 Components are never silently stripped. A missing `templateReport` means everything loaded. Fatal problems — an invalid manifest, a symlink, a smuggled credential — reject the whole template instead, and no group is created.
+
+<Note>
+The template path assigns a bare UUID. Only groups created with `--folder` carry the `ag-` prefix.
+</Note>
+
+`templateReport` is specific to the create response. When the same command [updates an existing agent](/templates/updating), reader notices come back under `report` instead.
 
 ## After stamping
 
@@ -106,7 +112,7 @@ See [Channels](/channels/overview) for the per-platform setup.
 </Step>
 <Step title="Connect credentials">
 
-Templates ship **no secrets**. Any MCP server that needs an API key gets one from the [credentials proxy](/operate/credentials), which injects it into outbound HTTPS calls at request time — matched by API host.
+Templates ship **no secrets**. Any MCP server that needs an API key gets one from the [OneCLI Agent Vault](/operate/credentials), which injects it into outbound HTTPS calls at request time — matched by API host.
 
 The common path needs no setup up front: the first time the agent calls a service with no credential, the API returns `401`/`403` and the agent replies with a prefilled connect link for that host. Open it, paste the key, and ask the agent to retry.
 
@@ -155,11 +161,11 @@ Plugin-owned MCP servers are template content, so `ncl groups config add-mcp-ser
 
 ## Next steps
 
-<Columns cols={2}>
+<CardGroup cols={2}>
 <Card title="Updating a stamped agent" icon="rotate" href="/templates/updating">
 Pull a newer version of the template into an agent already running.
 </Card>
 <Card title="Building and submitting a template" icon="pen-ruler" href="/templates/building-and-submitting">
 Build your own and contribute it to the catalog.
 </Card>
-</Columns>
+</CardGroup>

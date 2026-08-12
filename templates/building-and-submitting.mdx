@@ -5,7 +5,7 @@ keywords: ["author template", "submit template", "plugin.json", "mcp.json", "ai.
 tag: "NEW"
 ---
 
-{/* verified-against: src/templates/{parse,manifest,extension,mcp,skills,tasks,plugin-dir,create-agent}.ts, src/container-config.ts, container/agent-runner/src/plugin-mcp.ts, docs/templates.md @ nanocoai/nanoclaw#3220 f8563abe; nanocoai/nanoclaw-templates {README.md,scripts/check-templates.mjs,.github/workflows/check-templates.yml} @ 3c7966a7, CONTRIBUTING.md @ nanocoai/nanoclaw-templates#20 6b1fdd8b (paid-service disclosure, CI/engine lint delta, persona optional) */}
+{/* verified-against: src/templates/{parse,manifest,extension,mcp,skills,tasks,plugin-dir,create-agent}.ts, src/container-config.ts, container/agent-runner/src/plugin-mcp.ts, docs/templates.md @ nanocoai/nanoclaw#3220 f8563abe; nanocoai/nanoclaw-templates {README.md,scripts/check-templates.mjs,.github/workflows/check-templates.yml} @ 3c7966a7, CONTRIBUTING.md @ nanocoai/nanoclaw-templates#20 699fe42 (paid-service disclosure, CI/engine lint delta, persona optional) */}
 
 A template is an [Agent Plugins 1.0.0](https://agent-plugins.org) directory. This page walks the whole path: what goes in each part, how to verify it, and how to get it into the public registry.
 
@@ -109,7 +109,7 @@ The portable surface — `skills/` and `mcp.json` — follows the Agent Plugins 
 
 Every credential-shaped `env` and `headers` value is the literal `"placeholder"`. The real value arrives one of two ways, never from the template:
 
-- **The [credentials proxy](/operate/credentials) injects it at request time**, matched by API host. This is the normal path. The key never sits in `mcp.json`, the container environment, or chat context.
+- **The [OneCLI Agent Vault](/operate/credentials) injects it at request time**, matched by API host. This is the normal path. The key never sits in `mcp.json`, the container environment, or chat context.
 - **The operator supplies it after stamping** — `ncl groups config add-mcp-server --headers` — for the rare endpoint that genuinely needs a static header.
 
 Any value matching a known credential format is rejected outright, and the whole template fails to stamp:
@@ -118,7 +118,7 @@ Any value matching a known credential format is rejected outright, and the whole
 | --- | --- |
 | `sk-…` | OpenAI-style API keys |
 | `ghp_…`, `github_pat_…` | GitHub tokens |
-| `xox…-` | Slack tokens |
+| `xox[a-z]-` | Slack tokens |
 | `AKIA…` | AWS access key IDs |
 | `-----BEGIN …` | PEM private keys |
 
@@ -295,7 +295,7 @@ A template may depend on paid MCP servers or paid API tiers — Exa, HubSpot's p
 - and which plan or tier the template needs, where the vendor gates the required capability behind one,
 - and that the user supplies **their own key**.
 
-Never ship a shared key, a template-owner key, or any credential the contributor controls. The user's key goes in their own [credentials proxy](/operate/credentials) and stays there.
+Never ship a shared key, a template-owner key, or any credential the contributor controls. The user's key goes in their own [OneCLI Agent Vault](/operate/credentials) and stays there.
 
 <Tip>
 **Name the tier, don't quote the price.** Prices change and a stale figure in a README is worse than none — link the vendor's pricing page and name the plan instead. Tier names are far more stable than dollar amounts.
@@ -315,7 +315,7 @@ The registry ships the same script CI runs. It has zero dependencies — plain N
 node scripts/check-templates.mjs
 ```
 
-It walks every `<category>/<template>/` folder and reports all problems at once, exiting non-zero if any are found:
+It walks every `<category>/<template>/` folder and reports all problems at once, exiting non-zero if any are found (listing order follows the filesystem, not the alphabet):
 
 ```text
 check-templates: 4 template(s) OK: data/analyst, media/journalist, product/competitor-analysis, sales/sdr
@@ -395,9 +395,9 @@ Before requesting review, confirm each of these:
 - [ ] The template has been stamped and tested locally with a bare ref.
 - [ ] No API keys, tokens, or other secrets appear anywhere in the diff.
 
-## Related
+## Related pages
 
-<Columns cols={2}>
+<CardGroup cols={2}>
 <Card title="Template format reference" icon="book" href="/reference/template-format">
 Field-level validation rules, limits, and the runtime contract.
 </Card>
@@ -410,4 +410,4 @@ Conventions a `skills/<name>/` folder follows.
 <Card title="Credentials" icon="key" href="/operate/credentials">
 Why no key ever belongs in a template.
 </Card>
-</Columns>
+</CardGroup>

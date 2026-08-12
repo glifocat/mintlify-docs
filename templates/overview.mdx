@@ -23,14 +23,14 @@ Templates are [Agent Plugins 1.0.0](https://agent-plugins.org) directories. The 
 
 That cuts both ways, which is the point:
 
-<Columns cols={2}>
+<CardGroup cols={2}>
 <Card title="A NanoClaw template is a conformant plugin" icon="arrow-right-from-bracket">
 Drop it into any other spec-compatible client and its skills and MCP servers load. The NanoClaw extras are ignored by rule, not by accident.
 </Card>
 <Card title="A conformant plugin is a stampable template" icon="arrow-right-to-bracket">
 Only `plugin.json` is required. A persona-less third-party plugin stamps as a new agent group with its skills and MCP servers; the NanoClaw-only slots stay empty.
 </Card>
-</Columns>
+</CardGroup>
 
 ## What a template carries
 
@@ -65,7 +65,7 @@ Only `plugin.json` is required — it is the manifest and the discovery marker. 
 | Not in a template | Where it lives instead |
 | --- | --- |
 | Provider, model, effort | Set on the agent afterward with `ncl groups config update`. The runtime defaults to the install's configured provider. |
-| API keys and tokens | The [credentials proxy](/operate/credentials) injects them into outbound calls at request time. Credential-shaped values in a template are rejected at stamp time. |
+| API keys and tokens | The [OneCLI Agent Vault](/operate/credentials) injects them into outbound calls at request time. Credential-shaped values in a template are rejected at stamp time. |
 | Channel wiring | Stamping creates the agent group only. Wire it with `/manage-channels` or `ncl wirings create`, exactly as for a hand-built group. |
 | apt/npm packages | `ncl groups config add-package`, followed by `ncl groups restart --rebuild`. |
 
@@ -95,7 +95,7 @@ Templates live under a `<category>/<template>/` folder, and that path is exactly
 
 ## Next steps
 
-<Columns cols={2}>
+<CardGroup cols={2}>
 <Card title="Using a template" icon="wand-magic-sparkles" href="/templates/using-templates">
 Stamp an agent during install or anytime with `ncl`, then wire it up and activate its tasks.
 </Card>
@@ -108,4 +108,4 @@ Build one: manifest, MCP servers, skills, persona, tasks, and the no-secrets rul
 <Card title="Template format reference" icon="book" href="/reference/template-format">
 Field-level validation rules, limits, the runtime contract, and the report catalog.
 </Card>
-</Columns>
+</CardGroup>
