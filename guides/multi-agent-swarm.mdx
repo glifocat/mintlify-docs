@@ -4,7 +4,7 @@ description: "Hands-on tutorial: have an agent spawn a helper with create_agent,
 keywords: ["multi-agent", "create_agent", "agent-to-agent", "agent destinations", "send_message", "sub-agents", "approval", "ncl destinations"]
 ---
 
-{/* verified-against: src/modules/agent-to-agent/{create-agent,agent-route,write-destinations,index,message-gate}.ts, src/modules/agent-to-agent/db/{agent-destinations,agent-message-policies}.ts, src/modules/approvals/primitive.ts, container/agent-runner/src/mcp-tools/agents.ts + agents.instructions.md, container/agent-runner/src/destinations.ts, src/cli/resources/{destinations,groups,policies,wirings}.ts, src/group-init.ts, src/db/messaging-groups.ts @ 4e83a0a0 */}
+{/* verified-against: src/modules/agent-to-agent/{create-agent,agent-route,write-destinations,index,message-gate}.ts, src/modules/agent-to-agent/db/{agent-destinations,agent-message-policies}.ts, src/modules/approvals/primitive.ts, container/agent-runner/src/mcp-tools/agents.ts + agents.instructions.md, container/agent-runner/src/destinations.ts, src/cli/resources/{destinations,groups,policies,wirings}.ts, src/group-init.ts, src/db/messaging-groups.ts @ 639577c3 */}
 
 The [introduction](/introduction) promises real teams: a worker per task, a manager that tracks what's in flight, a supervisor that pings you. This tutorial builds the smallest working version — one agent spawning and delegating to another — then scales the same three primitives into that trio. It continues from [your first agent](/guides/first-agent); you'll reuse Scout to see the approval gate.
 
@@ -103,14 +103,14 @@ ncl destinations add --agent-group-id <supervisor-id> --local-name worker-1 \
 
 Two finishing touches:
 
-- **Supervisor pings you**: wire the supervisor to your DM (`ncl wirings create --messaging-group-id <your-dm-id> --agent-group-id <supervisor-id> ...`) so it receives your messages — and can reply, since an agent may always answer its origin chat. But `ncl wirings create` is a plain row insert: it does **not** create the channel destination (only the setup scripts' wiring path auto-creates one), so a *proactive* send addressed by name fails the ACL. Add the edge explicitly:
+- **Supervisor pings you**: wire the supervisor to your DM (`ncl wirings create --messaging-group-id <your-dm-id> --agent-group-id <supervisor-id> ...`) so it receives your messages — and can reply, since an agent may always answer its origin chat. The command also creates the channel destination in the same transaction and projects it into live sessions, so a *proactive* send works immediately. The auto-created local name is the normalized messaging-group name (with a `<channel_type>-<id-prefix>` fallback). Add an explicit edge only when you want a custom local name:
 
   ```bash
   ncl destinations add --agent-group-id <supervisor-id> --local-name owner-dm \
     --target-type channel --target-id <your-dm-mg-id>
   ```
 
-  Now the supervisor can message you unprompted — and use `ask_user_question` to put actual buttons under a decision.
+  Now the supervisor can message you unprompted — and use `ask_user_question` to put actual buttons under a decision. (Edge case: the destination is only auto-created when the agent-to-agent module is installed — but without that module the delivery ACL is skipped too.)
 - **One conversation per task**: wire a worker to a thread-capable channel (Discord, Slack) with `--session-mode per-thread` and every thread gets its own session — each task runs in a clean context instead of one ever-growing conversation. On server channels this is [forced anyway](/concepts/entity-model); the flag matters for DMs.
 
 </Step>
@@ -151,7 +151,7 @@ Return to free flow with `ncl policies remove --from <source-agent-id> --to <tar
 - **No loop protection.** There is no throttle, hop limit, or cycle detection on agent-to-agent messages — two agents told to "always reply" will ping-pong indefinitely, burning API calls. Give every agent's instructions an explicit stop condition ("report back once, then wait"). A [message policy](#gate-a-connection) on the edge also breaks a runaway loop, since every hop then waits for a human tap.
 - **No broadcast.** Each message targets one destination. Fan-out means one `<message>` block (or `send_message` call) per recipient — the parent orchestrates, the queue doesn't.
 - **No concurrency cap.** There's no environment variable that limits simultaneous agent containers — the old `MAX_CONCURRENT_CONTAINERS` was removed from the code entirely, not just left unenforced. A wide team really does run one container per active agent, so size the host accordingly.
-- **Edits to destinations outside `ncl` don't propagate live.** A running container serves a projection of its destinations, refreshed on every wake and by `ncl destinations add`/`remove` — but direct DB writes leave it stale until the next wake.
+- **Edits to destinations outside `ncl` don't propagate live.** A running container serves a projection of its destinations, refreshed on every wake and by `ncl destinations add`/`remove` and `ncl wirings create` — but direct DB writes leave it stale until the next wake.
 
 ## Cleanup
 

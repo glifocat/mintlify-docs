@@ -4,7 +4,7 @@ description: "Hands-on tutorial: build an agent from parts with ncl — create t
 keywords: ["tutorial", "first agent", "ncl groups create", "wirings", "messaging group", "cli channel", "pnpm run chat", "instructions.prepend.md"]
 ---
 
-{/* verified-against: src/cli/resources/{groups,wirings,messaging-groups,sessions}.ts, src/cli/crud.ts, src/router.ts, src/channels/cli.ts, scripts/chat.ts, scripts/init-cli-agent.ts, src/group-init.ts, src/container-runner.ts, setup/auto.ts @ 4e83a0a0 */}
+{/* verified-against: src/cli/resources/{groups,wirings,messaging-groups,sessions}.ts, src/cli/crud.ts, src/router.ts, src/channels/cli.ts, scripts/chat.ts, scripts/init-cli-agent.ts, src/group-init.ts, src/container-runner.ts, setup/auto.ts @ 639577c3 */}
 
 If you followed the [quickstart](/quickstart), the setup wizard already built your first agent. This tutorial builds a **second** one by hand, so you see every part the wizard hides: an **agent group** (the identity), a **messaging group** (the chat), and a **wiring** (the routing rule connecting them). We'll use the [CLI channel](/channels/cli) — it ships on trunk and needs zero platform credentials.
 
@@ -13,7 +13,7 @@ You need a working install with the host service running, [`ncl`](/operate/ncl-c
 <Steps>
 <Step title="Create the agent group">
 
-An agent group is just a row in the central DB plus a folder under `groups/` — but the folder doesn't exist yet, as you'll see.
+An agent group is just a row in the central DB plus a folder under `groups/` — both created in one step, as you'll see.
 
 ```bash
 ncl groups create --name "Scout" --folder scout
@@ -23,14 +23,14 @@ ncl groups create --name "Scout" --folder scout
 
 ```json
 {
-  "id": "3f2c9a1e-8b4d-4f6a-9c2e-d51b7a0e6f33",
+  "id": "ag-3f2c9a1e-8b4d-4f6a-9c2e-d51b7a0e6f33",
   "name": "Scout",
   "folder": "scout",
   "created_at": "2026-06-10T09:14:02.511Z"
 }
 ```
 
-Now check the filesystem: `ls groups/` — there is **no `scout/` folder**. Creation only writes the DB row. The folder (and the container config, session state, and skills directory) is initialized lazily by `initGroupFilesystem()` the first time a container spawns for this group. An agent that has never been messaged costs nothing.
+Now check the filesystem: `ls groups/` — the `scout/` folder is already there. Create does more than insert the DB row: it runs `initGroupFilesystem()` inline, so the folder and the container-config row exist before any message arrives. Re-running create with the same `--folder` is safe — it returns the existing row. What does *not* exist yet: the composed `CLAUDE.md` (generated at first container spawn), `instructions.prepend.md` (you create that file yourself when you give the agent standing instructions), and any session state. An agent that has never been messaged still costs nothing at runtime — no container runs for it.
 
 </Step>
 <Step title="Find the CLI messaging group">
@@ -60,7 +60,7 @@ ncl wirings create --messaging-group-id <mg-id> --agent-group-id <agent-id> \
 
 Two things matter here:
 
-- **`--engage-mode pattern` is required on CLI.** The default mode, `mention`, relies on platform-level @-mentions, which the CLI channel never produces — a `mention` wiring on CLI simply never fires.
+- **CLI wirings are always pattern mode.** The CLI adapter declares `pattern` with a match-everything default, so omitting the engage flags would wire Scout to answer every message. An explicit `--engage-mode mention` is rejected outright — the CLI channel never produces mentions, and wiring validation refuses a mode that can never engage. The explicit pattern above is what scopes Scout to its name.
 - **The pattern is a JavaScript regex** tested against the message text. `^[Ss]cout\b` engages Scout only when a message starts with its name. Don't use inline flags like `(?i)` — JS regexes reject them, and an invalid pattern fails *open* (the agent responds to everything).
 
 <Warning>
@@ -87,14 +87,14 @@ A `no_agent_engaged` drop row only appears when no wiring on the chat matched at
 </Step>
 <Step title="Inspect what was created">
 
-That first message materialized everything that was lazy in step 1. The group folder now exists:
+That first message triggered the first container spawn, which composed the one file creation left out:
 
 ```bash
 ls groups/scout/
-# CLAUDE.md  instructions.prepend.md
+# CLAUDE.md
 ```
 
-`CLAUDE.md` is the composed instructions file the host regenerates on every spawn — don't edit it. `instructions.prepend.md` is the agent's editable standing instructions, composed into the top of `CLAUDE.md` at every spawn. Groups created via `ncl` start with it **empty** — edit it to give Scout a personality and standing instructions (see [customize an agent](/guides/customize-an-agent)). Durable facts the agent accumulates over time live in its `memory/` tree.
+`CLAUDE.md` is the composed instructions file the host regenerates on every spawn — don't edit it. The agent's editable standing instructions live in `instructions.prepend.md`, composed into the top of `CLAUDE.md` at every spawn. Groups created via `ncl` don't have that file yet — create it to give Scout a personality and standing instructions (see [customize an agent](/guides/customize-an-agent)). Durable facts the agent accumulates over time live in its `memory/` tree.
 
 The session — the runtime unit mapping this (agent, chat) pair to a container — is visible too:
 

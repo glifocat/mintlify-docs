@@ -4,7 +4,7 @@ description: "Every per-group container config field — storage, defaults, spaw
 keywords: ["container config", "container_configs", "container.json", "provider", "model", "effort", "image_tag", "mcp_servers", "additional_mounts", "cli_scope", "skills", "packages", "timezone"]
 ---
 
-{/* verified-against: src/db/container-configs.ts, src/container-config.ts, src/container-runner.ts, src/cli/resources/{groups,tasks}.ts, src/cli/dispatch.ts, src/claude-md-compose.ts, src/modules/mount-security/index.ts, src/modules/scheduling/recurrence.ts, src/db/migrations/{014-container-configs,015-cli-scope}.ts, container/agent-runner/src/{config.ts,index.ts,db/messages-in.ts,providers/types.ts} @ 4e83a0a0 */}
+{/* verified-against: src/db/container-configs.ts, src/container-config.ts, src/container-runner.ts, src/cli/resources/{groups,tasks}.ts, src/cli/dispatch.ts, src/claude-md-compose.ts, src/modules/mount-security/index.ts, src/modules/scheduling/recurrence.ts, src/db/migrations/{014-container-configs,015-cli-scope}.ts, container/agent-runner/src/{config.ts,index.ts,db/messages-in.ts,providers/types.ts} @ 639577c3 */}
 
 Each agent group has one row in the `container_configs` table in the central SQLite database — the source of truth for how that group's containers spawn. You change it with the [`ncl groups config` subcommands](/reference/ncl-cli#groups); the row is created automatically with defaults when the group is created.
 
@@ -67,7 +67,7 @@ Cap on how many pending messages are batched into a single prompt. The runner de
 Host-side enforcement of what the agent can do through the in-container `ncl` CLI. One of:
 
 - `disabled` — all CLI requests rejected; the CLI instructions fragment is also dropped from the composed CLAUDE.md (that part applies at next spawn)
-- `group` (default) — only `groups`, `sessions`, `destinations`, and `members` resources, auto-scoped to the agent's own group; the agent cannot change `cli_scope` itself
+- `group` (default) — only `groups`, `sessions`, `destinations`, `members`, and `tasks` resources plus `wirings get`/`update` for the current conversation's wiring, auto-scoped to the agent's own group; the agent cannot change `cli_scope` itself
 - `global` — full resource access; mutations still require approval
 
 This is the only field **not** written to `container.json` — the host checks the database on every request. See [ncl CLI reference](/reference/ncl-cli#access-control) for the full enforcement rules.
@@ -78,7 +78,7 @@ Either the string `"all"` or an array of skill names. Before mounting, the host 
 
 ### mcp_servers
 
-External MCP servers merged with the built-in `nanoclaw` server at runner startup. Shape:
+External MCP servers merged with the built-in `nanoclaw` server at runner startup. Each entry is either a stdio server or a remote Streamable HTTP server:
 
 ```json
 {
@@ -87,11 +87,15 @@ External MCP servers merged with the built-in `nanoclaw` server at runner startu
     "args": ["-y", "@modelcontextprotocol/server-github"],
     "env": { "GITHUB_TOKEN": "..." },
     "instructions": "Use for repo operations."
+  },
+  "docs": {
+    "type": "http",
+    "url": "https://example.com/mcp"
   }
 }
 ```
 
-`args` and `env` are optional. `instructions`, if present, is composed into the group's CLAUDE.md as an inline fragment at spawn — but neither `ncl groups config add-mcp-server` nor the agent's `add_mcp_server` tool accepts it as of v2.1.38; to set it, update the JSON column directly in the database. Manage the rest with `ncl groups config add-mcp-server` / `remove-mcp-server`.
+`args` and `env` are optional and valid only on the stdio form (`type` defaults to `stdio`). Server names must be 1-64 chars of letters, digits, `_`, `-`. An `http` entry's `url` must be HTTPS — plain HTTP passes only for `localhost`, `127.0.0.1`, `[::1]`, and `host.docker.internal` — and URLs carrying credentials, fragments, or secret-looking query parameters are rejected. `instructions`, if present, is composed into the group's CLAUDE.md as an inline fragment at spawn — but neither `ncl groups config add-mcp-server` nor the agent's `add_mcp_server` tool accepts it as of v2.1.38; to set it, update the JSON column directly in the database. Manage the rest with `ncl groups config add-mcp-server` / `remove-mcp-server`.
 
 ### packages_apt and packages_npm
 

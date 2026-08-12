@@ -5,7 +5,7 @@ description: "Connect NanoClaw to a Discord bot via the Chat SDK adapter — Dev
 keywords: ["discord", "bot token", "add-discord", "gateway", "message content intent", "chat sdk", "threads", "developer portal"]
 ---
 
-{/* verified-against: src/channels/chat-sdk-bridge.ts, src/router.ts, src/channels/channel-defaults.ts, setup/channels/run-channel-skill.ts, .claude/skills/add-discord/SKILL.md @ 4e83a0a0; channels branch src/channels/discord.ts @ 6ee516ad */}
+{/* verified-against: src/channels/chat-sdk-bridge.ts, src/router.ts, src/channels/channel-defaults.ts, setup/channels/run-channel-skill.ts, .claude/skills/add-discord/SKILL.md @ 639577c3; channels branch src/channels/discord.ts @ 6ee516ad */}
 
 The Discord adapter connects NanoClaw to a bot you create in the Discord Developer Portal. It's built on the Chat SDK bridge (`@chat-adapter/discord` 4.29.0, pinned — the `/add-discord` skill may pin a slightly newer adapter version) and connects over Discord's **Gateway** — a WebSocket NanoClaw opens outbound, with events forwarded to a local loopback server. No public URL, webhook, or open port needed; works behind NAT and on a laptop.
 

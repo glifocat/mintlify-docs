@@ -5,7 +5,7 @@ description: "Hands-on tutorial: have your agent schedule a recurring task in ch
 keywords: ["scheduled tasks", "ncl tasks", "cron", "recurrence", "process_after", "series_id", "host sweep", "wakeAgent", "task script", "timezone"]
 ---
 
-{/* verified-against: src/cli/resources/tasks.ts, container/agent-runner/src/mcp-tools/scheduling.instructions.md, src/modules/scheduling/{create,db,recurrence,run-log}.ts, container/agent-runner/src/scheduling/task-script.ts, container/agent-runner/src/poll-loop.ts, container/agent-runner/src/timezone.ts, src/host-sweep.ts, src/session-manager.ts, src/config.ts, src/container-runner.ts, src/cli/resources/groups.ts @ 4e83a0a0 */}
+{/* verified-against: src/cli/resources/tasks.ts, container/agent-runner/src/mcp-tools/scheduling.instructions.md, src/modules/scheduling/{create,db,recurrence,run-log}.ts, container/agent-runner/src/scheduling/task-script.ts, container/agent-runner/src/poll-loop.ts, container/agent-runner/src/timezone.ts, src/host-sweep.ts, src/session-manager.ts, src/config.ts, src/container-runner.ts, src/cli/resources/groups.ts @ 639577c3 */}
 
 v2 has no scheduler service. A scheduled task is a row in an isolated per-task session's `messages_in` table with `kind='task'` and a `process_after` timestamp — the same inbox machinery, swept by the same host sweep, as any chat message. You drive it through the `ncl tasks` CLI: ask the agent in chat and it runs `ncl tasks` on your behalf, or run the commands yourself from the host. This tutorial assumes a working install with a wired agent (see [your first agent](/guides/first-agent)).
 
@@ -20,7 +20,7 @@ Scout, every weekday at 9am remind me to post my standup update
 
 Mechanically, the agent runs `ncl tasks create` with a `--prompt`, a cron `--recurrence` (`0 9 * * 1-5`), and (for one-shots) a `--process-after` timestamp for the first run. NanoClaw provisions an isolated per-task session for the series and inserts a `messages_in` row there with `kind='task'`, status `pending`, your `process_after`, the cron expression, and `series_id` set to the task's own id. See the [session DB schema](/reference/db-schema#session-databases) for the columns.
 
-The agent confirms with the generated id. Passing `--name "standup"` yields a readable id like `standup-a25c`; without a name, ids are `t-<hex>`. For a one-shot task — "remind me tomorrow at 2pm to review the budget" — it passes `--process-after` and omits `--recurrence`.
+The agent confirms with the generated id. Passing `--name "standup"` yields a readable id like `standup-a25c`; without a name, ids are `t-<hex>`. Recurrences over 4 fires per day are refused unless the task carries a `--script` gate (or the explicit `--dangerously-override-recurrence-limit` flag) — a high-frequency wake with no gate is almost always a mistake. For a one-shot task — "remind me tomorrow at 2pm to review the budget" — it passes `--process-after` and omits `--recurrence`.
 
 </Step>
 <Step title="Know what fires it">
@@ -72,8 +72,8 @@ The contract, from `container/agent-runner/src/scheduling/task-script.ts`:
 
 1. When the task fires, the script runs first inside the container — 30-second timeout, 1 MB output cap.
 2. The **last line of stdout** must be JSON: `{ "wakeAgent": true|false, "data": ... }`.
-3. `wakeAgent: false` — or any script error, timeout, or invalid output — marks the occurrence completed without invoking the agent. A recurring series still continues: the sweep clones the next occurrence from the completed row.
-4. `wakeAgent: true` — the agent wakes with `data` injected into the task prompt as `scriptOutput`.
+3. `wakeAgent: false` marks the occurrence completed without invoking the agent — a normal, quiet run; the sweep clones the next occurrence as usual. A script **error, timeout, or invalid output** is different: the occurrence is marked **failed**, consecutive failures back the series off exponentially (next run = the later of the cron slot and the backoff), and after 8 consecutive script failures the series auto-pauses with a run-log note — fix the script, then `ncl tasks resume <id>`.
+4. `wakeAgent: true` — the agent wakes with `data` injected into the task prompt as `scriptOutput`. The prompt's `<task>` element carries both the scheduled time (`time`, from `process_after`) and a fresh `current_time` stamped when the run reaches the agent — so relative wording like "today" stays correct even when a run fires late.
 
 Be honest about what this saves: the container still wakes on every firing (the sweep can't know the script's verdict in advance). The script gates the expensive part — the agent invocation — not the container spawn. Skip scripts entirely for tasks that need the agent's judgment every time, like daily briefings.
 

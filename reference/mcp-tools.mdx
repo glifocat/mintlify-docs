@@ -5,7 +5,7 @@ description: "Every MCP tool the agent can call inside its container — messagi
 keywords: ["mcp tools", "send_message", "send_file", "ask_user_question", "create_agent", "install_packages", "add_mcp_server", "nanoclaw mcp server", "agent tools"]
 ---
 
-{/* verified-against: container/agent-runner/src/mcp-tools/{index,server,types,core,interactive,agents,self-mod}.ts, container/agent-runner/src/mcp-tools/{core,interactive,agents,self-mod,cli}.instructions.md, src/modules/agent-to-agent/create-agent.ts, src/group-init.ts @ 4e83a0a0 */}
+{/* verified-against: container/agent-runner/src/mcp-tools/{index,server,types,core,interactive,agents,self-mod}.ts, container/agent-runner/src/mcp-tools/{core,interactive,agents,self-mod,cli}.instructions.md, src/modules/agent-to-agent/create-agent.ts, src/group-init.ts @ 639577c3 */}
 
 These are the tools the agent can call from inside its container. They're exposed by the built-in `nanoclaw` MCP server (`container/agent-runner/src/mcp-tools/`), so the agent sees them with the `mcp__nanoclaw__` prefix — e.g. `mcp__nanoclaw__send_message`. As an operator you never call them directly; you see their effects: messages arriving in chats, schedule changes, and approval cards.
 
@@ -112,13 +112,14 @@ Both tools are **always approval-gated** and fire-and-forget: the request is sub
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `name` | string | yes | Unique server name |
-| `command` | string | yes | Command to launch the server |
-| `args` | array | no | Command arguments |
-| `env` | object | no | Environment variables for the server |
+| `name` | string | yes | Unique server name — 1-64 chars of letters, digits, `_`, `-` |
+| `command` | string | one of | Command to launch a stdio server |
+| `url` | string | one of | Remote Streamable HTTP endpoint |
+| `args` | array | no | Command arguments (`command` form only) |
+| `env` | object | no | Environment variables for the server (`command` form only) |
 
-On approval the server is added to the group's [container config](/reference/container-config) and the container restarts (no image rebuild needed). The agent is instructed to use `"onecli-managed"` as the placeholder for credential env vars rather than asking you for keys.
+Exactly one of `command` or `url` is required. A `url` must be HTTPS — plain HTTP passes only for `localhost`, `127.0.0.1`, `[::1]`, and `host.docker.internal` — and URLs that embed credentials (userinfo, fragments, or credential-looking query parameters) are rejected with a pointer to OneCLI for authentication. On approval the server is added to the group's [container config](/reference/container-config) and the container restarts (no image rebuild needed). The agent is instructed to use `"onecli-managed"` as the placeholder for credential env vars rather than asking you for keys.
 
 ## The `ncl` CLI
 
-Not an MCP tool, but documented alongside them in the agent's instructions: the agent also has the `ncl` admin CLI at `/usr/local/bin/ncl` for querying and modifying NanoClaw's central configuration — its own group config, destinations, members, and sessions. Read commands are open; write commands return `approval-pending` and execute only after an admin approves. What it can reach is controlled by the group's `cli_scope` — see the [ncl CLI reference](/reference/ncl-cli#access-control).
+Not an MCP tool, but documented alongside them in the agent's instructions: the agent also has the `ncl` admin CLI at `/usr/local/bin/ncl` for querying and modifying NanoClaw's central configuration — its own group config, destinations, members, sessions, and the wiring for the current chat (`wirings get`/`update` — updates limited to `engage_mode` and `engage_pattern`, and approval-gated like other writes). Read commands are open; write commands return `approval-pending` and execute only after an admin approves. What it can reach is controlled by the group's `cli_scope` — see the [ncl CLI reference](/reference/ncl-cli#access-control).
