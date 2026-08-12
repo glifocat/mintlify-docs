@@ -6,7 +6,7 @@ rss: true
 ---
 
 <Update label="Post-v2.1.54 sweep: remote MCP, opencode catch-up, CLI reference fixes" description="2026-08-12" tags={["Updated"]}>
-  Drift sweep against upstream trunk `639577c3` (38 commits past v2.1.54, no new release) and the providers branch `9cfea509`. Channels branch unchanged.
+  Drift sweep against upstream trunk `639577c3` (38 commits past the previous sweep's anchor `4446b5bd`; still v2.1.54, no new release) and the providers branch `9cfea509`. Channels branch unchanged.
 
   - **Remote Streamable HTTP MCP servers** ([nanoclaw#3092](https://github.com/nanocoai/nanoclaw/pull/3092), [#3221](https://github.com/nanocoai/nanoclaw/pull/3221)) — [tools](/extend/tools), [container config](/reference/container-config), [MCP tools](/reference/mcp-tools), [self-modification](/extend/self-modification), and both `ncl` pages now document the `--url` form: `add_mcp_server` takes a `name` and exactly one of `command` or `url`, HTTPS enforced, credential-bearing URLs rejected.
   - **Gmail and Google Calendar tool skills removed upstream** ([nanoclaw#3172](https://github.com/nanocoai/nanoclaw/pull/3172)), **Tavily added** ([nanoclaw#3190](https://github.com/nanocoai/nanoclaw/pull/3190)) — [tools](/extend/tools) rewritten around `/add-tavily-tool` (keyless remote MCP), the [skills catalog](/reference/skills-catalog) drops four rows and adds one (45 skills), [credentials](/operate/credentials) reframes its stub-pattern example, [extend overview](/extend/overview) swaps its tool-install exemplar.

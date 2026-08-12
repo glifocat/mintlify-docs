@@ -65,7 +65,7 @@ Each skill adds a capability or MCP tool to your agents. See [Tools](/extend/too
 | `/add-mnemon` | Adds persistent graph-based memory via mnemon — agents recall past context before responding and remember insights after each turn |
 | `/add-ollama-tool` | Adds the Ollama MCP server so agents can call local models and optionally manage the Ollama model library |
 | `/add-rtk` | Installs the rtk token-compression proxy into agent containers — routes Bash tool calls through rtk for 60–90% token savings on dev commands |
-| `/add-tavily-tool` | Adds Tavily Search and Extract as keyless remote MCP tools through the pinned `mcp-remote` bridge — no API key, OneCLI not involved |
+| `/add-tavily-tool` | Adds Tavily Search and Extract as keyless remote MCP tools through the pinned `mcp-remote` bridge — no API key by default; an optional paid-key upgrade goes through the OneCLI vault |
 | `/add-vercel` | Adds Vercel deployment capability — installs the Vercel CLI in agent containers with OneCLI credential injection for `api.vercel.com` |
 
 ## Operational skills

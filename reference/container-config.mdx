@@ -95,7 +95,7 @@ External MCP servers merged with the built-in `nanoclaw` server at runner startu
 }
 ```
 
-`args` and `env` are optional and valid only on the stdio form (`type` defaults to `stdio`). Server names must be 1-64 chars of letters, digits, `_`, `-`. An `http` entry's `url` must be HTTPS — plain HTTP passes only for localhost and `host.docker.internal` — and URLs carrying credentials, fragments, or secret-looking query parameters are rejected. `instructions`, if present, is composed into the group's CLAUDE.md as an inline fragment at spawn — but neither `ncl groups config add-mcp-server` nor the agent's `add_mcp_server` tool accepts it as of v2.1.38; to set it, update the JSON column directly in the database. Manage the rest with `ncl groups config add-mcp-server` / `remove-mcp-server`.
+`args` and `env` are optional and valid only on the stdio form (`type` defaults to `stdio`). Server names must be 1-64 chars of letters, digits, `_`, `-`. An `http` entry's `url` must be HTTPS — plain HTTP passes only for `localhost`, `127.0.0.1`, `[::1]`, and `host.docker.internal` — and URLs carrying credentials, fragments, or secret-looking query parameters are rejected. `instructions`, if present, is composed into the group's CLAUDE.md as an inline fragment at spawn — but neither `ncl groups config add-mcp-server` nor the agent's `add_mcp_server` tool accepts it as of v2.1.38; to set it, update the JSON column directly in the database. Manage the rest with `ncl groups config add-mcp-server` / `remove-mcp-server`.
 
 ### packages_apt and packages_npm
 

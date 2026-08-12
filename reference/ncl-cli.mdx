@@ -83,7 +83,7 @@ Agent groups — logical agent identities with their own workspace folder, histo
 | --- | --- | --- | --- |
 | list | `ncl groups list` | open | |
 | get | `ncl groups get --id <id>` | open | |
-| create | `ncl groups create --folder <folder> [--name <name>] [--template <ref>] [--timezone <iana-id>]` | approval | `--folder` required and immutable; `--name` defaults to the folder. Idempotent on `--folder` — creating an existing folder returns the existing row. New ids are prefixed (`ag-<uuid>`). |
+| create | `ncl groups create --folder <folder> [--name <name>] [--template <ref>] [--timezone <iana-id>]` | approval | `--folder` required and immutable (except with `--template`, where the folder derives from the name); `--name` defaults to the folder. Idempotent on `--folder` — creating an existing folder returns the existing row. New ids are prefixed (`ag-<uuid>`). |
 | update | `ncl groups update --id <id> --name <name>` | approval | `name` is the only updatable column. |
 | delete | `ncl groups delete --id <id>` | approval | Custom cascading handler (not the generic single-table delete): removes sessions, destinations, approvals, role grants, memberships, and wirings in one FK-ordered transaction. Does **not** kill running containers or clean up `groups/<folder>/` and `data/v2-sessions/<id>/` on disk. |
 | restart | `ncl groups restart --id <id> [--rebuild] [--message <text>]` | approval | Host caller: restarts all running containers in the group. Agent caller: `--id` auto-filled, only the calling session restarts. `--rebuild` rebuilds the image first (required after package changes). `--message` queues an on-wake instruction so the fresh container starts and acts on it; without it the container stays stopped until the next user message. |

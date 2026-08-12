@@ -19,9 +19,9 @@ Two things are already there before you add anything: the built-in `nanoclaw` MC
 
 ## Web search with Tavily
 
-`/add-tavily-tool` gives the agent [Tavily](https://tavily.com) Search and Extract with **no API key**. The skill pins the `mcp-remote` bridge in the container manifest (`container/cli-tools.json`) and registers Tavily per group with `ncl groups config add-mcp-server`, using Tavily's keyless access mode (`X-Tavily-Access-Mode: keyless` header; access is IP-based). Tool filters expose only search and extract, so the agent sees `mcp__tavily__tavily_search` and `mcp__tavily__tavily_extract`. OneCLI is not involved — there is no credential to manage.
+`/add-tavily-tool` gives the agent [Tavily](https://tavily.com) Search and Extract with **no API key**. The skill pins the `mcp-remote` bridge in the container manifest (`container/cli-tools.json`) and registers Tavily per group with `ncl groups config add-mcp-server`, using Tavily's keyless access mode (`X-Tavily-Access-Mode: keyless` header; access is IP-based). Tool filters expose only search and extract, so the agent sees `mcp__tavily__tavily_search` and `mcp__tavily__tavily_extract`. No credential is needed for the keyless tier; the skill also installs an optional upgrade path — when the shared keyless allowance runs out, a paid Tavily key goes in the [OneCLI vault](/operate/credentials) and the gateway injects it into the bridge's requests.
 
-It is most valuable on non-Claude [providers](/extend/providers): the Claude provider already ships built-in `WebSearch`/`WebFetch`, while OpenCode and Codex groups get real web search only through a tool like this.
+It adds the most for groups on non-Claude [providers](/extend/providers) — the Claude provider already ships built-in `WebSearch`/`WebFetch`, and Codex has web search off by default.
 
 ## Local models as tools
 
@@ -65,7 +65,7 @@ Remote Streamable HTTP servers work too — pass `--url` instead of `--command`:
 ncl groups config add-mcp-server --id <group-id> --name docs --url https://example.com/mcp
 ```
 
-The URL must be HTTPS; plain HTTP passes only for `localhost` and `host.docker.internal`. URLs that embed credentials are rejected — connect the service through OneCLI instead.
+The URL must be HTTPS; plain HTTP passes only for `localhost`, `127.0.0.1`, `[::1]`, and `host.docker.internal`. URLs that embed credentials are rejected — connect the service through OneCLI instead.
 
 Run from inside an agent's container, `ncl` write commands are approval-gated; from a host operator shell they execute immediately. Remove with `ncl groups config remove-mcp-server --id <group-id> --name github`. The optional `instructions` field (composed into the group's CLAUDE.md) can't be set through `ncl` as of v2.1.4 — see [Container config](/reference/container-config#mcp_servers).
 
