@@ -16,7 +16,7 @@ rss: true
   - **Approval cards keep their content at terminal states** ([nanoclaw#3143](https://github.com/nanocoai/nanoclaw/pull/3143)) — [db-schema](/reference/db-schema) gains the `question` column (migration 021) and the missed `container_configs.timezone` (020); [credentials](/operate/credentials) updates the expiry wording.
   - **[Architecture](/concepts/architecture)** — host-module lifecycle registry startup step ([nanoclaw#3214](https://github.com/nanocoai/nanoclaw/pull/3214)) and the warm-stream trigger guard; **[first agent](/guides/first-agent)** — group creation initializes the filesystem inline (the lazy-init story was stale); **[multi-agent swarm](/guides/multi-agent-swarm)** — `ncl wirings create` does auto-create the channel destination; **[scheduled tasks](/guides/scheduled-tasks)** — script failures back off and auto-pause after 8, `wakeAgent: false` is a quiet success; **[writing skills](/extend/writing-skills)** — the guidelines' three principles ([nanoclaw#3211](https://github.com/nanocoai/nanoclaw/pull/3211)); **[upgrading](/operate/upgrading)** — `[BREAKING]` migration guides now execute, not "by hand".
 
-  All 36 flagged pages re-verified; stamps bumped to `639577c3` (providers pages to `9cfea509`). Edited prose follows ASD-STE100-aligned style: short sentences, active voice, one instruction per sentence.
+  All 36 flagged pages re-verified; stamps bumped to `639577c3` (providers pages to `9cfea509`).
 </Update>
 
 <Update label="v2.1.54 sweep: iMessage goes local-or-hosted" description="2026-08-02" tags={["Updated"]}>
