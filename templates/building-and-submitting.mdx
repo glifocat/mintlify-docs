@@ -1,0 +1,413 @@
+---
+title: "Building and submitting a template"
+description: "Build a template end to end — manifest, MCP servers, skills, persona, and tasks — then run the registry checks, test it against a real install, and open a pull request."
+keywords: ["author template", "submit template", "plugin.json", "mcp.json", "ai.nanoco.nanoclaw", "check-templates.mjs", "nanoclaw-templates", "template category", "no secrets"]
+tag: "NEW"
+---
+
+{/* verified-against: src/templates/{parse,manifest,extension,mcp,skills,tasks,plugin-dir,create-agent}.ts, src/container-config.ts, container/agent-runner/src/plugin-mcp.ts, docs/templates.md @ nanocoai/nanoclaw#3220 f8563abe; nanocoai/nanoclaw-templates {README.md,scripts/check-templates.mjs,.github/workflows/check-templates.yml} @ 3c7966a7, CONTRIBUTING.md @ nanocoai/nanoclaw-templates#20 6b1fdd8b (paid-service disclosure, CI/engine lint delta, persona optional) */}
+
+A template is an [Agent Plugins 1.0.0](https://agent-plugins.org) directory. This page walks the whole path: what goes in each part, how to verify it, and how to get it into the public registry.
+
+For the exact rules the engine validates against, see [the template format reference](/reference/template-format).
+
+## Anatomy
+
+<Tree>
+<Folder name="<template>" defaultOpen>
+  <File name="plugin.json" />
+  <File name="mcp.json" />
+  <Folder name="skills">
+    <Folder name="sdr-agent">
+      <File name="SKILL.md" />
+      <Folder name="references">
+        <File name="prospect-research.md" />
+      </Folder>
+    </Folder>
+  </Folder>
+  <Folder name="ai.nanoco.nanoclaw" defaultOpen>
+    <Folder name="context">
+      <File name="instructions.md" />
+      <Folder name="additional_context">
+        <File name="pricing.md" />
+      </Folder>
+    </Folder>
+    <Folder name="tasks">
+      <File name="morning-digest.md" />
+    </Folder>
+  </Folder>
+  <File name="README.md" />
+</Folder>
+</Tree>
+
+| Path | Loaded as | Required |
+| --- | --- | --- |
+| `plugin.json` | Plugin identity and the discovery marker | **Yes** |
+| `mcp.json` → `mcpServers` | MCP tool servers, written to the group's container config | No |
+| `skills/<name>/` | One skill per folder, copied whole into the group's skills overlay | No |
+| `ai.nanoco.nanoclaw/context/instructions.md` | The agent's persona, prepended to its project doc every spawn | No |
+| `ai.nanoco.nanoclaw/context/**/*.md` | Extra context, copied into the workspace at the same relative path | No |
+| `ai.nanoco.nanoclaw/tasks/*.md` | Recurring tasks, created paused | No |
+| `README.md` | Human docs for the template | Recommended |
+
+The portable surface — `skills/` and `mcp.json` — follows the Agent Plugins spec exactly. Everything NanoClaw-specific rides in the `ai.nanoco.nanoclaw/` extension directory and manifest key, which other spec-compatible clients skip by rule.
+
+<Note>
+**No provider, model, effort, or packages in a template.** Those are set on the agent afterward with `ncl groups config update`. The runtime defaults to the install's configured provider, which is what makes one template work everywhere.
+</Note>
+
+## The manifest
+
+`plugin.json` is the only required file. It is both the identity and the marker that makes a folder a template.
+
+```json
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "sdr",
+  "version": "1.0.0",
+  "description": "Outbound SDR agent: prospecting, enrichment, sequencing, and CRM hygiene",
+  "extensions": {
+    "ai.nanoco.nanoclaw": { "agentName": "SDR Agent" }
+  }
+}
+```
+
+`$schema` must be exactly that URL. `name` is 1–64 characters of lowercase alphanumerics, hyphens, and periods; it must start and end alphanumeric and may not contain a `--` or `..` run. It is the plugin's machine name, independent of the folder path — `sales/sdr/` carries `"name": "sdr"` — and it is the folder the plugin is stamped under, at `groups/<folder>/plugins/<name>/`.
+
+`extensions["ai.nanoco.nanoclaw"].agentName` sets the display name of the stamped agent. Without it the agent is named after the template folder; an explicit `--name` beats both.
+
+## MCP servers
+
+`mcp.json` declares tool servers. It has exactly two top-level fields, and every server declares its transport:
+
+```json
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "hubspot": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@hubspot/mcp-server@0.4.0"],
+      "env": { "PRIVATE_APP_ACCESS_TOKEN": "placeholder" }
+    },
+    "microsoft-learn": {
+      "type": "streamable-http",
+      "url": "https://learn.microsoft.com/api/mcp"
+    }
+  }
+}
+```
+
+- **`stdio`** takes `command`, `args`, and optional `env` and `cwd`. The `command` is a single token: a bare executable name, or a `./`-relative path resolved against the plugin root inside the container.
+- **`streamable-http`** takes an HTTPS `url` and optional `headers`. The legacy `sse` transport is not supported.
+
+### Credentials and secrets
+
+<Warning>
+**Hard rule: templates are public. Never commit an API key, token, or any other credential.** Registry CI and NanoClaw's stamp-time lint both reject them, but neither is a substitute for reading your own diff before you commit.
+</Warning>
+
+Every credential-shaped `env` and `headers` value is the literal `"placeholder"`. The real value arrives one of two ways, never from the template:
+
+- **The [credentials proxy](/operate/credentials) injects it at request time**, matched by API host. This is the normal path. The key never sits in `mcp.json`, the container environment, or chat context.
+- **The operator supplies it after stamping** — `ncl groups config add-mcp-server --headers` — for the rare endpoint that genuinely needs a static header.
+
+Any value matching a known credential format is rejected outright, and the whole template fails to stamp:
+
+| Pattern | Typical source |
+| --- | --- |
+| `sk-…` | OpenAI-style API keys |
+| `ghp_…`, `github_pat_…` | GitHub tokens |
+| `xox…-` | Slack tokens |
+| `AKIA…` | AWS access key IDs |
+| `-----BEGIN …` | PEM private keys |
+
+Task scripts may call external services, but must not contain credentials either.
+
+<Note>
+**Registry CI is stricter than the engine here.** A credential-shaped *key* — anything matching `TOKEN`, `SECRET`, `PASSWORD`, `API_KEY`, `CREDENTIAL`, `PRIVATE_KEY`, or `AUTH` — with a value that isn't `"placeholder"` **fails CI**, while NanoClaw itself only warns at stamp time. A template that stamps cleanly on your machine can still be rejected by the registry. Use `"placeholder"` for every credential-shaped key.
+</Note>
+
+#### Servers that need the variable present to boot
+
+Some MCP servers refuse to start unless an environment variable *exists*, even though the real credential comes from the proxy. `"placeholder"` satisfies the boot check — it is the one value both linters always accept.
+
+`sales/sdr` is the worked example. `@hubspot/mcp-server` won't start without `PRIVATE_APP_ACCESS_TOKEN`, so the template ships it as a dummy:
+
+```json
+"hubspot": {
+  "type": "stdio",
+  "command": "npx",
+  "args": ["-y", "@hubspot/mcp-server@0.4.0"],
+  "env": { "PRIVATE_APP_ACCESS_TOKEN": "placeholder" }
+}
+```
+
+<Warning>
+That placeholder **is not the credential, and must stay as-is.** Once HubSpot is connected, the real key is injected for `api.hubapi.com` at request time. Never replace it with a real token.
+</Warning>
+
+Only add a placeholder where the server actually demands one. In the same template, Exa needs no such variable and gets none.
+
+#### Document what the template needs
+
+A template that requires a connected service must say so in its own `README.md`. For each service, give:
+
+| | Example (`sales/sdr`) |
+| --- | --- |
+| The service | HubSpot |
+| The API host to match | `api.hubapi.com` |
+| The auth style | `Authorization: Bearer` |
+| The exact scopes | `crm.objects.contacts.read`, `crm.objects.deals.write`, … |
+| Where to get the key | Development → Keys → Service keys (Super Admin required) |
+
+[`sales/sdr/README.md`](https://github.com/nanocoai/nanoclaw-templates/blob/main/sales/sdr/README.md) is the pattern to follow — it lists every service in one table, then expands each with the steps to obtain the key.
+
+If any of those services costs money, it also has to be [declared up front](#paid-services-and-monetization).
+
+## Skills
+
+Each immediate subfolder of `skills/` is one skill, named after the folder. The whole folder is copied, so put `SKILL.md` (with `name` and `description` frontmatter) and any `references/*.md` inside it, following the usual [skill conventions](/extend/writing-skills).
+
+Skills land in the group's private skills overlay — keyed to that group, never shared with others. They auto-trigger by their `description`; they are not pre-loaded into the prompt.
+
+A non-conforming skill is skipped with a named notice at stamp time, never silently dropped.
+
+## The persona
+
+`ai.nanoco.nanoclaw/context/instructions.md` is the agent's standing brief. It is written to the provider-neutral `instructions.prepend.md` and inlined at the top of the agent's `CLAUDE.md`/`AGENTS.md` every spawn — system-prompt tier on any provider.
+
+<Tip>
+**Keep it under roughly 200 lines.** It is always in the agent's prompt, and some providers cap that document (Codex at ~32 KB), so an over-long persona gets truncated. Put bulk material in `skills/` or `additional_context/` instead.
+</Tip>
+
+**The persona is optional, and the registry does not require one.** A plain conformant plugin with no extension directory stamps fine — the agent simply uses NanoClaw's default project doc. CI only checks that `instructions.md` is non-empty *if you ship one*.
+
+Ship a persona when it makes the template useful out of the box; skip it when the skills and MCP servers are the whole point.
+
+### Extra context
+
+Other `.md` files under `ai.nanoco.nanoclaw/context/` — by convention in an `additional_context/` subfolder — are copied into the agent's workspace preserving their position relative to `instructions.md`. A file at `ai.nanoco.nanoclaw/context/additional_context/pricing.md` is readable by the agent as `additional_context/pricing.md`.
+
+**Nothing is injected automatically.** The agent only reads an extra file if `instructions.md` points to it, so reference every file you ship — by plain relative path, not `@`-syntax, which keeps it working under any provider:
+
+```markdown
+Pricing rules live in `additional_context/pricing.md`. Read it before quoting a price.
+```
+
+## Recurring tasks
+
+Each immediate Markdown file under `ai.nanoco.nanoclaw/tasks/` defines one recurring task. The filename becomes the task name, the frontmatter supplies the cron schedule, and the body is the prompt:
+
+```markdown
+---
+schedule: "*/15 * * * *"
+script: |
+  if [ -f /workspace/agent/wake-next-task ]; then
+    echo '{"wakeAgent": true}'
+  else
+    echo '{"wakeAgent": false}'
+  fi
+---
+
+Investigate the alerts reported by the script and notify me if they are serious.
+```
+
+`schedule` is required. `script` is optional, and may be a single-line or multiline YAML string. The frontmatter accepts **no other fields**, so a typo can't silently change behavior.
+
+Template tasks use the same creation path as `ncl tasks create` — cron validation, the group timezone, isolated task sessions, and frequency limits all apply. Ungated tasks are limited to four fires in the next 24 hours; tasks with a script gate may run more often. Templates cannot create one-time tasks or override the frequency limit. See [Scheduled tasks](/guides/scheduled-tasks) for the script contract.
+
+<Note>
+Tasks are created **paused**, so stamping never starts background work without consent. Users activate them with `ncl tasks resume <task-id>`.
+</Note>
+
+## What stamping does with it
+
+Stamping copies the **whole plugin** to `groups/<folder>/plugins/<name>/`, mounted read-only in the container at `/workspace/agent/plugins/<name>`. A writable sibling, `plugin-data/<name>/`, holds per-plugin state.
+
+Because the whole plugin is present, a skill can reference sibling files — a `TROUBLESHOOTING.md` at the plugin root, say — and they exist in the container.
+
+stdio servers declared by the plugin get the spec's runtime contract: `PLUGIN_ROOT` and `PLUGIN_DATA` in their environment, and `${PLUGIN_ROOT}`/`${PLUGIN_DATA}` expansion in `args` elements and `env` values. See [the runtime contract](/reference/template-format#the-runtime-contract).
+
+## Migrating from the pre-plugin layout
+
+Templates written before vX.Y.Z used a bare `context/instructions.md` as the discovery marker and `.mcp.json` for servers. That layout is no longer read — stamping one fails with a migration error.
+
+Re-fetch the template from the registry, or convert it:
+
+<Steps>
+<Step title="Add plugin.json">
+With the exact 1.0.0 `$schema` and a valid `name`. This is what makes the folder discoverable.
+</Step>
+<Step title="Rename .mcp.json to mcp.json">
+Add the MCP `$schema`, and give every server an explicit `"type"` of `stdio` or `streamable-http`. A leftover `.mcp.json` is ignored with a notice.
+</Step>
+<Step title="Move context/ and tasks/ under ai.nanoco.nanoclaw/">
+So they become `ai.nanoco.nanoclaw/context/` and `ai.nanoco.nanoclaw/tasks/`.
+</Step>
+</Steps>
+
+## Submitting to the registry
+
+Templates ship in [`nanocoai/nanoclaw-templates`](https://github.com/nanocoai/nanoclaw-templates), a separate repo from NanoClaw itself. Contributions are accepted by pull request, and CI enforces most of the standards below automatically.
+
+### Where it goes
+
+Every template lives under a **category** folder, one folder per template, at exactly two levels:
+
+```text
+<category>/<template>/
+```
+
+That path is also the ref people pass to `--template`, so `sales/sdr/` is stamped as `--template sales/sdr`. Templates nested deeper are not discovered.
+
+Categories in the registry today are `sales`, `product`, `data`, and `media`.
+
+<Tip>
+Check whether an existing category fits and reuse it before adding a new one. A new category must be a single, lowercase, broadly-recognized business function — `sales`, `support`, `engineering`, `marketing`, `ops`, `finance` — never a niche or product-specific label. The goal is a small, predictable set a newcomer can guess.
+</Tip>
+
+### What the registry requires
+
+`plugin.json` is the only required file. Everything else is optional to the loader, but the registry holds contributions to a higher bar than the engine does.
+
+| Path | Standard | Enforced by |
+| --- | --- | --- |
+| `plugin.json` | Present, with the exact 1.0.0 `$schema` and a valid `name` | CI |
+| `mcp.json` | Exact MCP `$schema`, exactly two top-level fields, a declared `type` per server | CI |
+| `mcp.json` credentials | Credential-shaped `env`/`headers` values carry the literal `"placeholder"` | CI |
+| `skills/<name>/SKILL.md` | Present, with `name` and `description` frontmatter | CI |
+| `ai.nanoco.nanoclaw/tasks/*.md` | `schedule` frontmatter, optional `script`, no other fields, non-empty body | CI |
+| Whole tree | No symlinks | CI |
+| `ai.nanoco.nanoclaw/context/instructions.md` | Optional. If shipped, it is non-empty | CI (only when the file exists) |
+| `README.md` | Explains what the template does, and for every service it needs: the API host, auth style, exact scopes, and where to get the key | Review |
+| `README.md` paid dependencies | Any paid service is declared up front, with a link and the required tier — see below | Review |
+| Whole template | No affiliate links, baked-in billing, or author monetization | Review |
+
+### Paid services and monetization
+
+A template may depend on paid MCP servers or paid API tiers — Exa, HubSpot's paid plans, and similar are all fine. What isn't fine is a user discovering the paywall after they've stamped it.
+
+**The template's `README.md` must state, up front:**
+
+- that the service is paid,
+- a link to the tool,
+- and which plan or tier the template needs, where the vendor gates the required capability behind one,
+- and that the user supplies **their own key**.
+
+Never ship a shared key, a template-owner key, or any credential the contributor controls. The user's key goes in their own [credentials proxy](/operate/credentials) and stays there.
+
+<Tip>
+**Name the tier, don't quote the price.** Prices change and a stale figure in a README is worse than none — link the vendor's pricing page and name the plan instead. Tier names are far more stable than dollar amounts.
+</Tip>
+
+If the template works on a free tier with reduced capability, say which parts need the paid plan. That's more useful than a blanket "requires a paid subscription."
+
+<Warning>
+**No monetization through the registry template.** No affiliate or referral links, no baked-in billing, no revenue share wired into the template. A registry template is a configuration people can read and fork, not a distribution channel for the author.
+</Warning>
+
+### Run the checks locally
+
+The registry ships the same script CI runs. It has zero dependencies — plain Node:
+
+```bash
+node scripts/check-templates.mjs
+```
+
+It walks every `<category>/<template>/` folder and reports all problems at once, exiting non-zero if any are found:
+
+```text
+check-templates: 4 template(s) OK: data/analyst, media/journalist, product/competitor-analysis, sales/sdr
+```
+
+Beyond the standards above, it also catches two migration mistakes: a `.mcp.json` that should be renamed to `mcp.json`, and a `context/instructions.md` with no `plugin.json` — the pre-plugin layout described above.
+
+### Test it end to end
+
+Passing CI is not the same as working. Stamp your template before you open the PR.
+
+<Warning>
+`--template` resolves against your **NanoClaw install's** templates directory, not your clone of the registry. Stamping a bare ref from inside your clone will not find it.
+</Warning>
+
+<Tabs>
+<Tab title="Point at your clone">
+
+```bash
+NANOCLAW_TEMPLATES_DIR="$(pwd)" ncl groups create \
+  --template <category>/<template> --name "Test"
+```
+
+</Tab>
+<Tab title="Copy into your install">
+
+```bash
+cp -R <category>/<template> <nanoclaw>/templates/<category>/<template>
+ncl groups create --template <category>/<template> --name "Test"
+```
+
+</Tab>
+</Tabs>
+
+Then verify what stamped:
+
+```bash
+ncl tasks list --status paused          # tasks must appear, and must be paused
+ncl tasks run <task-id>                 # for a scripted task, run it once
+ncl tasks get <task-id>                 # inspect the result
+```
+
+Check the create response for a `templateReport` array. Any entry there means a component was skipped or ignored — a non-conforming skill, an unsupported MCP transport, an unknown manifest field. Fix those before submitting; they are never silently stripped, and reviewers will see them too.
+
+### Open the PR
+
+<Steps>
+<Step title="Fork and branch">
+Fork the registry and create a branch for your template.
+</Step>
+<Step title="Build it">
+Create the template at `<category>/<template>/`, starting with `plugin.json` and a persona. Add `mcp.json`, `skills/<name>/` folders, and tasks as needed, plus a `README.md`. Leave the provider unset — it is chosen on the agent later.
+</Step>
+<Step title="Check and test">
+Run `node scripts/check-templates.mjs`, then stamp and test the template against a real install.
+</Step>
+<Step title="Re-read the diff">
+Scan for secrets one more time before you commit.
+</Step>
+<Step title="Open the PR">
+Describe what the template does, including any predefined tasks and the MCP servers and credentials it expects.
+</Step>
+</Steps>
+
+Before requesting review, confirm each of these:
+
+- [ ] The template lives under an appropriate `<category>/<template>/`, reusing an existing category where one fits.
+- [ ] `plugin.json` is present with the exact 1.0.0 `$schema` and a valid `name`.
+- [ ] If the template ships `ai.nanoco.nanoclaw/context/instructions.md`, it is non-empty and stays focused — under roughly 200 lines, with bulk material in `skills/` or `additional_context/`.
+- [ ] Every `mcp.json` server declares a `type`, and every credential-shaped `env`/`headers` value is the literal `"placeholder"`.
+- [ ] Every task file has a non-empty `schedule`, an optional non-empty `script`, no other frontmatter fields, and a prompt body.
+- [ ] A per-template `README.md` explains the template, and for every service it needs gives the API host, auth style, exact scopes, and where to get the key.
+- [ ] Any `"placeholder"` env var is there because the server won't boot without it — and the README says never to replace it with a real key.
+- [ ] Every paid service is declared up front in the README: that it's paid, a link to the tool, the tier the template needs (if any), and that the user brings their own key. No prices quoted.
+- [ ] No affiliate or referral links, no baked-in billing, and no shared or author-owned credential anywhere in the template.
+- [ ] `node scripts/check-templates.mjs` passes.
+- [ ] The template has been stamped and tested locally with a bare ref.
+- [ ] No API keys, tokens, or other secrets appear anywhere in the diff.
+
+## Related
+
+<Columns cols={2}>
+<Card title="Template format reference" icon="book" href="/reference/template-format">
+Field-level validation rules, limits, and the runtime contract.
+</Card>
+<Card title="Updating a stamped agent" icon="rotate" href="/templates/updating">
+Deliver template changes to agents already running.
+</Card>
+<Card title="Writing skills" icon="pen-nib" href="/extend/writing-skills">
+Conventions a `skills/<name>/` folder follows.
+</Card>
+<Card title="Credentials" icon="key" href="/operate/credentials">
+Why no key ever belongs in a template.
+</Card>
+</Columns>

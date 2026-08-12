@@ -1,0 +1,95 @@
+---
+title: "Updating a stamped agent"
+description: "Restamp an agent in place when its template changes — read the dry-run plan, understand what resets and what is never touched, and spot customizations before they are lost."
+keywords: ["restamp", "template update", "ncl groups create --template --yes", "CUSTOMIZED", "--new", "plugin-owned mcp server", "dry run"]
+tag: "NEW"
+---
+
+{/* verified-against: src/templates/restamp.ts, src/cli/resources/groups.ts, src/container-config.ts @ nanocoai/nanoclaw#3220 f8563abe; docs/templates.md @ nanocoai/nanoclaw#2909 ed19f8ea */}
+
+When a template gains a skill, fixes a persona, or changes a task schedule, you don't have to rebuild the agent. Restamping updates an already-stamped agent in place.
+
+`ncl groups create --template` stamps a **new** agent only when no group carries the plugin yet. When one already does, the same command becomes an in-place update of that agent.
+
+```bash
+ncl groups create --template sales/sdr          # dry run: show the update plan
+ncl groups create --template sales/sdr --yes    # apply it
+ncl groups restart --id <agent-group-id>        # skill and MCP changes take effect
+```
+
+The dry run is the default and has no side effects. Nothing changes until you pass `--yes`.
+
+<Warning>
+Applying resets every plugin-owned surface to the template's version, overwriting local edits to those files. The dry run flags them as **CUSTOMIZED** first — read it before you apply.
+</Warning>
+
+## Picking the target
+
+| Situation | What happens |
+| --- | --- |
+| No group carries the plugin | A new agent is stamped. |
+| Exactly one group carries it | That agent's update plan is shown. |
+| Several groups carry it | The command fails and lists them by name and id. Pass `--id <group-id>` to pick one. |
+| You want a second agent from the same template | Pass `--new` to stamp another instead of updating. |
+
+Restamping only works against the **same plugin name**. To move an agent to a different template, create a new agent.
+
+## What resets and what doesn't
+
+The template — including its `ai.nanoco.nanoclaw` extension — is the source of truth for everything it stamps. Restamping resets exactly those surfaces and touches nothing else.
+
+| Reset to the template | Never touched |
+| --- | --- |
+| `plugins/<name>/`, replaced wholesale | Memory, sessions, and chat history |
+| The skills overlay: per skill, updated, added, or removed | Skills the agent authored itself |
+| Plugin-owned MCP servers, swapped as a set | MCP servers you added with `add-mcp-server` |
+| Persona (`instructions.prepend.md`) and context files | Other workspace files the plugin never shipped |
+| Task definitions, matched by name; dropped tasks are deleted | Task pause/resume state and `plugin-data/<name>/` |
+| | Channel wiring, provider, model, and packages |
+
+Two collision rules keep operator state safe:
+
+- **Your servers win.** A template server whose name is already taken by a server you added is skipped with a notice, and yours stays in place.
+- **Activation survives.** A task you resumed stays resumed while its prompt and schedule update.
+
+## Reading the plan
+
+Each line names a surface, the action, and whether the live copy has drifted:
+
+```text
+plugin       plugins/sdr                    update      replaced wholesale from the template
+persona      instructions.prepend.md        update      CUSTOMIZED
+skill        sdr-agent                      update
+skill        old-play                       remove
+context      additional_context/pricing.md  create
+mcp-server   hubspot                        unchanged
+mcp-server   exa                            skip        a server you added has this name; the plugin version was not installed
+task         morning-digest                 update
+```
+
+Actions are `create`, `update`, `remove`, `skip`, and `unchanged`. Surfaces are `plugin`, `persona`, `context`, `skill`, `mcp-server`, and `task`.
+
+**CUSTOMIZED** means the live copy differs from what the *previous* template version stamped, so applying discards your local edits to that file. The baseline for that comparison is the previous plugin copy still sitting at `plugins/<name>/` — no separate bookkeeping exists to drift out of sync.
+
+<Note>
+Because `plugins/<name>/` **is** the baseline, edits made directly inside it host-side are neither detected as customizations nor preserved. The container mounts it read-only; change the template, not the stamped copy.
+</Note>
+
+## Operational notes
+
+- **Restart to pick up changes.** Skill and MCP server changes take effect on the next container start: `ncl groups restart --id <agent-group-id>`.
+- **Restamping is idempotent.** If an apply fails partway, fix the cause and re-run it — the remaining changes converge.
+- **Approve deliberately.** When an agent requests a restamp through [self-modification](/extend/self-modification), the approval card shows only the command line. Run the dry run yourself before approving.
+- **Plugin-owned servers are locked.** `ncl groups config add-mcp-server` and `remove-mcp-server`, and the agent's own `add_mcp_server` tool, refuse to edit a server owned by a plugin. Removing one by hand doesn't stick either — it reappears on the next restamp. Update the template instead.
+- **New context files need a restamp.** Context extras are copied at stamp time, so files added to a template later don't reach an already-created agent on their own.
+
+## Related
+
+<Columns cols={2}>
+<Card title="Using a template" icon="wand-magic-sparkles" href="/templates/using-templates">
+Stamping an agent for the first time.
+</Card>
+<Card title="Building and submitting a template" icon="pen-ruler" href="/templates/building-and-submitting">
+Changing a template so there is something to restamp.
+</Card>
+</Columns>

@@ -20,6 +20,7 @@ NanoClaw's own parser ([`src/env.ts`](https://github.com/nanocoai/nanoclaw/blob/
 | `ASSISTANT_HAS_OWN_NUMBER` | `false` | `src/config.ts:47` | Set `true` when the assistant runs on its own WhatsApp number instead of yours. |
 | `ONECLI_URL` | — | `src/config.ts:75` | URL of the OneCLI Agent Vault. |
 | `ONECLI_API_KEY` | — | `src/config.ts:76` | API key for the vault. See [Credentials](/operate/credentials). |
+| `NANOCLAW_TEMPLATES_DIR` | `templates/` at the project root | `src/config.ts:63` | Local directory [templates](/templates/overview) resolve against. `--template <ref>` is a path relative to it. Resolved once at load — a local path only, never a URL, and never changed at runtime. |
 | `TZ` | system timezone, else `UTC` | `src/config.ts:101` | IANA timezone for scheduled tasks and timestamps. Invalid values are skipped, not errored. Injected into every agent container at spawn. |
 | `CONTAINER_CPU_LIMIT` | _unset_ (unbounded) | `src/config.ts:80` | Opt-in CPU cap per agent container, passed through to `docker run --cpus` (e.g. `2`). Empty leaves containers unbounded — the current default. Can be set in `.env` or the process environment. |
 | `CONTAINER_MEMORY_LIMIT` | _unset_ (unbounded) | `src/config.ts:81` | Opt-in memory cap per agent container, passed through to `docker run --memory` (e.g. `8g`). A hard cap only on a swapless host — there the runaway is OOM-killed; with swap present the container can spill past it. NanoClaw doesn't manage swap. Can be set in `.env` or the process environment. |
@@ -54,6 +55,7 @@ Consumed by the setup wizard (`pnpm run setup:auto`) and migration scripts, not 
 | `NANOCLAW_SKIP` | — | `setup/auto.ts:152` | Comma-separated step names to skip: `environment`, `container`, `onecli`, `auth`, `mounts`, `service`, `cli-agent`, `timezone`, `channel`, `verify`, `first-chat`. |
 | `NANOCLAW_DISPLAY_NAME` | `$USER` | `setup/auto.ts:502` | How agents address the operator — skips the prompt. |
 | `NANOCLAW_AGENT_PROVIDER` | — | `setup/auto.ts:938` | Preselects the agent provider and skips the setup picker (e.g. `claude`, `codex`). Setup fails if the value isn't a provider available in this install. |
+| `NANOCLAW_TEMPLATE_PATH` | — | `setup/auto.ts:218` | Presets the first-agent [template](/templates/using-templates) as a local ref (e.g. `sales/sdr`), skipping the picker. Same as `--template-path`. Honored even on an existing install, which otherwise never sees the picker. Setup warns and falls back to the picker if the ref isn't found. |
 | `NANOCLAW_AGENT_NAME` | — | `setup/channels/*.ts` | Pre-fills the agent name prompt in each channel setup flow. The CLI scratch agent is always "Terminal Agent". |
 | `NANOCLAW_CHANNELS` | — | `setup/migrate-v2/select-channels.ts:43` | Comma-separated channel names (e.g. `telegram,discord`) — skips the channel picker in the v2 migration flow. |
 | `NANOCLAW_V1_PATH` | sibling-directory scan | `migrate-v2.sh:196` | Explicit override for v1 install discovery in the migration flow. Validated against `$NANOCLAW_V1_PATH/store/messages.db` — the script fails with a message telling you to set it when auto-discovery misses. |

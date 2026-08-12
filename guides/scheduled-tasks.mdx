@@ -9,6 +9,10 @@ keywords: ["scheduled tasks", "ncl tasks", "cron", "recurrence", "process_after"
 
 v2 has no scheduler service. A scheduled task is a row in an isolated per-task session's `messages_in` table with `kind='task'` and a `process_after` timestamp — the same inbox machinery, swept by the same host sweep, as any chat message. You drive it through the `ncl tasks` CLI: ask the agent in chat and it runs `ncl tasks` on your behalf, or run the commands yourself from the host. This tutorial assumes a working install with a wired agent (see [your first agent](/guides/first-agent)).
 
+<Note>
+Agents stamped from a [template](/templates/overview) may arrive with recurring tasks already defined. They are created **paused** — list them with `ncl tasks list --group <agent-group-id> --status paused` and enable the ones you want with `ncl tasks resume <task-id>`.
+</Note>
+
 <Steps>
 <Step title="Schedule a task in chat">
 
