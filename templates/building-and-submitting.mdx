@@ -5,7 +5,7 @@ keywords: ["author template", "submit template", "plugin.json", "mcp.json", "ai.
 tag: "NEW"
 ---
 
-{/* verified-against: src/templates/{parse,manifest,extension,mcp,skills,tasks,plugin-dir,create-agent}.ts, src/container-config.ts, container/agent-runner/src/plugin-mcp.ts, docs/templates.md @ nanocoai/nanoclaw#3220 f8563abe; nanocoai/nanoclaw-templates {README.md,scripts/check-templates.mjs,.github/workflows/check-templates.yml} @ 3c7966a7, CONTRIBUTING.md @ nanocoai/nanoclaw-templates#20 699fe42 (paid-service disclosure, CI/engine lint delta, persona optional) */}
+{/* verified-against: src/templates/{parse,manifest,extension,mcp,skills,tasks,plugin-dir,create-agent}.ts, src/container-config.ts, container/agent-runner/src/plugin-mcp.ts, docs/templates.md @ nanocoai/nanoclaw#3220 1293ec56; nanocoai/nanoclaw-templates {README.md,scripts/check-templates.mjs,.github/workflows/check-templates.yml} @ 3c7966a7, CONTRIBUTING.md @ nanocoai/nanoclaw-templates#20 699fe42 (paid-service disclosure, CI/engine lint delta, persona optional) */}
 
 A template is an [Agent Plugins 1.0.0](https://agent-plugins.org) directory. This page walks the whole path: what goes in each part, how to verify it, and how to get it into the public registry.
 
@@ -107,10 +107,11 @@ The portable surface — `skills/` and `mcp.json` — follows the Agent Plugins 
 **Hard rule: templates are public. Never commit an API key, token, or any other credential.** Registry CI and NanoClaw's stamp-time lint both reject them, but neither is a substitute for reading your own diff before you commit.
 </Warning>
 
-Every credential-shaped `env` and `headers` value is the literal `"placeholder"`. The real value arrives one of two ways, never from the template:
+Every credential-shaped `env` and `headers` value is the literal `"placeholder"`. The real value comes from the [OneCLI Agent Vault](/operate/credentials), which injects it at request time, matched by API host. The key never sits in `mcp.json`, the container environment, or chat context.
 
-- **The [OneCLI Agent Vault](/operate/credentials) injects it at request time**, matched by API host. This is the normal path. The key never sits in `mcp.json`, the container environment, or chat context.
-- **The operator supplies it after stamping** — `ncl groups config add-mcp-server --headers` — for the rare endpoint that genuinely needs a static header.
+<Note>
+**Static header credentials on a plugin-owned server are unsupported by design.** There is no after-the-fact edit path: the ownership guard refuses `add-mcp-server` and `remove-mcp-server` for plugin-owned names. If an endpoint genuinely requires a static header, the operator adds a **separately named, user-owned** server with `ncl groups config add-mcp-server --headers` instead.
+</Note>
 
 Any value matching a known credential format is rejected outright, and the whole template fails to stamp:
 

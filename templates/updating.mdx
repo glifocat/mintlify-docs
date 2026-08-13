@@ -5,7 +5,7 @@ keywords: ["restamp", "template update", "ncl groups create --template --yes", "
 tag: "NEW"
 ---
 
-{/* verified-against: src/templates/restamp.ts, src/cli/resources/groups.ts, src/container-config.ts @ nanocoai/nanoclaw#3220 f8563abe; docs/templates.md @ nanocoai/nanoclaw#2909 ed19f8ea */}
+{/* verified-against: src/templates/restamp.ts, src/cli/resources/groups.ts, src/container-config.ts @ nanocoai/nanoclaw#3220 1293ec56; docs/templates.md @ nanocoai/nanoclaw#2909 ed19f8ea */}
 
 When a template gains a skill, fixes a persona, or changes a task schedule, you don't have to rebuild the agent. Restamping updates an already-stamped agent in place.
 
@@ -57,7 +57,7 @@ Two collision rules keep operator state safe:
 A header names the plugin and target group, then the run's status, then one aligned line per surface — **action, surface, name**, with any flags in parentheses:
 
 ```text
-Restamp "sdr" → group "SDR Agent" (3f2c8a91-7b4d-4e1a-9c02-5f8ab6d31e77)
+Restamp "sdr" → group "SDR Agent" (ag-3f2c8a91-7b4d-4e1a-9c02-5f8ab6d31e77)
 DRY RUN — nothing was changed. Re-run with --yes to apply. Pass --new to stamp a separate agent instead.
 
   update    plugin     plugins/sdr  (replaced wholesale from the template)

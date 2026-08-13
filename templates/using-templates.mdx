@@ -5,7 +5,7 @@ keywords: ["ncl groups create --template", "stamp agent", "template ref", "NANOC
 tag: "NEW"
 ---
 
-{/* verified-against: src/templates/{create-agent,local-dir,parse}.ts, src/cli/resources/{groups,tasks}.ts @ nanocoai/nanoclaw#3220 f8563abe; setup/{templates,auto}.ts, docs/templates.md @ nanocoai/nanoclaw#2909 ed19f8ea */}
+{/* verified-against: src/templates/{create-agent,local-dir,parse}.ts, src/cli/resources/{groups,tasks}.ts @ nanocoai/nanoclaw#3220 1293ec56; setup/{templates,auto}.ts, docs/templates.md @ nanocoai/nanoclaw#2909 ed19f8ea */}
 
 There are two ways to stamp an agent from a [template](/templates/overview): during installation, or anytime with `ncl`.
 
@@ -78,7 +78,7 @@ If the reader skipped or ignored anything — a non-conforming skill, an unsuppo
 
 ```json
 {
-  "id": "3f2c8a91-7b4d-4e1a-9c02-5f8ab6d31e77",
+  "id": "ag-3f2c8a91-7b4d-4e1a-9c02-5f8ab6d31e77",
   "name": "SDR Agent",
   "folder": "sdr-agent",
   "templateReport": [
@@ -89,10 +89,6 @@ If the reader skipped or ignored anything — a non-conforming skill, an unsuppo
 ```
 
 Components are never silently stripped. A missing `templateReport` means everything loaded. Fatal problems — an invalid manifest, a symlink, a smuggled credential — reject the whole template instead, and no group is created.
-
-<Note>
-The template path assigns a bare UUID. Only groups created with `--folder` carry the `ag-` prefix.
-</Note>
 
 `templateReport` is specific to the create response. When the same command [updates an existing agent](/templates/updating), reader notices come back under `report` instead.
 

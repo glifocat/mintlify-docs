@@ -5,7 +5,7 @@ keywords: ["template format", "plugin.json", "mcp.json schema", "agent plugins 1
 tag: "NEW"
 ---
 
-{/* verified-against: src/templates/{parse,manifest,extension,mcp,skills,tasks,plugin-dir,create-agent,local-dir}.ts, src/container-config.ts, src/modules/self-mod/request.ts, container/agent-runner/src/plugin-mcp.ts @ nanocoai/nanoclaw#3220 f8563abe */}
+{/* verified-against: src/templates/{parse,manifest,extension,mcp,skills,tasks,plugin-dir,create-agent,local-dir}.ts, src/container-config.ts, src/modules/self-mod/request.ts, container/agent-runner/src/plugin-mcp.ts @ nanocoai/nanoclaw#3220 1293ec56 */}
 
 The precise rules a [template](/templates/overview) is validated against. For a walkthrough of building one, see [Building and submitting a template](/templates/building-and-submitting).
 
@@ -117,12 +117,13 @@ Applied to every `env` and `headers` value at stamp time. The literal `"placehol
 | Condition | Result |
 | --- | --- |
 | Value matches `sk-`, `ghp_`, `github_pat_`, `xox[a-z]-`, `AKIA`, or `-----BEGIN ` | **Whole template rejected**, with the key named |
+| Same, after stripping a leading `Bearer `, `Token `, or `Basic ` (case-insensitive) | **Whole template rejected** — so `Bearer sk-…`, the common header shape, is caught too |
 | Key matches `TOKEN`, `SECRET`, `PASSWD`, `PASSWORD`, `API_KEY`, `APIKEY`, `CREDENTIAL`, `PRIVATE_KEY`, `PRIVATEKEY`, or `AUTH`, and the value is not `"placeholder"` | Warning in `templateReport`; the stamp proceeds |
 
 Key matching is case-insensitive and matches anywhere in the name, so `MY_SLACK_TOKEN_V2` matches on `TOKEN`.
 
 <Note>
-The registry's `check-templates.mjs` **fails** on the second case rather than warning, so a template that stamps cleanly locally can still be rejected by CI. See [Building and submitting a template](/templates/building-and-submitting).
+The registry's `check-templates.mjs` **fails** on the credential-shaped-key case rather than warning, so a template that stamps cleanly locally can still be rejected by CI. It also does not strip auth-scheme prefixes, so `Bearer sk-…` trips the engine but not the registry script. See [Building and submitting a template](/templates/building-and-submitting).
 </Note>
 
 As defense in depth, stored MCP config is re-validated whenever the container config is materialized; invalid entries are dropped and logged.
