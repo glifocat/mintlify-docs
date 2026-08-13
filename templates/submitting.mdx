@@ -1,15 +1,60 @@
 ---
 title: "Submitting a template"
-description: "Contribute a template to the public NanoClaw registry: where it goes, the standards CI enforces, the paid-service and monetization rules, and the PR checklist."
-keywords: ["submit template", "contribute template", "nanoclaw-templates", "check-templates.mjs", "registry standards", "template category", "paid services", "pull request"]
+description: "Contribute a template to the public NanoClaw registry: how acceptance and ownership work, where it goes, the standards CI enforces, the paid-service and monetization rules, and the PR checklist."
+keywords: ["submit template", "contribute template", "template acceptance", "template ownership", "author credit", "nanoclaw-templates", "check-templates.mjs", "registry standards", "template category", "paid services", "pull request"]
 tag: "NEW"
 ---
 
-{/* verified-against: nanocoai/nanoclaw-templates {README.md,scripts/check-templates.mjs,.github/workflows/check-templates.yml} @ 3c7966a7, CONTRIBUTING.md @ nanocoai/nanoclaw-templates#20 41b44bf; src/templates/{mcp,manifest,tasks,skills}.ts @ nanocoai/nanoclaw#3220 1293ec56 */}
+{/* verified-against: nanocoai/nanoclaw-templates {README.md,scripts/check-templates.mjs,.github/workflows/check-templates.yml} @ 3c7966a7, CONTRIBUTING.md @ nanocoai/nanoclaw-templates#20 41b44bf, LICENSE @ 3c7966a7; src/templates/{mcp,manifest,tasks,skills}.ts @ nanocoai/nanoclaw#3220 1293ec56. Acceptance/ownership policy is product policy, not code-derived. */}
 
 Templates ship in [`nanocoai/nanoclaw-templates`](https://github.com/nanocoai/nanoclaw-templates), a separate repo from NanoClaw itself. Contributions are accepted by pull request, and CI enforces most of the standards below automatically.
 
 Build and test the template first — see [Building a template](/templates/building). This page covers only what the registry adds on top.
+
+## Acceptance and ownership
+
+Read this before you invest the work. Two things about the registry are worth knowing up front.
+
+### Acceptance is at NanoClaw's discretion
+
+The catalog is curated, not a free-for-all. A submission has to bring real value to the community: it should do a job people actually have, work out of the box, and be more than one team's internal configuration. A well-built template can still be declined — because it's too narrow, because it substantially duplicates one already in the catalog, or because the catalog doesn't need it yet.
+
+<Tip>
+Unsure whether an idea fits? Open an issue describing it before building the whole thing. That's cheaper than finding out at review.
+</Tip>
+
+### Accepted templates become NanoClaw's to maintain
+
+Once a template is merged it is part of the catalog, and NanoClaw takes over responsibility for it. That means we may edit, restructure, retarget, recategorize, or retire it — updating a pinned MCP server version, rewriting a persona, folding it into another template — **without asking first**, the same as any other file in the repo.
+
+This isn't a formality. People stamp these templates expecting them to keep working, so the catalog has to stay maintainable as a whole, and that is only possible if the maintainers can change any part of it.
+
+Concretely, after merge:
+
+| | |
+| --- | --- |
+| Ongoing maintenance and support | NanoClaw |
+| Deciding when it changes, moves, or is retired | NanoClaw |
+| Fixing it when an upstream dependency breaks | NanoClaw |
+| Authorship credit | Yours, permanently |
+
+### You keep the credit
+
+Attribution is preserved through every later edit. Record it in the manifest, which supports an `author` object per the Agent Plugins spec:
+
+```json
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "sdr",
+  "author": { "name": "Your Name", "url": "https://github.com/your-handle" }
+}
+```
+
+`author` takes `name`, `email`, and `url` — any subset, and any other field is rejected. Add a credit line to the template's `README.md` too if you'd like it visible to people reading the folder. Neither gets stripped when the template is later edited.
+
+<Note>
+The registry is [MIT licensed](https://github.com/nanocoai/nanoclaw-templates/blob/main/LICENSE), and your contribution is accepted under that same license — so "ownership" here means stewardship and maintenance, not a transfer of copyright. Your work stays MIT, attributed to you, and anyone may fork it.
+</Note>
 
 ## Where it goes
 
@@ -99,7 +144,7 @@ Run `node scripts/check-templates.mjs`, then [stamp and drive it against a real 
 Scan for secrets one more time before you commit.
 </Step>
 <Step title="Open the PR">
-Describe what the template does, including any predefined tasks and the MCP servers and credentials it expects.
+Describe what the template does, including any predefined tasks and the MCP servers and credentials it expects. Set `author` in `plugin.json` so the credit lands with the template.
 </Step>
 </Steps>
 
@@ -117,6 +162,7 @@ Before requesting review, confirm each of these:
 - [ ] `node scripts/check-templates.mjs` passes.
 - [ ] The template has been [stamped and tested locally](/templates/building#testing-locally) with a bare ref.
 - [ ] No API keys, tokens, or other secrets appear anywhere in the diff.
+- [ ] You've read [Acceptance and ownership](#acceptance-and-ownership): acceptance is discretionary, and a merged template is NanoClaw's to maintain, with your authorship credited permanently.
 
 ## Related pages
 
