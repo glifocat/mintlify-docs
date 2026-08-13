@@ -16,7 +16,7 @@ Templates are [Agent Plugins 1.0.0](https://agent-plugins.org) directories. Nano
 | Rule | Value |
 | --- | --- |
 | Base directory | `templates/` at the project root, or `NANOCLAW_TEMPLATES_DIR` |
-| Ref form | Multi-segment relative path — `sales/sdr` → `templates/sales/sdr` |
+| Ref form | Multi-segment relative path — `<category>/<template>` → `templates/<category>/<template>` |
 | Plugin root | The leaf folder of the ref |
 | Rejected | Absolute paths, a leading `~`, and any ref resolving outside the base directory |
 | Remote refs | Not supported. No git URLs, no `--source`, no fetch at `ncl` time |

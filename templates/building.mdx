@@ -63,16 +63,16 @@ The portable surface — `skills/` and `mcp.json` — follows the Agent Plugins 
 ```json
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "sdr",
+  "name": "acme-agent",
   "version": "1.0.0",
-  "description": "Outbound SDR agent: prospecting, enrichment, sequencing, and CRM hygiene",
+  "description": "What this agent does, in one line",
   "extensions": {
-    "ai.nanoco.nanoclaw": { "agentName": "SDR Agent" }
+    "ai.nanoco.nanoclaw": { "agentName": "Acme Agent" }
   }
 }
 ```
 
-`$schema` must be exactly that URL. `name` is 1–64 characters of lowercase alphanumerics, hyphens, and periods; it must start and end alphanumeric and may not contain a `--` or `..` run. It is the plugin's machine name, independent of the folder path — `sales/sdr/` carries `"name": "sdr"` — and it is the folder the plugin is stamped under, at `groups/<folder>/plugins/<name>/`.
+`$schema` must be exactly that URL. `name` is 1–64 characters of lowercase alphanumerics, hyphens, and periods; it must start and end alphanumeric and may not contain a `--` or `..` run. It is the plugin's machine name, independent of the folder path — a template at `<category>/<template>/` can carry any valid `name` — and it is the folder the plugin is stamped under, at `groups/<folder>/plugins/<name>/`.
 
 `extensions["ai.nanoco.nanoclaw"].agentName` sets the display name of the stamped agent. Without it the agent is named after the template folder; an explicit `--name` beats both.
 
@@ -84,11 +84,11 @@ The portable surface — `skills/` and `mcp.json` — follows the Agent Plugins 
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
   "mcpServers": {
-    "hubspot": {
+    "crm": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@hubspot/mcp-server@0.4.0"],
-      "env": { "PRIVATE_APP_ACCESS_TOKEN": "placeholder" }
+      "args": ["-y", "@acme/mcp-server@1.2.3"],
+      "env": { "ACME_API_KEY": "placeholder" }
     },
     "microsoft-learn": {
       "type": "streamable-http",
@@ -133,36 +133,36 @@ Task scripts may call external services, but must not contain credentials either
 
 Some MCP servers refuse to start unless an environment variable *exists*, even though the real credential comes from the proxy. `"placeholder"` satisfies the boot check — it is the one value both linters always accept.
 
-`sales/sdr` is the worked example. `@hubspot/mcp-server` won't start without `PRIVATE_APP_ACCESS_TOKEN`, so the template ships it as a dummy:
+Say a server won't start unless `ACME_API_KEY` is set. Ship it as a dummy:
 
 ```json
-"hubspot": {
+"crm": {
   "type": "stdio",
   "command": "npx",
-  "args": ["-y", "@hubspot/mcp-server@0.4.0"],
-  "env": { "PRIVATE_APP_ACCESS_TOKEN": "placeholder" }
+  "args": ["-y", "@acme/mcp-server@1.2.3"],
+  "env": { "ACME_API_KEY": "placeholder" }
 }
 ```
 
 <Warning>
-That placeholder **is not the credential, and must stay as-is.** Once HubSpot is connected, the real key is injected for `api.hubapi.com` at request time. Never replace it with a real token.
+That placeholder **is not the credential, and must stay as-is.** Once the service is connected, the real key is injected for its API host at request time. Never replace it with a real token.
 </Warning>
 
-Only add a placeholder where the server actually demands one. In the same template, Exa needs no such variable and gets none.
+Only add a placeholder where the server actually demands one. A server that authenticates purely through the vault needs no such variable and should not get one.
 
 #### Document what the template needs
 
 A template that requires a connected service must say so in its own `README.md`. For each service, give:
 
-| | Example (`sales/sdr`) |
+| Field | Example |
 | --- | --- |
-| The service | HubSpot |
-| The API host to match | `api.hubapi.com` |
-| The auth style | `Authorization: Bearer` |
-| The exact scopes | `crm.objects.contacts.read`, `crm.objects.deals.write`, … |
-| Where to get the key | Development → Keys → Service keys (Super Admin required) |
+| The service | The vendor's name |
+| The API host to match | `api.example.com` |
+| The auth style | `Authorization: Bearer`, or an `X-Api-Key` header |
+| The exact scopes | Every scope the template actually uses, named individually |
+| Where to get the key | The console path, plus any account role it requires |
 
-[`sales/sdr/README.md`](https://github.com/nanocoai/nanoclaw-templates/blob/main/sales/sdr/README.md) is the pattern to follow — it lists every service in one table, then expands each with the steps to obtain the key.
+The templates already in the [registry](https://github.com/nanocoai/nanoclaw-templates) show the pattern: every service in one table, then a section per service with the steps to obtain its key.
 
 If any of those services costs money and you plan to submit the template, it also has to be [declared up front](/templates/submitting#paid-services-and-monetization).
 

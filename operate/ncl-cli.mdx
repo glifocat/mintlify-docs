@@ -71,7 +71,7 @@ ncl groups create --name "Research" --folder research
 ncl groups restart --id <group-id> --rebuild
 ```
 
-`create` also takes `--template <ref>` to stamp the new group from a [template](/templates/overview) — a ref relative to your local `templates/` directory, e.g. `sales/sdr`. When a group already carries that template's plugin, the same command shows an in-place [update plan](/templates/updating) instead; `--yes` applies it and `--new` forces a second agent.
+`create` also takes `--template <ref>` to stamp the new group from a [template](/templates/overview) — a ref relative to your local `templates/` directory, e.g. `<category>/<template>`. When a group already carries that template's plugin, the same command shows an in-place [update plan](/templates/updating) instead; `--yes` applies it and `--new` forces a second agent.
 
 `restart` kills and respawns the group's containers (`--rebuild` rebuilds the image first — required after package changes; `--message <text>` leaves an on-wake instruction). `delete` cascades through sessions, wirings, roles, memberships, and destinations in one transaction.
 

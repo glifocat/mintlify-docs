@@ -10,7 +10,7 @@ tag: "NEW"
 A **template** is a reusable directory you stamp into a working agent. It carries the agent's standing instructions, its MCP tool servers, its skills, and optional recurring tasks — but **no secrets and no provider**. Point `ncl` at one and you get a configured agent group in seconds.
 
 ```bash
-ncl groups create --template sales/sdr --name "SDR Agent"
+ncl groups create --template <category>/<template> --name "My Agent"
 ```
 
 <Note>
@@ -81,7 +81,7 @@ A template is only ever used to **create** an agent. There is no way to adopt on
 The only ongoing operation is [restamping](/templates/updating) — pulling a **newer version of the same template** into the agent that template created. Targeting anything else fails:
 
 ```text
-Group "Scout" does not carry plugin "sdr" — check the group id, or drop --id to stamp a new agent
+Group "Scout" does not carry plugin "acme-agent" — check the group id, or drop --id to stamp a new agent
 ```
 
 If you have an existing agent and want what a template offers, stamp a new agent from the template and wire it up alongside — or copy the pieces you want in by hand.

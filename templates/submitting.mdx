@@ -45,7 +45,7 @@ Attribution is preserved through every later edit. Record it in the manifest, wh
 ```json
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-  "name": "sdr",
+  "name": "acme-agent",
   "author": { "name": "Your Name", "url": "https://github.com/your-handle" }
 }
 ```
@@ -64,7 +64,7 @@ Every template lives under a **category** folder, one folder per template, at ex
 <category>/<template>/
 ```
 
-That path is also the ref people pass to `--template`, so `sales/sdr/` is stamped as `--template sales/sdr`. Templates nested deeper are not discovered.
+That path is also the ref people pass to `--template`: a template at `<category>/<template>/` is stamped with `--template <category>/<template>`. Templates nested deeper are not discovered.
 
 Categories in the registry today are `sales`, `product`, `data`, and `media`.
 
@@ -91,7 +91,7 @@ Check whether an existing category fits and reuse it before adding a new one. A 
 
 ## Paid services and monetization
 
-A template may depend on paid MCP servers or paid API tiers — Exa, HubSpot's paid plans, and similar are all fine. What isn't fine is a user discovering the paywall after they've stamped it.
+A template may depend on paid MCP servers or paid API tiers. That is fine. What isn't fine is a user discovering the paywall after they've stamped it.
 
 **The template's `README.md` must state, up front:**
 
@@ -123,7 +123,7 @@ node scripts/check-templates.mjs
 It walks every `<category>/<template>/` folder and reports all problems at once, exiting non-zero if any are found (listing order follows the filesystem, not the alphabet):
 
 ```text
-check-templates: 4 template(s) OK: data/analyst, media/journalist, product/competitor-analysis, sales/sdr
+check-templates: 4 template(s) OK: <category>/<template>, …
 ```
 
 Beyond the standards above, it also catches two migration mistakes: a `.mcp.json` that should be renamed to `mcp.json`, and a `context/instructions.md` with no `plugin.json` — the pre-plugin layout described above.

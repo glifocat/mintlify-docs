@@ -12,8 +12,8 @@ When a template gains a skill, fixes a persona, or changes a task schedule, you 
 `ncl groups create --template` stamps a **new** agent only when no group carries the plugin yet. When one already does, the same command becomes an in-place update of that agent.
 
 ```bash
-ncl groups create --template sales/sdr          # dry run: show the update plan
-ncl groups create --template sales/sdr --yes    # apply it
+ncl groups create --template <category>/<template>          # dry run: show the update plan
+ncl groups create --template <category>/<template> --yes    # apply it
 ncl groups restart --id <agent-group-id>        # skill and MCP changes take effect
 ```
 
@@ -42,7 +42,7 @@ Applying resets every plugin-owned surface to the template's version, overwritin
 Restamping only ever updates an agent **that template created**, to a newer version of the same template. It is not a way to adopt a template onto an existing agent — a hand-built group, or one stamped from a different template, is rejected:
 
 ```text
-Group "Scout" does not carry plugin "sdr" — check the group id, or drop --id to stamp a new agent
+Group "Scout" does not carry plugin "acme-agent" — check the group id, or drop --id to stamp a new agent
 ```
 
 The check is whether the group's workspace already holds that plugin's manifest. To give an existing agent a different template, create a new agent instead.
@@ -70,16 +70,16 @@ Two collision rules keep operator state safe:
 A header names the plugin and target group, then the run's status, then one aligned line per surface — **action, surface, name**, with any flags in parentheses:
 
 ```text
-Restamp "sdr" → group "SDR Agent" (ag-3f2c8a91-7b4d-4e1a-9c02-5f8ab6d31e77)
+Restamp "acme-agent" → group "Acme Agent" (ag-3f2c8a91-7b4d-4e1a-9c02-5f8ab6d31e77)
 DRY RUN — nothing was changed. Re-run with --yes to apply. Pass --new to stamp a separate agent instead.
 
-  update    plugin     plugins/sdr  (replaced wholesale from the template)
+  update    plugin     plugins/acme-agent  (replaced wholesale from the template)
   update    persona    instructions.prepend.md  (CUSTOMIZED — local edits lost)
-  update    skill      sdr-agent
+  update    skill      research
   remove    skill      old-play
   create    context    additional_context/pricing.md
-  unchanged mcp-server hubspot
-  skip      mcp-server exa  (a server you added has this name; the plugin version was not installed)
+  unchanged mcp-server crm
+  skip      mcp-server search  (a server you added has this name; the plugin version was not installed)
   update    task       morning-digest  (series tsk-9d2f1a7c; status "paused" kept)
 ```
 

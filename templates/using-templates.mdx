@@ -40,8 +40,8 @@ Installs that already have a channel-wired agent don't see the picker. To stamp 
 Advanced setup exposes the pick as **First-agent template**, which resolves to a local ref. The same setting is available as a flag or an environment variable:
 
 ```bash
-bash nanoclaw.sh --template-path sales/sdr
-NANOCLAW_TEMPLATE_PATH=sales/sdr bash nanoclaw.sh
+bash nanoclaw.sh --template-path <category>/<template>
+NANOCLAW_TEMPLATE_PATH=<category>/<template> bash nanoclaw.sh
 ```
 
 An explicit template path is honored even on an existing install. If the ref isn't found under your templates directory, setup warns and falls back to the picker.
@@ -49,7 +49,7 @@ An explicit template path is honored even on an existing install. If the ref isn
 ## Anytime, with `ncl`
 
 ```bash
-ncl groups create --template sales/sdr --name "SDR Agent"
+ncl groups create --template <category>/<template> --name "My Agent"
 ```
 
 This creates the agent group and stamps every surface the template carries. It does **not** wire the agent to a channel — run `/manage-channels` (or `ncl wirings create`) afterward, exactly as for a [hand-built group](/guides/first-agent).
@@ -62,12 +62,12 @@ This creates the agent group and stamps every surface the template carries. It d
 
 ### The template ref
 
-`--template <ref>` is a path **relative to your local templates directory** — `templates/` by default, or `NANOCLAW_TEMPLATES_DIR`. Refs are multi-segment, so `sales/sdr` resolves to `templates/sales/sdr`. The plugin root is the leaf folder; its manifest `name` is just `sdr`.
+`--template <ref>` is a path **relative to your local templates directory** — `templates/` by default, or `NANOCLAW_TEMPLATES_DIR`. Refs are multi-segment, so `<category>/<template>` resolves to `templates/<category>/<template>`. The plugin root is the leaf folder, and its manifest `name` is independent of the path.
 
 The ref must stay inside the templates directory. Absolute paths, a leading `~`, and `../` escapes are all rejected.
 
 ```bash
-ncl groups create --template sales/sdr          # templates/sales/sdr
+ncl groups create --template <category>/<template>   # templates/<category>/<template>
 ncl groups create --template /etc/passwd        # rejected: absolute path
 ncl groups create --template ../../secrets      # rejected: escapes the templates dir
 ```
