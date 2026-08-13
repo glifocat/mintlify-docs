@@ -33,7 +33,7 @@ For the exact rules the engine validates against, see [the template format refer
       </Folder>
     </Folder>
     <Folder name="tasks">
-      <File name="morning-digest.md" />
+      <File name="daily-summary.md" />
     </Folder>
   </Folder>
   <File name="README.md" />
@@ -274,7 +274,7 @@ ncl tasks run <task-id>                 # for a scripted task, run it once
 ncl tasks get <task-id>                 # inspect the result
 ```
 
-Check the create response for a `templateReport` array. Any entry there means a component was skipped or ignored — a non-conforming skill, an unsupported MCP transport, an unknown manifest field. CI won't catch these — it validates only `$schema` and `name` — so fix them before submitting; they are never silently stripped, and reviewers will see them too.
+Check the create response for a `templateReport` array. Any entry there means a component was skipped or ignored — a non-conforming skill, an unsupported MCP transport, an unknown manifest field. Registry CI catches the first two, but an unknown manifest field passes it — `check-templates.mjs` validates only `$schema` and `name` in the manifest — so fix every entry before submitting; nothing in the report is silently stripped.
 
 When you're done with the test agent, `ncl groups delete --id <agent-group-id>` removes it — see [removing a test agent](/templates/updating#operational-notes) for the on-disk leftovers it leaves behind.
 
