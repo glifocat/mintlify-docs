@@ -32,7 +32,13 @@ Applying resets every plugin-owned surface to the template's version, overwritin
 | Several groups carry it | The command fails and lists them by name and id. Pass `--id <group-id>` to pick one. |
 | You want a second agent from the same template | Pass `--new` to stamp another instead of updating. |
 
-Restamping only works against the **same plugin name**. To move an agent to a different template, create a new agent.
+Restamping only ever updates an agent **that template created**, to a newer version of the same template. It is not a way to adopt a template onto an existing agent — a hand-built group, or one stamped from a different template, is rejected:
+
+```text
+Group "Scout" does not carry plugin "sdr" — check the group id, or drop --id to stamp a new agent
+```
+
+The check is whether the group's workspace already holds that plugin's manifest. To give an existing agent a different template, create a new agent instead.
 
 ## What resets and what doesn't
 

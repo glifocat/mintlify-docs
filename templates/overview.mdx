@@ -71,6 +71,21 @@ Only `plugin.json` is required — it is the manifest and the discovery marker. 
 
 Because the provider is chosen separately, one template works on any provider.
 
+## Templates create new agents only
+
+A template is only ever used to **create** an agent. There is no way to adopt one onto an agent that already exists:
+
+- An agent you built by hand (`ncl groups create --folder …`) can never receive a template.
+- An agent stamped from one template can never be switched to a different one.
+
+The only ongoing operation is [restamping](/templates/updating) — pulling a **newer version of the same template** into the agent that template created. Targeting anything else fails:
+
+```text
+Group "Scout" does not carry plugin "sdr" — check the group id, or drop --id to stamp a new agent
+```
+
+If you have an existing agent and want what a template offers, stamp a new agent from the template and wire it up alongside — or copy the pieces you want in by hand.
+
 ## Where templates come from
 
 Templates resolve **only from a local directory** — `templates/` at the project root by default (committed but shipped empty), or whatever `NANOCLAW_TEMPLATES_DIR` points at. There is no git URL, no `--source`, and no remote fetch at `ncl` time.

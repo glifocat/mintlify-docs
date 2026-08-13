@@ -52,6 +52,10 @@ ncl groups create --template sales/sdr --name "SDR Agent"
 
 This creates the agent group and stamps every surface the template carries. It does **not** wire the agent to a channel — run `/manage-channels` (or `ncl wirings create`) afterward, exactly as for a [hand-built group](/guides/first-agent).
 
+<Note>
+**This always creates a new agent.** A template can't be applied to an agent that already exists — see [templates create new agents only](/templates/overview#templates-create-new-agents-only). The one exception is pulling a newer version of the *same* template into the agent it created, which is [restamping](/templates/updating).
+</Note>
+
 `--name` is optional. Without it the display name falls back to the template's own `agentName`, then to the template folder name. `--timezone <iana-id>` sets the group timezone, which is what template task schedules fire in.
 
 ### The template ref
