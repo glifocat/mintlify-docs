@@ -64,7 +64,7 @@ Every template lives under a **category** folder, one folder per template, at ex
 <category>/<template>/
 ```
 
-That path is also the ref people pass to `--template`: a template at `<category>/<template>/` is stamped with `--template <category>/<template>`. Templates nested deeper are not discovered.
+That path is also the ref people pass to `--template`: a template at `<category>/<template>/` is stamped with `--template <category>/<template>`. The engine stamps a more deeply nested ref fine, but the registry checks walk exactly two levels — nest deeper and the parent fails CI with `not a template: plugin.json missing`.
 
 Categories in the registry today are `sales`, `product`, `data`, and `media`.
 
@@ -126,7 +126,7 @@ It walks every `<category>/<template>/` folder and reports all problems at once,
 check-templates: 4 template(s) OK: <category>/<template>, …
 ```
 
-Beyond the standards above, it also catches two migration mistakes: a `.mcp.json` that should be renamed to `mcp.json`, and a `context/instructions.md` with no `plugin.json` — the pre-plugin layout described above.
+Beyond the standards above, it also catches two migration mistakes: a `.mcp.json` that should be renamed to `mcp.json`, and a `context/instructions.md` with no `plugin.json` — the [pre-plugin layout](/templates/building#migrating-from-the-pre-plugin-layout).
 
 ## Open the PR
 

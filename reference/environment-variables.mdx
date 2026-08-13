@@ -4,7 +4,7 @@ description: "Every environment variable NanoClaw reads — .env keys, host proc
 keywords: ["environment variables", ".env", "configuration", "ASSISTANT_NAME", "LOG_LEVEL", "NANOCLAW_SKIP", "NANOCLAW_EGRESS_LOCKDOWN", "setup", "reference"]
 ---
 
-{/* verified-against: src/config.ts, src/env.ts, src/log.ts, src/webhook-server.ts, src/egress-lockdown.ts, src/host-sweep.ts, src/container-runner.ts, src/providers/claude.ts, setup/auto.ts, setup/onecli.ts, setup/lib/setup-config.ts, setup/lib/claude-assist.ts, setup/lib/diagnostics.ts, setup/signal-auth.ts, setup/container.ts, setup/migrate-v2/select-channels.ts, migrate-v2.sh, setup/registry-login.ts, setup/lib/registry-state.ts, container/pull.sh, container/agent-runner/src/{timezone.ts,providers/claude.ts} @ 639577c3 */}
+{/* verified-against: src/config.ts, src/env.ts, src/log.ts, src/webhook-server.ts, src/egress-lockdown.ts, src/host-sweep.ts, src/container-runner.ts, src/providers/claude.ts, setup/auto.ts, setup/onecli.ts, setup/lib/setup-config.ts, setup/lib/claude-assist.ts, setup/lib/diagnostics.ts, setup/signal-auth.ts, setup/container.ts, setup/migrate-v2/select-channels.ts, migrate-v2.sh, setup/registry-login.ts, setup/lib/registry-state.ts, container/pull.sh, container/agent-runner/src/{timezone.ts,providers/claude.ts} @ 639577c3 + branch-only template behavior @ nanocoai/nanoclaw#3220 1293ec56, #2909 5df5800 */}
 
 Exhaustive list of every environment variable the NanoClaw host, setup wizard, and agent runner read. For how to actually set these — `.env` editing, service definitions, restart commands — see [Configuration](/operate/configuration).
 
@@ -37,8 +37,8 @@ Read from `process.env` at host startup, with no `.env` fallback. Putting these 
 | Variable | Default | Read in | Effect |
 |---|---|---|---|
 | `CONTAINER_IMAGE` | per-install tag | `src/config.ts:70` | Full agent image override (name and tag). |
-| `NANOCLAW_TEMPLATES_DIR` | `templates/` at the project root | `src/config.ts:63` | Local directory [templates](/templates/overview) resolve against; `--template <ref>` is relative to it. A local path only, never a URL. Resolved **once at host startup**, so setting it on an `ncl` invocation has no effect — `ncl` is a socket client and the host has already resolved the path. Change it in the service definition and restart the host. |
 | `CONTAINER_IMAGE_BASE` | per-install name | `src/config.ts:69` | Base image name override. The default embeds an install slug so two checkouts on one host don't clobber each other's image. |
+| `NANOCLAW_TEMPLATES_DIR` | `templates/` at the project root | `src/config.ts:63` | Local directory [templates](/templates/overview) resolve against; `--template <ref>` is relative to it. A local path only, never a URL. Resolved **once at host startup**, so setting it on an `ncl` invocation has no effect — `ncl` is a socket client and the host has already resolved the path. Change it in the service definition and restart the host. |
 | `WEBHOOK_PORT` | `3000` | `src/webhook-server.ts:113` | Port for the local webhook server. |
 | `LOG_LEVEL` | `info` | `src/log.ts:16` | One of `debug`, `info`, `warn`, `error`, `fatal`. |
 

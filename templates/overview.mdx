@@ -5,7 +5,7 @@ keywords: ["templates", "agent plugins", "plugin.json", "stamp", "ncl groups cre
 tag: "NEW"
 ---
 
-{/* verified-against: src/templates/{parse,manifest,extension,mcp,skills,tasks,plugin-dir,create-agent,local-dir}.ts, src/cli/resources/groups.ts, docs/templates.md @ nanocoai/nanoclaw#3220 1293ec56; setup/{templates,auto}.ts @ nanocoai/nanoclaw#2909 ed19f8ea; nanocoai/nanoclaw-templates @ 3c7966a7 */}
+{/* verified-against: src/templates/{parse,manifest,extension,mcp,skills,tasks,plugin-dir,create-agent,local-dir}.ts, src/cli/resources/groups.ts, docs/templates.md @ nanocoai/nanoclaw#3220 1293ec56; setup/{templates,auto}.ts @ nanocoai/nanoclaw#2909 5df5800; nanocoai/nanoclaw-templates @ 3c7966a7 */}
 
 A **template** is a reusable directory you stamp into a working agent. It carries the agent's standing instructions, its MCP tool servers, its skills, and optional recurring tasks — but **no secrets and no provider**. Point `ncl` at one and you get a configured agent group in seconds.
 
@@ -67,7 +67,7 @@ Only `plugin.json` is required — it is the manifest and the discovery marker. 
 | Provider, model, effort | Set on the agent afterward with `ncl groups config update`. The runtime defaults to the install's configured provider. |
 | API keys and tokens | The [OneCLI Agent Vault](/operate/credentials) injects them into outbound calls at request time. Credential-shaped values in a template are rejected at stamp time. |
 | Channel wiring | Stamping creates the agent group only. Wire it with `/manage-channels` or `ncl wirings create`, exactly as for a hand-built group. |
-| apt/npm packages | `ncl groups config add-package --id <agent-group-id>`, followed by `ncl groups restart --id <agent-group-id> --rebuild`. |
+| apt/npm packages | `ncl groups config add-package --id <agent-group-id> --apt <pkg>` (or `--npm`), followed by `ncl groups restart --id <agent-group-id> --rebuild`. |
 
 Because the provider is chosen separately, one template works on any provider.
 
@@ -88,7 +88,7 @@ If you have an existing agent and want what a template offers, stamp a new agent
 
 ## Where templates come from
 
-Templates resolve **only from a local directory** — `templates/` at the project root by default (committed but shipped empty), or whatever `NANOCLAW_TEMPLATES_DIR` points at. There is no git URL, no `--source`, and no remote fetch at `ncl` time.
+Templates resolve **only from a local directory** — `templates/` at the project root by default (committed, and ships with just a README), or whatever `NANOCLAW_TEMPLATES_DIR` points at. There is no git URL, no `--source`, and no remote fetch at `ncl` time.
 
 The public catalog is [`nanocoai/nanoclaw-templates`](https://github.com/nanocoai/nanoclaw-templates). Get a template from it into your local `templates/` one of two ways:
 
@@ -121,6 +121,6 @@ Restamp in place when the template changes — what resets, what is never touche
 Build one: manifest, MCP servers, skills, persona, tasks, and the no-secrets rule.
 </Card>
 <Card title="Template format reference" icon="book" href="/reference/template-format">
-Field-level validation rules, limits, the runtime contract, and the report catalog.
+Field-level validation rules, limits, and the runtime contract.
 </Card>
 </CardGroup>

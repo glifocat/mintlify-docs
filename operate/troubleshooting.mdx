@@ -4,7 +4,7 @@ description: "Diagnose NanoClaw v2 failures: host startup stops, container spawn
 keywords: ["troubleshooting", "debugging", "dropped messages", "container spawn", "upgrade tripwire", "host sweep", "LOG_LEVEL"]
 ---
 
-{/* verified-against: .claude/skills/debug/SKILL.md, src/container-runtime.ts, src/container-runner.ts, src/host-sweep.ts, src/upgrade-state.ts, src/log.ts, src/cli/resources/dropped-messages.ts, src/cli/resources/sessions.ts, src/egress-lockdown.ts, src/modules/mount-security/index.ts, src/webhook-server.ts, src/circuit-breaker.ts, setup/service.ts @ 4e83a0a0 */}
+{/* verified-against: .claude/skills/debug/SKILL.md, src/container-runtime.ts, src/container-runner.ts, src/host-sweep.ts, src/upgrade-state.ts, src/log.ts, src/cli/resources/dropped-messages.ts, src/cli/resources/sessions.ts, src/egress-lockdown.ts, src/modules/mount-security/index.ts, src/webhook-server.ts, src/circuit-breaker.ts, setup/service.ts @ 4e83a0a0 + branch-only template behavior @ nanocoai/nanoclaw#3220 1293ec56, #2909 5df5800 */}
 
 ## Start here
 
@@ -138,7 +138,7 @@ rm -rf data/v2-sessions/<group>/<session>/
 
 Expected on first use, not a fault. A [template](/templates/overview) ships no credentials, so the first call to a service the [vault](/operate/credentials) has no key for fails. The agent replies with a prefilled connect link for that host — open it, paste the key, and ask it to retry.
 
-The template's own `README.md` lists every service it expects, with the API host and required scopes.
+The template's own `README.md` lists the services it expects and how to connect them.
 
 ## Template task never fires
 

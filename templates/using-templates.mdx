@@ -5,7 +5,7 @@ keywords: ["ncl groups create --template", "stamp agent", "template ref", "NANOC
 tag: "NEW"
 ---
 
-{/* verified-against: src/templates/{create-agent,local-dir,parse}.ts, src/cli/resources/{groups,tasks}.ts @ nanocoai/nanoclaw#3220 1293ec56; setup/{templates,auto}.ts, docs/templates.md @ nanocoai/nanoclaw#2909 ed19f8ea */}
+{/* verified-against: src/templates/{create-agent,local-dir,parse}.ts, src/cli/resources/{groups,tasks}.ts @ nanocoai/nanoclaw#3220 1293ec56; setup/{templates,auto}.ts, docs/templates.md @ nanocoai/nanoclaw#2909 5df5800 */}
 
 There are two ways to stamp an agent from a [template](/templates/overview): during installation, or anytime with `ncl`.
 
@@ -30,10 +30,10 @@ Setup then stamps the agent through the same `ncl groups create --template` comm
 The provider you pick during setup stays separate from the template.
 
 <Note>
-Installs that already have a channel-wired agent don't see the picker. To stamp a template on one, use the CLI below or pass an explicit template path.
+Installs that already have a channel-wired agent don't see the picker. On such an install, stamp a template with the CLI below or by passing an explicit template path.
 </Note>
 
-**If setup failed partway through**, your pick is remembered in `.env`, so a rerun asks whether to continue with the same template. If the agent was already stamped, setup shows an update-in-place confirmation instead — declining leaves the existing agent untouched. See [Updating a stamped agent](/templates/updating) for what that update covers.
+**If setup failed partway through**, your pick is remembered in `.env`, so a rerun asks early whether to continue with the same template. If the agent was already stamped, a second prompt later in the same run asks whether to update it in place — declining leaves the existing agent untouched. See [Updating a stamped agent](/templates/updating) for what that update covers.
 
 ### Presetting a template
 
@@ -85,8 +85,9 @@ If the reader skipped or ignored anything — a non-conforming skill, an unsuppo
 ```json
 {
   "id": "ag-3f2c8a91-7b4d-4e1a-9c02-5f8ab6d31e77",
-  "name": "SDR Agent",
-  "folder": "sdr-agent",
+  "name": "My Agent",
+  "folder": "my-agent",
+  "…": "…",
   "templateReport": [
     "mcp.json: server \"legacy\" skipped: unsupported transport \"sse\"",
     "plugin.json: unknown field \"icon\" ignored"

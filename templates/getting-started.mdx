@@ -5,7 +5,7 @@ keywords: ["getting started", "template", "prebuilt agent", "nanoclaw.sh", "sale
 tag: "NEW"
 ---
 
-{/* verified-against: nanoclaw.sh, setup/{auto,templates}.ts, src/templates/{create-agent,local-dir}.ts, src/cli/resources/{groups,tasks}.ts @ nanocoai/nanoclaw#3220 1293ec56 + #2909 ed19f8ea; nanocoai/nanoclaw-templates @ 3c7966a7 */}
+{/* verified-against: nanoclaw.sh, setup/{auto,templates}.ts, src/templates/{create-agent,local-dir}.ts, src/cli/resources/{groups,tasks}.ts @ nanocoai/nanoclaw#3220 1293ec56 + #2909 5df5800; nanocoai/nanoclaw-templates @ 3c7966a7 */}
 
 A **template** is a prebuilt agent. Instead of describing what you want an assistant to do and shaping it over days, you pick one that already knows a job — outbound sales, competitor research, data analysis — and it arrives configured: standing instructions, tools, skills, and recurring routines.
 
@@ -31,6 +31,7 @@ Each template's own `README.md` says exactly what it does and which accounts it 
 - **macOS or Linux** (WSL works) with **4 GB+ RAM** — the installer warns below ~3.7 GB
 - **git**, to clone the repository
 - **A credential for your AI provider** — by default Claude (a Pro/Max subscription, an OAuth token, or an Anthropic API key); pick Codex instead and it's a ChatGPT subscription or an OpenAI API key
+- **A NanoClaw account sign-in**, if you take the recommended prebuilt sandbox image — a quick browser step during setup. Building the image locally instead needs no account
 
 Everything else — Homebrew on macOS, Node 22, pnpm, Docker, the credential vault — the installer handles. Two caveats from its pre-flight checks: don't run as root on Linux, and Google Cloud VMs are known not to work.
 
@@ -58,7 +59,7 @@ The wizard asks **"How should we create your first agent?"** early on — before
 
 > **From the NanoClaw template library**
 
-It clones the public catalog, lists what's in it, and copies your pick into your install. Choose the ref you decided on above, for example `sales/sdr`.
+It clones the public catalog and lists what's in it by name, with the ref as a hint beside each row. Pick the one you decided on above, and setup copies it into your install.
 
 The other two options are **Fresh agent** (no template — shape it by chatting) and **From local templates** (anything already in your `templates/` folder).
 
@@ -73,7 +74,7 @@ Nothing here is template-specific, and the defaults are good:
 3. **Provider sign-in** — press Enter for Claude and sign in, or pick Codex.
 4. **Access rules** — starts empty. The sandbox only sees what you share later.
 5. **Background service** — NanoClaw starts under launchd or systemd.
-6. **Your name**, **timezone**, and a **first contact** check.
+6. **Your name**, a **first contact** check, then **timezone**.
 7. **Channel** — connect Telegram (recommended), Discord, WhatsApp, Signal, iMessage, Slack, or Teams. Or skip and use the terminal.
 
 Your template is stamped into a working agent, and if you connected a channel it gets wired to it.

@@ -5,7 +5,7 @@ keywords: ["restamp", "template update", "ncl groups create --template --yes", "
 tag: "NEW"
 ---
 
-{/* verified-against: src/templates/restamp.ts, src/cli/resources/groups.ts, src/container-config.ts @ nanocoai/nanoclaw#3220 1293ec56; docs/templates.md @ nanocoai/nanoclaw#2909 ed19f8ea */}
+{/* verified-against: src/templates/restamp.ts, src/cli/resources/groups.ts, src/container-config.ts @ nanocoai/nanoclaw#3220 1293ec56; docs/templates.md @ nanocoai/nanoclaw#2909 5df5800 */}
 
 When a template gains a skill, fixes a persona, or changes a task schedule, you don't have to rebuild the agent. Restamping updates an already-stamped agent in place.
 
@@ -20,7 +20,7 @@ ncl groups restart --id <agent-group-id>        # skill and MCP changes take eff
 The dry run is the default and has no side effects. Nothing changes until you pass `--yes`.
 
 <Warning>
-**First, get the new version into your local `templates/`.** Restamping reads only your local copy — there is no built-in refresh from the registry, and the setup wizard deliberately keeps an existing local copy rather than overwriting it. If you skip this step the plan comes back `Nothing to apply — the group already matches the template.`, which looks like a no-op rather than a stale copy.
+**First, get the new version into your local `templates/`.** Restamping reads only your local copy — there is no built-in refresh from the registry, and the setup wizard deliberately keeps an existing local copy rather than overwriting it. If you skip this step the dry run lists every surface as `unchanged`, and applying with `--yes` reports `Nothing to apply — the group already matches the template.` — both read as a no-op rather than a stale copy.
 
 - **You authored the template** — edit it in place and re-run.
 - **It came from the registry** — clone or download the registry again and replace the local folder by hand.
@@ -67,7 +67,7 @@ Two collision rules keep operator state safe:
 
 ## Reading the plan
 
-A header names the plugin and target group, then the run's status, then one aligned line per surface — **action, surface, name**, with any flags in parentheses:
+A header names the plugin and target group, then the run's status, then one aligned line per surface in a fixed order — plugin, persona, context, skills, MCP servers, tasks — as **action, surface, name**, with any flags in parentheses:
 
 ```text
 Restamp "acme-agent" → group "Acme Agent" (ag-3f2c8a91-7b4d-4e1a-9c02-5f8ab6d31e77)
@@ -75,17 +75,17 @@ DRY RUN — nothing was changed. Re-run with --yes to apply. Pass --new to stamp
 
   update    plugin     plugins/acme-agent  (replaced wholesale from the template)
   update    persona    instructions.prepend.md  (CUSTOMIZED — local edits lost)
+  create    context    additional_context/pricing.md
   update    skill      research
   remove    skill      old-play
-  create    context    additional_context/pricing.md
   unchanged mcp-server crm
   skip      mcp-server search  (a server you added has this name; the plugin version was not installed)
-  update    task       morning-digest  (series tsk-9d2f1a7c; status "paused" kept)
+  update    task       morning-digest  (series morning-digest-9d2f; status "paused" kept)
 ```
 
 Actions are `create`, `update`, `remove`, `skip`, and `unchanged`. Surfaces are `plugin`, `persona`, `context`, `skill`, `mcp-server`, and `task`. If the reader skipped or ignored anything, a `Template reader notices:` block follows the table.
 
-Applying swaps the status line for `Restamp applied. Run ncl groups restart --id <group-id> for skill and MCP changes to take effect.` — or `Nothing to apply — the group already matches the template.` when every surface was already current.
+Applying swaps the status line for ``Restamp applied. Run `ncl groups restart --id <group-id>` for skill and MCP changes to take effect.`` — or `Nothing to apply — the group already matches the template.` when every surface was already current.
 
 <Note>
 This is the human rendering an operator sees. A restamp requested by the agent through [self-modification](/extend/self-modification) reports as JSON instead.

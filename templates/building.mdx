@@ -18,10 +18,10 @@ For the exact rules the engine validates against, see [the template format refer
   <File name="plugin.json" />
   <File name="mcp.json" />
   <Folder name="skills">
-    <Folder name="sdr-agent">
+    <Folder name="<skill-name>">
       <File name="SKILL.md" />
       <Folder name="references">
-        <File name="prospect-research.md" />
+        <File name="<reference>.md" />
       </Folder>
     </Folder>
   </Folder>
@@ -126,12 +126,12 @@ Any value matching a known credential format is rejected outright, and the whole
 Task scripts may call external services, but must not contain credentials either.
 
 <Note>
-**Registry CI is stricter than the engine here.** A credential-shaped *key* — anything matching `TOKEN`, `SECRET`, `PASSWORD`, `API_KEY`, `CREDENTIAL`, `PRIVATE_KEY`, or `AUTH` — with a value that isn't `"placeholder"` **fails CI**, while NanoClaw itself only warns at stamp time. A template that stamps cleanly on your machine can still be rejected by the registry. Use `"placeholder"` for every credential-shaped key.
+**Registry CI is stricter than the engine here.** A credential-shaped *key* — anything matching `TOKEN`, `SECRET`, `PASSWD`, `PASSWORD`, `API_KEY`, `APIKEY`, `CREDENTIAL`, `PRIVATE_KEY`, `PRIVATEKEY`, or `AUTH` — with a value that isn't `"placeholder"` **fails CI**, while NanoClaw itself only warns at stamp time. A template that stamps cleanly on your machine can still be rejected by the registry. Use `"placeholder"` for every credential-shaped key.
 </Note>
 
 #### Servers that need the variable present to boot
 
-Some MCP servers refuse to start unless an environment variable *exists*, even though the real credential comes from the proxy. `"placeholder"` satisfies the boot check — it is the one value both linters always accept.
+Some MCP servers refuse to start unless an environment variable *exists*, even though the real credential comes from the vault. `"placeholder"` satisfies the boot check — it is the one value both linters always accept.
 
 Say a server won't start unless `ACME_API_KEY` is set. Ship it as a dummy:
 
@@ -170,7 +170,7 @@ If any of those services costs money and you plan to submit the template, it als
 
 Each immediate subfolder of `skills/` is one skill, named after the folder. The whole folder is copied, so put `SKILL.md` (with `name` and `description` frontmatter) and any `references/*.md` inside it, following the usual [skill conventions](/extend/writing-skills).
 
-Skills land in the group's private skills overlay — keyed to that group, never shared with others. They auto-trigger by their `description`; they are not pre-loaded into the prompt.
+Skills land in the group's private skills overlay — keyed to that group, never shared with others. Each skill's `name` and `description` are always in the prompt, and that's what the auto-trigger matches on; only the body is read on demand.
 
 A non-conforming skill is skipped with a named notice at stamp time, never silently dropped.
 
@@ -182,7 +182,7 @@ A non-conforming skill is skipped with a named notice at stamp time, never silen
 **Keep it under roughly 200 lines.** It is always in the agent's prompt, and some providers cap that document (Codex at ~32 KB), so an over-long persona gets truncated. Put bulk material in `skills/` or `additional_context/` instead.
 </Tip>
 
-**The persona is optional, and the registry does not require one.** A plain conformant plugin with no extension directory stamps fine — the agent simply uses NanoClaw's default project doc. CI only checks that `instructions.md` is non-empty *if you ship one*.
+**The persona is optional — the registry recommends one but doesn't require it.** A plain conformant plugin with no extension directory stamps fine — the agent simply uses NanoClaw's default project doc. CI only checks that `instructions.md` is non-empty *if you ship one*.
 
 Ship a persona when it makes the template useful out of the box; skip it when the skills and MCP servers are the whole point.
 
@@ -274,7 +274,9 @@ ncl tasks run <task-id>                 # for a scripted task, run it once
 ncl tasks get <task-id>                 # inspect the result
 ```
 
-Check the create response for a `templateReport` array. Any entry there means a component was skipped or ignored — a non-conforming skill, an unsupported MCP transport, an unknown manifest field. Fix those before submitting; they are never silently stripped, and reviewers will see them too.
+Check the create response for a `templateReport` array. Any entry there means a component was skipped or ignored — a non-conforming skill, an unsupported MCP transport, an unknown manifest field. CI won't catch these — it validates only `$schema` and `name` — so fix them before submitting; they are never silently stripped, and reviewers will see them too.
+
+When you're done with the test agent, `ncl groups delete --id <agent-group-id>` removes it — see [removing a test agent](/templates/updating#operational-notes) for the on-disk leftovers it leaves behind.
 
 
 ## Migrating from the pre-plugin layout
