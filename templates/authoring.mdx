@@ -1,15 +1,15 @@
 ---
-title: "Building and submitting a template"
-description: "Build a template end to end — manifest, MCP servers, skills, persona, and tasks — then run the registry checks, test it against a real install, and open a pull request."
-keywords: ["author template", "submit template", "plugin.json", "mcp.json", "ai.nanoco.nanoclaw", "check-templates.mjs", "nanoclaw-templates", "template category", "no secrets"]
+title: "Authoring a template"
+description: "Build a template: the Agent Plugins manifest, MCP servers with placeholder credentials, skills, the persona and extra context, recurring tasks, and how to test it locally."
+keywords: ["author template", "plugin.json", "mcp.json", "ai.nanoco.nanoclaw", "instructions.md", "additional_context", "template tasks", "agent plugins", "test template"]
 tag: "NEW"
 ---
 
-{/* verified-against: src/templates/{parse,manifest,extension,mcp,skills,tasks,plugin-dir,create-agent}.ts, src/container-config.ts, container/agent-runner/src/plugin-mcp.ts, docs/templates.md @ nanocoai/nanoclaw#3220 1293ec56; nanocoai/nanoclaw-templates {README.md,scripts/check-templates.mjs,.github/workflows/check-templates.yml} @ 3c7966a7, CONTRIBUTING.md @ nanocoai/nanoclaw-templates#20 699fe42 (paid-service disclosure, CI/engine lint delta, persona optional) */}
+{/* verified-against: src/templates/{parse,manifest,extension,mcp,skills,tasks,plugin-dir,create-agent}.ts, src/container-config.ts, src/config.ts, container/agent-runner/src/plugin-mcp.ts, docs/templates.md @ nanocoai/nanoclaw#3220 1293ec56; nanocoai/nanoclaw-templates @ 3c7966a7 */}
 
-A template is an [Agent Plugins 1.0.0](https://agent-plugins.org) directory. This page walks the whole path: what goes in each part, how to verify it, and how to get it into the public registry.
+A template is an [Agent Plugins 1.0.0](https://agent-plugins.org) directory. This page covers what goes in each part and how to test it.
 
-For the exact rules the engine validates against, see [the template format reference](/reference/template-format).
+For the exact rules the engine validates against, see [the template format reference](/reference/template-format). To publish one to the public catalog, see [Submitting a template](/templates/submitting).
 
 ## Anatomy
 
@@ -164,7 +164,7 @@ A template that requires a connected service must say so in its own `README.md`.
 
 [`sales/sdr/README.md`](https://github.com/nanocoai/nanoclaw-templates/blob/main/sales/sdr/README.md) is the pattern to follow — it lists every service in one table, then expands each with the steps to obtain the key.
 
-If any of those services costs money, it also has to be [declared up front](#paid-services-and-monetization).
+If any of those services costs money and you plan to submit the template, it also has to be [declared up front](/templates/submitting#paid-services-and-monetization).
 
 ## Skills
 
@@ -230,103 +230,9 @@ Because the whole plugin is present, a skill can reference sibling files — a `
 
 stdio servers declared by the plugin get the spec's runtime contract: `PLUGIN_ROOT` and `PLUGIN_DATA` in their environment, and `${PLUGIN_ROOT}`/`${PLUGIN_DATA}` expansion in `args` elements and `env` values. See [the runtime contract](/reference/template-format#the-runtime-contract).
 
-## Migrating from the pre-plugin layout
+## Testing locally
 
-Templates written for the pre-plugin layout used a bare `context/instructions.md` as the discovery marker and `.mcp.json` for servers. That layout is no longer read — stamping one fails with a migration error.
-
-Re-fetch the template from the registry, or convert it:
-
-<Steps>
-<Step title="Add plugin.json">
-With the exact 1.0.0 `$schema` and a valid `name`. This is what makes the folder discoverable.
-</Step>
-<Step title="Rename .mcp.json to mcp.json">
-Add the MCP `$schema`, and give every server an explicit `"type"` of `stdio` or `streamable-http`. A leftover `.mcp.json` is ignored with a notice.
-</Step>
-<Step title="Move context/ and tasks/ under ai.nanoco.nanoclaw/">
-So they become `ai.nanoco.nanoclaw/context/` and `ai.nanoco.nanoclaw/tasks/`.
-</Step>
-</Steps>
-
-## Submitting to the registry
-
-Templates ship in [`nanocoai/nanoclaw-templates`](https://github.com/nanocoai/nanoclaw-templates), a separate repo from NanoClaw itself. Contributions are accepted by pull request, and CI enforces most of the standards below automatically.
-
-### Where it goes
-
-Every template lives under a **category** folder, one folder per template, at exactly two levels:
-
-```text
-<category>/<template>/
-```
-
-That path is also the ref people pass to `--template`, so `sales/sdr/` is stamped as `--template sales/sdr`. Templates nested deeper are not discovered.
-
-Categories in the registry today are `sales`, `product`, `data`, and `media`.
-
-<Tip>
-Check whether an existing category fits and reuse it before adding a new one. A new category must be a single, lowercase, broadly-recognized business function — `sales`, `support`, `engineering`, `marketing`, `ops`, `finance` — never a niche or product-specific label. The goal is a small, predictable set a newcomer can guess.
-</Tip>
-
-### What the registry requires
-
-`plugin.json` is the only required file. Everything else is optional to the loader, but the registry holds contributions to a higher bar than the engine does.
-
-| Path | Standard | Enforced by |
-| --- | --- | --- |
-| `plugin.json` | Present, with the exact 1.0.0 `$schema` and a valid `name` | CI |
-| `mcp.json` | Exact MCP `$schema`, exactly two top-level fields, a declared `type` per server | CI |
-| `mcp.json` credentials | Credential-shaped `env`/`headers` values carry the literal `"placeholder"` | CI |
-| `skills/<name>/SKILL.md` | Present, with `name` and `description` frontmatter | CI |
-| `ai.nanoco.nanoclaw/tasks/*.md` | `schedule` frontmatter, optional `script`, no other fields, non-empty body | CI |
-| Whole tree | No symlinks | CI |
-| `ai.nanoco.nanoclaw/context/instructions.md` | Optional. If shipped, it is non-empty | CI (only when the file exists) |
-| `README.md` | Explains what the template does, and for every service it needs: the API host, auth style, exact scopes, and where to get the key | Review |
-| `README.md` paid dependencies | Any paid service is declared up front, with a link and the required tier — see below | Review |
-| Whole template | No affiliate links, baked-in billing, or author monetization | Review |
-
-### Paid services and monetization
-
-A template may depend on paid MCP servers or paid API tiers — Exa, HubSpot's paid plans, and similar are all fine. What isn't fine is a user discovering the paywall after they've stamped it.
-
-**The template's `README.md` must state, up front:**
-
-- that the service is paid,
-- a link to the tool,
-- and which plan or tier the template needs, where the vendor gates the required capability behind one,
-- and that the user supplies **their own key**.
-
-Never ship a shared key, a template-owner key, or any credential the contributor controls. The user's key goes in their own [OneCLI Agent Vault](/operate/credentials) and stays there.
-
-<Tip>
-**Name the tier, don't quote the price.** Prices change and a stale figure in a README is worse than none — link the vendor's pricing page and name the plan instead. Tier names are far more stable than dollar amounts.
-</Tip>
-
-If the template works on a free tier with reduced capability, say which parts need the paid plan. That's more useful than a blanket "requires a paid subscription."
-
-<Warning>
-**No monetization through the registry template.** No affiliate or referral links, no baked-in billing, no revenue share wired into the template. A registry template is a configuration people can read and fork, not a distribution channel for the author.
-</Warning>
-
-### Run the checks locally
-
-The registry ships the same script CI runs. It has zero dependencies — plain Node:
-
-```bash
-node scripts/check-templates.mjs
-```
-
-It walks every `<category>/<template>/` folder and reports all problems at once, exiting non-zero if any are found (listing order follows the filesystem, not the alphabet):
-
-```text
-check-templates: 4 template(s) OK: data/analyst, media/journalist, product/competitor-analysis, sales/sdr
-```
-
-Beyond the standards above, it also catches two migration mistakes: a `.mcp.json` that should be renamed to `mcp.json`, and a `context/instructions.md` with no `plugin.json` — the pre-plugin layout described above.
-
-### Test it end to end
-
-Passing CI is not the same as working. Stamp your template before you open the PR.
+Stamp your template and drive it before you rely on it — or before you open a pull request.
 
 <Warning>
 `--template` resolves against your **NanoClaw install's** templates directory, not your clone of the registry. Stamping a bare ref from inside your clone will not find it — and prefixing the command with `NANOCLAW_TEMPLATES_DIR=…` will not help, because the **host process** reads that variable once at startup and `ncl` is only a socket client.
@@ -370,54 +276,38 @@ ncl tasks get <task-id>                 # inspect the result
 
 Check the create response for a `templateReport` array. Any entry there means a component was skipped or ignored — a non-conforming skill, an unsupported MCP transport, an unknown manifest field. Fix those before submitting; they are never silently stripped, and reviewers will see them too.
 
-### Open the PR
+
+## Migrating from the pre-plugin layout
+
+Templates written for the pre-plugin layout used a bare `context/instructions.md` as the discovery marker and `.mcp.json` for servers. That layout is no longer read — stamping one fails with a migration error.
+
+Re-fetch the template from the registry, or convert it:
 
 <Steps>
-<Step title="Fork and branch">
-Fork the registry and create a branch for your template.
+<Step title="Add plugin.json">
+With the exact 1.0.0 `$schema` and a valid `name`. This is what makes the folder discoverable.
 </Step>
-<Step title="Build it">
-Create the template at `<category>/<template>/`, starting with `plugin.json` and a persona. Add `mcp.json`, `skills/<name>/` folders, and tasks as needed, plus a `README.md`. Leave the provider unset — it is chosen on the agent later.
+<Step title="Rename .mcp.json to mcp.json">
+Add the MCP `$schema`, and give every server an explicit `"type"` of `stdio` or `streamable-http`. A leftover `.mcp.json` is ignored with a notice.
 </Step>
-<Step title="Check and test">
-Run `node scripts/check-templates.mjs`, then stamp and test the template against a real install.
-</Step>
-<Step title="Re-read the diff">
-Scan for secrets one more time before you commit.
-</Step>
-<Step title="Open the PR">
-Describe what the template does, including any predefined tasks and the MCP servers and credentials it expects.
+<Step title="Move context/ and tasks/ under ai.nanoco.nanoclaw/">
+So they become `ai.nanoco.nanoclaw/context/` and `ai.nanoco.nanoclaw/tasks/`.
 </Step>
 </Steps>
-
-Before requesting review, confirm each of these:
-
-- [ ] The template lives under an appropriate `<category>/<template>/`, reusing an existing category where one fits.
-- [ ] `plugin.json` is present with the exact 1.0.0 `$schema` and a valid `name`.
-- [ ] If the template ships `ai.nanoco.nanoclaw/context/instructions.md`, it is non-empty and stays focused — under roughly 200 lines, with bulk material in `skills/` or `additional_context/`.
-- [ ] Every `mcp.json` server declares a `type`, and every credential-shaped `env`/`headers` value is the literal `"placeholder"`.
-- [ ] Every task file has a non-empty `schedule`, an optional non-empty `script`, no other frontmatter fields, and a prompt body.
-- [ ] A per-template `README.md` explains the template, and for every service it needs gives the API host, auth style, exact scopes, and where to get the key.
-- [ ] Any `"placeholder"` env var is there because the server won't boot without it — and the README says never to replace it with a real key.
-- [ ] Every paid service is declared up front in the README: that it's paid, a link to the tool, the tier the template needs (if any), and that the user brings their own key. No prices quoted.
-- [ ] No affiliate or referral links, no baked-in billing, and no shared or author-owned credential anywhere in the template.
-- [ ] `node scripts/check-templates.mjs` passes.
-- [ ] The template has been stamped and tested locally with a bare ref.
-- [ ] No API keys, tokens, or other secrets appear anywhere in the diff.
 
 ## Related pages
 
 <CardGroup cols={2}>
+<Card title="Submitting a template" icon="code-pull-request" href="/templates/submitting">
+Registry standards, the checks script, and the PR checklist.
+</Card>
 <Card title="Template format reference" icon="book" href="/reference/template-format">
 Field-level validation rules, limits, and the runtime contract.
-</Card>
-<Card title="Updating a stamped agent" icon="rotate" href="/templates/updating">
-Deliver template changes to agents already running.
 </Card>
 <Card title="Writing skills" icon="pen-nib" href="/extend/writing-skills">
 Conventions a `skills/<name>/` folder follows.
 </Card>
-<Card title="Credentials" icon="key" href="/operate/credentials">
-Why no key ever belongs in a template.
+<Card title="Updating a stamped agent" icon="rotate" href="/templates/updating">
+Deliver template changes to agents already running.
 </Card>
 </CardGroup>

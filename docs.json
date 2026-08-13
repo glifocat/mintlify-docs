@@ -154,7 +154,7 @@
           {
             "group": "Templates",
             "icon": "layer-group",
-            "pages": ["templates/overview", "templates/using-templates", "templates/updating", "templates/building-and-submitting"]
+            "pages": ["templates/overview", "templates/using-templates", "templates/updating", "templates/authoring", "templates/submitting"]
           },
           {
             "group": "Extend",
