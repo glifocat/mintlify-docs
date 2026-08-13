@@ -123,7 +123,7 @@ Applied to every `env` and `headers` value at stamp time. The literal `"placehol
 Key matching is case-insensitive and matches anywhere in the name, so `MY_SLACK_TOKEN_V2` matches on `TOKEN`.
 
 <Note>
-The registry's `check-templates.mjs` **fails** on the credential-shaped-key case rather than warning, so a template that stamps cleanly locally can still be rejected by CI. It also does not strip auth-scheme prefixes, so `Bearer sk-…` trips the engine but not the registry script. See [Building and submitting a template](/templates/building-and-submitting).
+The registry's `check-templates.mjs` **fails** on the credential-shaped-key case rather than warning, so a template that stamps cleanly locally can still be rejected by CI. It also does not strip auth-scheme prefixes, so a `Bearer sk-…` value trips the engine but not the registry script — though only when the key itself isn't credential-shaped; an `Authorization` header still fails CI on the key rule. See [Building and submitting a template](/templates/building-and-submitting).
 </Note>
 
 As defense in depth, stored MCP config is re-validated whenever the container config is materialized; invalid entries are dropped and logged.

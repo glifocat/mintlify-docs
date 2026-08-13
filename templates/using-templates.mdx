@@ -30,8 +30,10 @@ Setup then stamps the agent through the same `ncl groups create --template` comm
 The provider you pick during setup stays separate from the template.
 
 <Note>
-Existing installs don't see the template picker. To stamp a template on an install that already has agent groups, use the CLI below or pass an explicit template path.
+Installs that already have a channel-wired agent don't see the picker. To stamp a template on one, use the CLI below or pass an explicit template path.
 </Note>
+
+**If setup failed partway through**, your pick is remembered in `.env`, so a rerun asks whether to continue with the same template. If the agent was already stamped, setup shows an update-in-place confirmation instead — declining leaves the existing agent untouched. See [Updating a stamped agent](/templates/updating) for what that update covers.
 
 ### Presetting a template
 
@@ -72,9 +74,9 @@ ncl groups create --template ../../secrets      # rejected: escapes the template
 
 To point the library somewhere else, set `NANOCLAW_TEMPLATES_DIR` to another **local** path. It is never a URL and never changes at runtime.
 
-```bash
-NANOCLAW_TEMPLATES_DIR="$(pwd)" ncl groups create --template sales/sdr --name "Test"
-```
+<Warning>
+`NANOCLAW_TEMPLATES_DIR` is read by the **host process**, once at startup. Setting it on an `ncl` invocation does nothing — `ncl` is a socket client, and the host resolved the path long before your command arrived. To change it, set it in the host service environment and restart the host.
+</Warning>
 
 ### Reading the create response
 

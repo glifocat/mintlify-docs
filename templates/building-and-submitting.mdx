@@ -232,7 +232,7 @@ stdio servers declared by the plugin get the spec's runtime contract: `PLUGIN_RO
 
 ## Migrating from the pre-plugin layout
 
-Templates written before vX.Y.Z used a bare `context/instructions.md` as the discovery marker and `.mcp.json` for servers. That layout is no longer read — stamping one fails with a migration error.
+Templates written for the pre-plugin layout used a bare `context/instructions.md` as the discovery marker and `.mcp.json` for servers. That layout is no longer read — stamping one fails with a migration error.
 
 Re-fetch the template from the registry, or convert it:
 
@@ -329,24 +329,33 @@ Beyond the standards above, it also catches two migration mistakes: a `.mcp.json
 Passing CI is not the same as working. Stamp your template before you open the PR.
 
 <Warning>
-`--template` resolves against your **NanoClaw install's** templates directory, not your clone of the registry. Stamping a bare ref from inside your clone will not find it.
+`--template` resolves against your **NanoClaw install's** templates directory, not your clone of the registry. Stamping a bare ref from inside your clone will not find it — and prefixing the command with `NANOCLAW_TEMPLATES_DIR=…` will not help, because the **host process** reads that variable once at startup and `ncl` is only a socket client.
 </Warning>
 
 <Tabs>
-<Tab title="Point at your clone">
+<Tab title="Copy into your install (simplest)">
+
+`templates/` ships with only a README, so create the category directory first:
 
 ```bash
-NANOCLAW_TEMPLATES_DIR="$(pwd)" ncl groups create \
-  --template <category>/<template> --name "Test"
-```
-
-</Tab>
-<Tab title="Copy into your install">
-
-```bash
-cp -R <category>/<template> <nanoclaw>/templates/<category>/<template>
+mkdir -p <nanoclaw>/templates/<category>
+cp -R <category>/<template> <nanoclaw>/templates/<category>/
 ncl groups create --template <category>/<template> --name "Test"
 ```
+
+Re-copy after every edit — the stamp reads the copy, not your clone.
+
+</Tab>
+<Tab title="Point the host at your clone">
+
+Set the variable in the **host service environment**, then restart the host so it picks up the new path:
+
+```bash
+# add NANOCLAW_TEMPLATES_DIR=/path/to/your/clone to the service environment
+ncl groups create --template <category>/<template> --name "Test"
+```
+
+Worth it only if you iterate a lot; otherwise re-copying is less trouble.
 
 </Tab>
 </Tabs>

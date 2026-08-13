@@ -134,6 +134,27 @@ ncl sessions list                              # find the session and its agent 
 rm -rf data/v2-sessions/<group>/<session>/
 ```
 
+## Template agent replies 401 or 403
+
+Expected on first use, not a fault. A [template](/templates/overview) ships no credentials, so the first call to a service the [vault](/operate/credentials) has no key for fails. The agent replies with a prefilled connect link for that host — open it, paste the key, and ask it to retry.
+
+The template's own `README.md` lists every service it expects, with the API host and required scopes.
+
+## Template task never fires
+
+Template tasks are created **paused** on purpose, so stamping never starts background work without consent. Nothing fires until you resume them:
+
+```bash
+ncl tasks list --group <agent-group-id> --status paused
+ncl tasks resume <task-id>
+```
+
+If a task is already resumed and still quiet, it's a normal scheduling problem rather than a template one — see [Scheduled tasks](/guides/scheduled-tasks).
+
+## Restamping reports "Nothing to apply"
+
+Restamping reads only your **local** `templates/` copy, and nothing refreshes it for you. Update the local folder first — edit it if you authored it, or re-download the registry copy — then re-run. See [Updating a stamped agent](/templates/updating).
+
 ## Getting help
 
 - Run `/debug` in Claude Code — it can read the logs and query the session DBs for you.

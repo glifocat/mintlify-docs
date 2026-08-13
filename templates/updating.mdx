@@ -20,6 +20,13 @@ ncl groups restart --id <agent-group-id>        # skill and MCP changes take eff
 The dry run is the default and has no side effects. Nothing changes until you pass `--yes`.
 
 <Warning>
+**First, get the new version into your local `templates/`.** Restamping reads only your local copy — there is no built-in refresh from the registry, and the setup wizard deliberately keeps an existing local copy rather than overwriting it. If you skip this step the plan comes back `Nothing to apply — the group already matches the template.`, which looks like a no-op rather than a stale copy.
+
+- **You authored the template** — edit it in place and re-run.
+- **It came from the registry** — clone or download the registry again and replace the local folder by hand.
+</Warning>
+
+<Warning>
 Applying resets every plugin-owned surface to the template's version, overwriting local edits to those files. The dry run flags them as **CUSTOMIZED** first — read it before you apply.
 </Warning>
 
@@ -78,7 +85,7 @@ DRY RUN — nothing was changed. Re-run with --yes to apply. Pass --new to stamp
 
 Actions are `create`, `update`, `remove`, `skip`, and `unchanged`. Surfaces are `plugin`, `persona`, `context`, `skill`, `mcp-server`, and `task`. If the reader skipped or ignored anything, a `Template reader notices:` block follows the table.
 
-Applying swaps the status line for `Restamp applied. Run ncl groups restart --id <id> for skill and MCP changes to take effect.` — or `Nothing to apply — the group already matches the template.` when every surface was already current.
+Applying swaps the status line for `Restamp applied. Run ncl groups restart --id <group-id> for skill and MCP changes to take effect.` — or `Nothing to apply — the group already matches the template.` when every surface was already current.
 
 <Note>
 This is the human rendering an operator sees. A restamp requested by the agent through [self-modification](/extend/self-modification) reports as JSON instead.
@@ -97,6 +104,8 @@ Because `plugins/<name>/` **is** the baseline, edits made directly inside it hos
 - **Approve deliberately.** When an agent requests a restamp through [self-modification](/extend/self-modification), the approval card shows only the command line. Run the dry run yourself before approving.
 - **Plugin-owned servers are locked.** `ncl groups config add-mcp-server` and `remove-mcp-server`, and the agent's own `add_mcp_server` tool, refuse to edit a server owned by a plugin. Removing one by hand doesn't stick either — it reappears on the next restamp. Update the template instead.
 - **New context files need a restamp.** Context extras are copied at stamp time, so files added to a template later don't reach an already-created agent on their own.
+- **`--name` and `--timezone` do nothing here.** Both apply only when an agent is created; on the update path they are silently ignored, so `--name "New Name" --yes` will not rename the group. Use `ncl groups update --id <agent-group-id> --name "New Name"`.
+- **Removing a test agent.** `ncl groups delete --id <agent-group-id>` cascades through sessions, wirings, and destinations, but leaves `groups/<folder>/` and `data/v2-sessions/<agent-group-id>/` on disk — delete those too if you want the workspace gone.
 
 ## Related pages
 

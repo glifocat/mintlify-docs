@@ -14,7 +14,7 @@ ncl groups create --template sales/sdr --name "SDR Agent"
 ```
 
 <Note>
-Templates use the [Agent Plugins 1.0.0](https://agent-plugins.org) format as of vX.Y.Z. Templates written for the earlier layout (a bare `context/instructions.md` marker and `.mcp.json`) are no longer read — see [migrating from the pre-plugin layout](/templates/building-and-submitting#migrating-from-the-pre-plugin-layout).
+Templates use the [Agent Plugins 1.0.0](https://agent-plugins.org) format. Templates written for the earlier layout (a bare `context/instructions.md` marker and `.mcp.json`) are no longer read — see [migrating from the pre-plugin layout](/templates/building-and-submitting#migrating-from-the-pre-plugin-layout).
 </Note>
 
 ## Why the format is a standard
@@ -67,7 +67,7 @@ Only `plugin.json` is required — it is the manifest and the discovery marker. 
 | Provider, model, effort | Set on the agent afterward with `ncl groups config update`. The runtime defaults to the install's configured provider. |
 | API keys and tokens | The [OneCLI Agent Vault](/operate/credentials) injects them into outbound calls at request time. Credential-shaped values in a template are rejected at stamp time. |
 | Channel wiring | Stamping creates the agent group only. Wire it with `/manage-channels` or `ncl wirings create`, exactly as for a hand-built group. |
-| apt/npm packages | `ncl groups config add-package`, followed by `ncl groups restart --rebuild`. |
+| apt/npm packages | `ncl groups config add-package --id <agent-group-id>`, followed by `ncl groups restart --id <agent-group-id> --rebuild`. |
 
 Because the provider is chosen separately, one template works on any provider.
 
