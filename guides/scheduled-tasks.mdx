@@ -5,9 +5,13 @@ description: "Hands-on tutorial: have your agent schedule a recurring task in ch
 keywords: ["scheduled tasks", "ncl tasks", "cron", "recurrence", "process_after", "series_id", "host sweep", "wakeAgent", "task script", "timezone"]
 ---
 
-{/* verified-against: src/cli/resources/tasks.ts, container/agent-runner/src/mcp-tools/scheduling.instructions.md, src/modules/scheduling/{create,db,recurrence,run-log}.ts, container/agent-runner/src/scheduling/task-script.ts, container/agent-runner/src/poll-loop.ts, container/agent-runner/src/timezone.ts, src/host-sweep.ts, src/session-manager.ts, src/config.ts, src/container-runner.ts, src/cli/resources/groups.ts @ 639577c3 */}
+{/* verified-against: src/cli/resources/tasks.ts, container/agent-runner/src/mcp-tools/scheduling.instructions.md, src/modules/scheduling/{create,db,recurrence,run-log}.ts, container/agent-runner/src/scheduling/task-script.ts, container/agent-runner/src/poll-loop.ts, container/agent-runner/src/timezone.ts, src/host-sweep.ts, src/session-manager.ts, src/config.ts, src/container-runner.ts, src/cli/resources/groups.ts @ 639577c3; template behavior @ 20d61af */}
 
 v2 has no scheduler service. A scheduled task is a row in an isolated per-task session's `messages_in` table with `kind='task'` and a `process_after` timestamp — the same inbox machinery, swept by the same host sweep, as any chat message. You drive it through the `ncl tasks` CLI: ask the agent in chat and it runs `ncl tasks` on your behalf, or run the commands yourself from the host. This tutorial assumes a working install with a wired agent (see [your first agent](/guides/first-agent)).
+
+<Note>
+Agents stamped from a [template](/templates/overview) may arrive with recurring tasks already defined. They are created **paused** — list them with `ncl tasks list --group <agent-group-id> --status paused` and enable the ones you want with `ncl tasks resume <task-id>`.
+</Note>
 
 <Steps>
 <Step title="Schedule a task in chat">

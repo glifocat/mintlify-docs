@@ -1,0 +1,174 @@
+---
+title: "Using a template"
+description: "Stamp an agent from a template during install or anytime with ncl, then wire it to a channel, connect credentials, and activate its recurring tasks."
+keywords: ["ncl groups create --template", "stamp agent", "template ref", "NANOCLAW_TEMPLATES_DIR", "NANOCLAW_TEMPLATE_PATH", "templateReport", "paused tasks"]
+tag: "NEW"
+---
+
+{/* verified-against: src/templates/{create-agent,local-dir,parse}.ts, src/cli/resources/{groups,tasks}.ts @ 20d61af; setup/{templates,auto}.ts, docs/templates.md @ 20d61af */}
+
+There are two ways to stamp an agent from a [template](/templates/overview): during installation, or anytime with `ncl`.
+
+## During installation
+
+Run the installer and setup offers a template before it builds the sandbox:
+
+```bash
+bash nanoclaw.sh
+```
+
+At the prompt **"How should we create your first agent?"** you get three choices:
+
+| Choice | What it does |
+| --- | --- |
+| **Fresh agent** | The default. No template — shape the agent by chatting with it. |
+| **From the NanoClaw template library** | Clones [`nanocoai/nanoclaw-templates`](https://github.com/nanocoai/nanoclaw-templates), lists what's in it, and copies your pick into your local `templates/` before stamping. |
+| **From local templates** | Lists the templates already in your `templates/` directory. |
+
+Setup then stamps the agent through the same `ncl groups create --template` command described below. The agent is created even when channel setup is skipped or can't finish wiring — when a channel is ready later, setup wires that existing agent and sends the welcome message.
+
+The provider you pick during setup stays separate from the template.
+
+<Note>
+Installs that already have a channel-wired agent don't see the picker. On such an install, stamp a template with the CLI below or by passing an explicit template path.
+</Note>
+
+**If setup failed partway through**, your pick is remembered in `.env`, so a rerun asks early whether to continue with the same template. If the agent was already stamped, a second prompt later in the same run asks whether to update it in place — declining leaves the existing agent untouched. See [Updating a stamped agent](/templates/updating) for what that update covers.
+
+### Presetting a template
+
+Advanced setup exposes the pick as **First-agent template**, which resolves to a local ref. The same setting is available as a flag or an environment variable:
+
+```bash
+bash nanoclaw.sh --template-path <category>/<template>
+NANOCLAW_TEMPLATE_PATH=<category>/<template> bash nanoclaw.sh
+```
+
+An explicit template path is honored even on an existing install. If the ref isn't found under your templates directory, setup warns and falls back to the picker.
+
+## Anytime, with `ncl`
+
+```bash
+ncl groups create --template <category>/<template> --name "My Agent"
+```
+
+This creates the agent group and stamps every surface the template carries. It does **not** wire the agent to a channel — run `/manage-channels` (or `ncl wirings create`) afterward, exactly as for a [hand-built group](/guides/first-agent).
+
+<Note>
+**This always creates a new agent.** A template can't be applied to an agent that already exists — see [templates create new agents only](/templates/overview#templates-create-new-agents-only). The one exception is pulling a newer version of the *same* template into the agent it created, which is [restamping](/templates/updating).
+</Note>
+
+`--name` is optional. Without it the display name falls back to the template's own `agentName`, then to the template folder name. `--timezone <iana-id>` sets the group timezone, which is what template task schedules fire in.
+
+### The template ref
+
+`--template <ref>` is a path **relative to your local templates directory** — `templates/` by default, or `NANOCLAW_TEMPLATES_DIR`. Refs are multi-segment, so `<category>/<template>` resolves to `templates/<category>/<template>`. The plugin root is the leaf folder, and its manifest `name` is independent of the path.
+
+The ref must stay inside the templates directory. Absolute paths, a leading `~`, and `../` escapes are all rejected.
+
+```bash
+ncl groups create --template <category>/<template>   # templates/<category>/<template>
+ncl groups create --template /etc/passwd        # rejected: absolute path
+ncl groups create --template ../../secrets      # rejected: escapes the templates dir
+```
+
+To point the library somewhere else, set `NANOCLAW_TEMPLATES_DIR` to another **local** path. It is never a URL and never changes at runtime.
+
+<Warning>
+`NANOCLAW_TEMPLATES_DIR` is read by the **host process**, once at startup. Setting it on an `ncl` invocation does nothing — `ncl` is a socket client, and the host resolved the path long before your command arrived. To change it, set it in the host service environment and restart the host.
+</Warning>
+
+### Reading the create response
+
+If the reader skipped or ignored anything — a non-conforming skill, an unsupported MCP transport, an unknown manifest field — the create response carries a `templateReport` array listing each item by name:
+
+```json
+{
+  "id": "ag-3f2c8a91-7b4d-4e1a-9c02-5f8ab6d31e77",
+  "name": "My Agent",
+  "folder": "my-agent",
+  "…": "…",
+  "templateReport": [
+    "mcp.json: server \"legacy\" skipped: unsupported transport \"sse\"",
+    "plugin.json: unknown field \"icon\" ignored"
+  ]
+}
+```
+
+Components are never silently stripped. A missing `templateReport` means everything loaded. Fatal problems — an invalid manifest, a symlink, a smuggled credential — reject the whole template instead, and no group is created.
+
+`templateReport` is specific to the create response. When the same command [updates an existing agent](/templates/updating), reader notices come back under `report` instead.
+
+## After stamping
+
+<Steps>
+<Step title="Wire it to a channel">
+
+Stamping creates the agent identity only. Connect it to a chat the usual way:
+
+```bash
+/manage-channels
+```
+
+See [Channels](/channels/overview) for the per-platform setup.
+
+</Step>
+<Step title="Connect credentials">
+
+Templates ship **no secrets**. Any MCP server that needs an API key gets one from the [OneCLI Agent Vault](/operate/credentials), which injects it into outbound HTTPS calls at request time — matched by API host.
+
+The common path needs no setup up front: the first time the agent calls a service with no credential, the API returns `401`/`403` and the agent replies with a prefilled connect link for that host. Open it, paste the key, and ask the agent to retry.
+
+Check the template's own `README.md` for which services it expects, the scopes each key needs, and whether any of them is a **paid** service — registry templates must declare that up front, with a link to the tool and the tier they need. You always supply your own key.
+
+</Step>
+<Step title="Activate recurring tasks">
+
+Template tasks are created **paused**, so stamping never starts background work without your consent. List and enable them:
+
+```bash
+ncl tasks list --group <agent-group-id> --status paused
+ncl tasks resume <task-id>
+```
+
+Resuming follows normal [scheduled task](/guides/scheduled-tasks) semantics — if the stored next run passed while the task was paused, it becomes eligible immediately.
+
+</Step>
+<Step title="Set the provider, if you want a specific one">
+
+The template doesn't pick one. To override the install default:
+
+```bash
+ncl groups config update --id <agent-group-id> --provider codex
+ncl groups restart --id <agent-group-id>
+```
+
+See [Providers](/extend/providers).
+
+</Step>
+</Steps>
+
+## What stamping actually created
+
+| Surface | Where it lands |
+| --- | --- |
+| The whole plugin | `groups/<folder>/plugins/<name>/`, mounted **read-only** in the container at `/workspace/agent/plugins/<name>` |
+| Writable plugin state | `groups/<folder>/plugin-data/<name>/` |
+| Persona | `groups/<folder>/instructions.prepend.md`, inlined at the top of the agent's `CLAUDE.md`/`AGENTS.md` every spawn |
+| Extra context files | `groups/<folder>/`, keeping their layout relative to `instructions.md` |
+| Skills | The group's private skills overlay — keyed to that group, never shared |
+| MCP servers | The group's container config, marked plugin-owned |
+| Tasks | Scheduled tasks in the DB, status `paused` |
+
+Plugin-owned MCP servers are template content, so `ncl groups config add-mcp-server` and `remove-mcp-server` refuse to edit them. Change the template and [restamp](/templates/updating) instead.
+
+## Next steps
+
+<CardGroup cols={2}>
+<Card title="Updating a stamped agent" icon="rotate" href="/templates/updating">
+Pull a newer version of the template into an agent already running.
+</Card>
+<Card title="Building a template" icon="pen-ruler" href="/templates/building">
+Build your own and contribute it to the catalog.
+</Card>
+</CardGroup>

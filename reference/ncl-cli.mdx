@@ -5,7 +5,7 @@ tag: "UPDATED"
 keywords: ["ncl", "cli", "reference", "commands", "flags", "groups", "wirings", "sessions", "roles", "members", "destinations", "approvals", "cli_scope"]
 ---
 
-{/* verified-against: src/cli/dispatch.ts, src/cli/crud.ts, src/cli/client.ts, src/cli/format.ts, src/cli/transport-errors.ts, src/cli/registry.ts, src/cli/frame.ts, src/cli/commands/help.ts, src/cli/resources/{approvals,destinations,dropped-messages,groups,members,messaging-groups,policies,roles,sessions,tasks,user-dms,users,wirings}.ts, src/channels/channel-defaults.ts, bin/ncl @ 639577c3 */}
+{/* verified-against: src/cli/dispatch.ts, src/cli/crud.ts, src/cli/client.ts, src/cli/format.ts, src/cli/transport-errors.ts, src/cli/registry.ts, src/cli/frame.ts, src/cli/commands/help.ts, src/cli/resources/{approvals,destinations,dropped-messages,groups,members,messaging-groups,policies,roles,sessions,tasks,user-dms,users,wirings}.ts, src/channels/channel-defaults.ts, bin/ncl @ 639577c3; template behavior @ 20d61af */}
 
 Exhaustive reference for the `ncl` admin CLI. For a task-oriented walkthrough, see [The ncl admin CLI](/operate/ncl-cli).
 
@@ -83,7 +83,7 @@ Agent groups — logical agent identities with their own workspace folder, histo
 | --- | --- | --- | --- |
 | list | `ncl groups list` | open | |
 | get | `ncl groups get --id <id>` | open | |
-| create | `ncl groups create --folder <folder> [--name <name>] [--template <ref>] [--timezone <iana-id>]` | approval | `--folder` required and immutable (except with `--template`, where the folder derives from the name); `--name` defaults to the folder. Idempotent on `--folder` — creating an existing folder returns the existing row. New ids are prefixed (`ag-<uuid>`). |
+| create | `ncl groups create --folder <folder> [--name <name>] [--template <ref>] [--timezone <iana-id>] [--id <id>] [--new] [--yes]` | approval | **Without `--template`:** `--folder` required and immutable, `--name` defaults to the folder, idempotent on `--folder` (creating an existing folder returns the existing row), and new ids are prefixed `ag-<uuid>`. **With `--template <ref>`:** stamps from a local [template](/templates/overview) under `templates/`. Combining it with `--folder` is **rejected** — a bare group *is* its folder, a templated group *is* its plugin. The display name is `--name`, else the manifest's `agentName`, else the template ref's leaf folder; the group folder derives from that name, with a random `-XXXXXXXX` suffix on collision. Always creates a new agent, except when updating one this template already made: a group can only be targeted if its workspace holds that plugin's manifest, so a hand-built group or one stamped from another template is rejected. Convergent rather than folder-idempotent: if a group already carries that plugin, the command returns an in-place [update plan](/templates/updating) instead of creating anything — `--yes` applies it, `--id` picks the target when several groups carry it, and `--new` forces a fresh stamp. `--name` and `--timezone` apply only when a group is created; both are ignored on an in-place update. Reader notices come back as `templateReport` on a create, and as `report` on an update. |
 | update | `ncl groups update --id <id> --name <name>` | approval | `name` is the only updatable column. |
 | delete | `ncl groups delete --id <id>` | approval | Custom cascading handler (not the generic single-table delete): removes sessions, destinations, approvals, role grants, memberships, and wirings in one FK-ordered transaction. Does **not** kill running containers or clean up `groups/<folder>/` and `data/v2-sessions/<id>/` on disk. |
 | restart | `ncl groups restart --id <id> [--rebuild] [--message <text>]` | approval | Host caller: restarts all running containers in the group. Agent caller: `--id` auto-filled, only the calling session restarts. `--rebuild` rebuilds the image first (required after package changes). `--message` queues an on-wake instruction so the fresh container starts and acts on it; without it the container stays stopped until the next user message. |
@@ -95,6 +95,8 @@ Agent groups — logical agent identities with their own workspace folder, histo
 | config remove-package | `ncl groups config remove-package --id <id> --apt <pkg> \| --npm <pkg>` | approval | Requires `ncl groups restart --rebuild`. |
 | config add-mount | `ncl groups config add-mount --id <id> --host <host-path> --container <container-path> [--ro]` | approval | **Host-only** — never runnable from inside a container (mounting host paths is a filesystem-access boundary). Adds a bind mount to `additional_mounts`; `--ro` makes it read-only. Restart required to take effect. |
 | config remove-mount | `ncl groups config remove-mount --id <id> --host <host-path> --container <container-path>` | approval | Host-only. Removes the matching mount. Restart required to take effect. |
+
+`add-mcp-server` and `remove-mcp-server` refuse to touch a server owned by a stamped [template](/templates/overview) — update the template and [restamp](/templates/updating) instead. A plugin-owned server removed by hand reappears on the next restamp.
 
 ## members
 

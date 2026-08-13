@@ -152,6 +152,11 @@
             "pages": ["guides/first-agent", "guides/customize-an-agent", "guides/scheduled-tasks", "guides/multi-agent-swarm"]
           },
           {
+            "group": "Templates",
+            "icon": "layer-group",
+            "pages": ["templates/getting-started", "templates/overview", "templates/using-templates", "templates/updating", "templates/building", "templates/submitting"]
+          },
+          {
             "group": "Extend",
             "icon": "puzzle-piece",
             "pages": ["extend/overview", "extend/tools", "extend/providers", "extend/self-modification", "extend/writing-skills"]
@@ -173,7 +178,7 @@
         "groups": [
           {
             "group": "Operating",
-            "pages": ["reference/ncl-cli", "reference/environment-variables", "reference/container-config", "reference/skills-catalog"]
+            "pages": ["reference/ncl-cli", "reference/environment-variables", "reference/container-config", "reference/template-format", "reference/skills-catalog"]
           },
           {
             "group": "Internals",

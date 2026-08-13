@@ -4,7 +4,7 @@ description: "Diagnose NanoClaw v2 failures: host startup stops, container spawn
 keywords: ["troubleshooting", "debugging", "dropped messages", "container spawn", "upgrade tripwire", "host sweep", "LOG_LEVEL"]
 ---
 
-{/* verified-against: .claude/skills/debug/SKILL.md, src/container-runtime.ts, src/container-runner.ts, src/host-sweep.ts, src/upgrade-state.ts, src/log.ts, src/cli/resources/dropped-messages.ts, src/cli/resources/sessions.ts, src/egress-lockdown.ts, src/modules/mount-security/index.ts, src/webhook-server.ts, src/circuit-breaker.ts, setup/service.ts @ 4e83a0a0 */}
+{/* verified-against: .claude/skills/debug/SKILL.md, src/container-runtime.ts, src/container-runner.ts, src/host-sweep.ts, src/upgrade-state.ts, src/log.ts, src/cli/resources/dropped-messages.ts, src/cli/resources/sessions.ts, src/egress-lockdown.ts, src/modules/mount-security/index.ts, src/webhook-server.ts, src/circuit-breaker.ts, setup/service.ts @ 4e83a0a0; template behavior @ 20d61af */}
 
 ## Start here
 
@@ -133,6 +133,27 @@ To wipe a misbehaving session's conversation state, remove its folder — the ho
 ncl sessions list                              # find the session and its agent group
 rm -rf data/v2-sessions/<group>/<session>/
 ```
+
+## Template agent replies 401 or 403
+
+Expected on first use, not a fault. A [template](/templates/overview) ships no credentials, so the first call to a service the [vault](/operate/credentials) has no key for fails. The agent replies with a prefilled connect link for that host — open it, paste the key, and ask it to retry.
+
+The template's own `README.md` lists the services it expects and how to connect them.
+
+## Template task never fires
+
+Template tasks are created **paused** on purpose, so stamping never starts background work without consent. Nothing fires until you resume them:
+
+```bash
+ncl tasks list --group <agent-group-id> --status paused
+ncl tasks resume <task-id>
+```
+
+If a task is already resumed and still quiet, it's a normal scheduling problem rather than a template one — see [Scheduled tasks](/guides/scheduled-tasks).
+
+## Restamping reports "Nothing to apply"
+
+Restamping reads only your **local** `templates/` copy, and nothing refreshes it for you. Update the local folder first — edit it if you authored it, or re-download the registry copy — then re-run. See [Updating a stamped agent](/templates/updating).
 
 ## Getting help
 

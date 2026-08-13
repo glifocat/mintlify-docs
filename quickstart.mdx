@@ -6,7 +6,7 @@ icon: "bolt"
 keywords: ["setup", "install", "getting started", "nanoclaw.sh", "setup wizard", "first agent", "things to try"]
 ---
 
-{/* verified-against: nanoclaw.sh, setup.sh, setup/auto.ts, setup/probe.sh, setup/install-node.sh, setup/channels/*.ts, setup/providers/registry.ts, scripts/init-first-agent.ts, .claude/skills/setup/SKILL.md, package.json, container/agent-runner/src/providers/claude.ts, container/agent-runner/src/mcp-tools/agents.ts, src/modules/agent-to-agent/create-agent.ts, src/session-manager.ts, src/claude-md-compose.ts, src/channels/cli.ts @ 639577c3 */}
+{/* verified-against: nanoclaw.sh, setup.sh, setup/auto.ts, setup/probe.sh, setup/install-node.sh, setup/channels/*.ts, setup/providers/registry.ts, scripts/init-first-agent.ts, .claude/skills/setup/SKILL.md, package.json, container/agent-runner/src/providers/claude.ts, container/agent-runner/src/mcp-tools/agents.ts, src/modules/agent-to-agent/create-agent.ts, src/session-manager.ts, src/claude-md-compose.ts, src/channels/cli.ts @ 639577c3; template behavior @ 20d61af */}
 
 About 15 minutes from a fresh machine to an assistant you can message — one command, a handful of prompts, and one thing you bring yourself: a credential for your AI provider (a Claude or Codex subscription, or an API key). The script installs everything else.
 
@@ -34,21 +34,22 @@ Everything else — Homebrew on macOS, Node 22, pnpm, Docker, the OneCLI vault �
   <Step title="Answer the wizard">
     Press Enter on **Standard setup** (or pick **Advanced** to override defaults), then the wizard walks through:
 
-    <Frame caption="The wizard right after the system check — the sandbox step that follows is the long one (a large image fetch that typically takes a few minutes, or a 3–10 minute local build).">
+    <Frame caption="The wizard right after the system check. The first-agent template prompt comes next, then the sandbox step — the long one (a large image fetch that typically takes a few minutes, or a 3–10 minute local build).">
       <img src="/images/setup-wizard.png" alt="Terminal running the NanoClaw setup wizard: the NanoClaw splash art, Standard setup selected, the system check passed, and the sandbox build starting" />
     </Frame>
 
     1. **System check** — verifies your environment
-    2. **Sandbox image** — choose where the agent sandbox image comes from. The recommended default fetches the pre-built [Echo hardened image](/guides/echo-hardened-runtime): a quick browser sign-in to NanoClaw, then a large download that typically takes a few minutes. Or pick **Build it here** — no account, 3–10 minutes on a fresh machine.
-    3. **OneCLI vault** — installs the credential vault, or offers to reuse an existing OneCLI instance. Your agent never sees your API keys; the vault injects them into approved requests as they leave the sandbox.
-    4. **Choose your agent runtime and connect** — Claude is the default: press Enter, then sign in with your Claude subscription (opens a browser), paste an OAuth token (`sk-ant-oat…`), or paste an API key (`sk-ant-api…`). Or pick **Codex** to install it inline and authenticate with a ChatGPT subscription or OpenAI API key — either way the credential lands in the vault, never the container
-    5. **Access rules** — writes the assistant's filesystem access rules (empty to start — the sandbox only sees what you explicitly share later)
-    6. **Background service** — starts NanoClaw under launchd (macOS) or a systemd user service (Linux)
-    7. **Your name** — what the assistant should call you
-    8. **First contact** — the wizard pings your assistant and waits for a reply. First startup takes 30–60 seconds while the sandbox warms up. You can pause here and chat from the terminal.
-    9. **Timezone** — auto-detected, confirmed with you
-    10. **Channel** — connect Telegram (recommended), Discord, WhatsApp, Signal, iMessage, Slack, or Microsoft Teams — or skip and use the terminal. Other channels install after setup with `/add-<name>` in Claude Code.
-    11. **Final check** — makes sure everything works together: credentials, service, and configured channels, flagging anything left to fix
+    2. **Your first agent** — start with a **Fresh agent** (the default — shape it by chatting), or stamp one from a [template](/templates/overview): prebuilt agents from the NanoClaw template library, or whatever is already in your local `templates/`. A library pick is copied locally, then stamped. Existing installs skip this prompt.
+    3. **Sandbox image** — choose where the agent sandbox image comes from. The recommended default fetches the pre-built [Echo hardened image](/guides/echo-hardened-runtime): a quick browser sign-in to NanoClaw, then a large download that typically takes a few minutes. Or pick **Build it here** — no account, 3–10 minutes on a fresh machine.
+    4. **OneCLI vault** — installs the credential vault, or offers to reuse an existing OneCLI instance. Your agent never sees your API keys; the vault injects them into approved requests as they leave the sandbox.
+    5. **Choose your agent runtime and connect** — Claude is the default: press Enter, then sign in with your Claude subscription (opens a browser), paste an OAuth token (`sk-ant-oat…`), or paste an API key (`sk-ant-api…`). Or pick **Codex** to install it inline and authenticate with a ChatGPT subscription or OpenAI API key — either way the credential lands in the vault, never the container
+    6. **Access rules** — writes the assistant's filesystem access rules (empty to start — the sandbox only sees what you explicitly share later)
+    7. **Background service** — starts NanoClaw under launchd (macOS) or a systemd user service (Linux)
+    8. **Your name** — what the assistant should call you
+    9. **First contact** — the wizard pings your assistant and waits for a reply. First startup takes 30–60 seconds while the sandbox warms up. You can pause here and chat from the terminal.
+    10. **Timezone** — auto-detected, confirmed with you
+    11. **Channel** — connect Telegram (recommended), Discord, WhatsApp, Signal, iMessage, Slack, or Microsoft Teams — or skip and use the terminal. Other channels install after setup with `/add-<name>` in Claude Code.
+    12. **Final check** — makes sure everything works together: credentials, service, and configured channels, flagging anything left to fix
   </Step>
 
   <Step title="Send your first message">

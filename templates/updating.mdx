@@ -1,0 +1,119 @@
+---
+title: "Updating a stamped agent"
+description: "Restamp an agent in place when its template changes — read the dry-run plan, understand what resets and what is never touched, and spot customizations before they are lost."
+keywords: ["restamp", "template update", "ncl groups create --template --yes", "CUSTOMIZED", "--new", "plugin-owned mcp server", "dry run"]
+tag: "NEW"
+---
+
+{/* verified-against: src/templates/restamp.ts, src/cli/resources/groups.ts, src/container-config.ts @ 20d61af; docs/templates.md @ 20d61af */}
+
+When a template gains a skill, fixes a persona, or changes a task schedule, you don't have to rebuild the agent. Restamping updates an already-stamped agent in place.
+
+`ncl groups create --template` stamps a **new** agent only when no group carries the plugin yet. When one already does, the same command becomes an in-place update of that agent.
+
+```bash
+ncl groups create --template <category>/<template>          # dry run: show the update plan
+ncl groups create --template <category>/<template> --yes    # apply it
+ncl groups restart --id <agent-group-id>        # skill and MCP changes take effect
+```
+
+The dry run is the default and has no side effects. Nothing changes until you pass `--yes`.
+
+<Warning>
+**First, get the new version into your local `templates/`.** Restamping reads only your local copy — there is no built-in refresh from the registry, and the setup wizard deliberately keeps an existing local copy rather than overwriting it. If you skip this step the dry run lists every surface as `unchanged`, and applying with `--yes` reports `Nothing to apply — the group already matches the template.` — both read as a no-op rather than a stale copy.
+
+- **You authored the template** — edit it in place and re-run.
+- **It came from the registry** — clone or download the registry again and replace the local folder by hand.
+</Warning>
+
+<Warning>
+Applying resets every plugin-owned surface to the template's version, overwriting local edits to those files. The dry run flags them as **CUSTOMIZED** first — read it before you apply.
+</Warning>
+
+## Picking the target
+
+| Situation | What happens |
+| --- | --- |
+| No group carries the plugin | A new agent is stamped. |
+| Exactly one group carries it | That agent's update plan is shown. |
+| Several groups carry it | The command fails and lists them by name and id. Pass `--id <group-id>` to pick one. |
+| You want a second agent from the same template | Pass `--new` to stamp another instead of updating. |
+
+Restamping only ever updates an agent **that template created**, to a newer version of the same template. It is not a way to adopt a template onto an existing agent — a hand-built group, or one stamped from a different template, is rejected:
+
+```text
+Group "Scout" does not carry plugin "acme-agent" — check the group id, or drop --id to stamp a new agent
+```
+
+The check is whether the group's workspace already holds that plugin's manifest. To give an existing agent a different template, create a new agent instead.
+
+## What resets and what doesn't
+
+The template — including its `ai.nanoco.nanoclaw` extension — is the source of truth for everything it stamps. Restamping resets exactly those surfaces and touches nothing else.
+
+| Reset to the template | Never touched |
+| --- | --- |
+| `plugins/<name>/`, replaced wholesale | Memory, sessions, and chat history |
+| The skills overlay: per skill, updated, added, or removed | Skills the agent authored itself |
+| Plugin-owned MCP servers, swapped as a set | MCP servers you added with `add-mcp-server` |
+| Persona (`instructions.prepend.md`) and context files | Other workspace files the plugin never shipped |
+| Task definitions, matched by name; dropped tasks are deleted | Task pause/resume state and `plugin-data/<name>/` |
+| | Channel wiring, provider, model, and packages |
+
+Two collision rules keep operator state safe:
+
+- **Your servers win.** A template server whose name is already taken by a server you added is skipped with a notice, and yours stays in place.
+- **Activation survives.** A task you resumed stays resumed while its prompt and schedule update.
+
+## Reading the plan
+
+A header names the plugin and target group, then the run's status, then one aligned line per surface in a fixed order — plugin, persona, context, skills, MCP servers, tasks — as **action, surface, name**, with any flags in parentheses:
+
+```text
+Restamp "acme-agent" → group "Acme Agent" (ag-3f2c8a91-7b4d-4e1a-9c02-5f8ab6d31e77)
+DRY RUN — nothing was changed. Re-run with --yes to apply. Pass --new to stamp a separate agent instead.
+
+  update    plugin     plugins/acme-agent  (replaced wholesale from the template)
+  update    persona    instructions.prepend.md  (CUSTOMIZED — local edits lost)
+  create    context    additional_context/pricing.md
+  update    skill      research
+  remove    skill      old-play
+  unchanged mcp-server crm
+  skip      mcp-server search  (a server you added has this name; the plugin version was not installed)
+  update    task       morning-digest  (series morning-digest-9d2f; status "paused" kept)
+```
+
+Actions are `create`, `update`, `remove`, `skip`, and `unchanged`. Surfaces are `plugin`, `persona`, `context`, `skill`, `mcp-server`, and `task`. If the reader skipped or ignored anything, a `Template reader notices:` block follows the table.
+
+Applying swaps the status line for ``Restamp applied. Run `ncl groups restart --id <group-id>` for skill and MCP changes to take effect.`` — or `Nothing to apply — the group already matches the template.` when every surface was already current.
+
+<Note>
+This is the human rendering an operator sees. A restamp requested by the agent through [self-modification](/extend/self-modification) reports as JSON instead.
+</Note>
+
+**CUSTOMIZED** means the live copy differs from what the *previous* template version stamped, so applying discards your local edits to that file. The baseline for that comparison is the previous plugin copy still sitting at `plugins/<name>/` — no separate bookkeeping exists to drift out of sync.
+
+<Note>
+Because `plugins/<name>/` **is** the baseline, edits made directly inside it host-side are neither detected as customizations nor preserved. The container mounts it read-only; change the template, not the stamped copy.
+</Note>
+
+## Operational notes
+
+- **Restart to pick up changes.** Skill and MCP server changes take effect on the next container start: `ncl groups restart --id <agent-group-id>`.
+- **Restamping is idempotent.** If an apply fails partway, fix the cause and re-run it — the remaining changes converge.
+- **Approve deliberately.** When an agent requests a restamp through [self-modification](/extend/self-modification), the approval card shows only the command line. Run the dry run yourself before approving.
+- **Plugin-owned servers are locked.** `ncl groups config add-mcp-server` and `remove-mcp-server`, and the agent's own `add_mcp_server` tool, refuse to edit a server owned by a plugin. Removing one by hand doesn't stick either — it reappears on the next restamp. Update the template instead.
+- **New context files need a restamp.** Context extras are copied at stamp time, so files added to a template later don't reach an already-created agent on their own.
+- **`--name` and `--timezone` do nothing here.** Both apply only when an agent is created; on the update path they are silently ignored, so `--name "New Name" --yes` will not rename the group. Use `ncl groups update --id <agent-group-id> --name "New Name"`.
+- **Removing a test agent.** `ncl groups delete --id <agent-group-id>` cascades through sessions, wirings, and destinations, but leaves `groups/<folder>/` and `data/v2-sessions/<agent-group-id>/` on disk — delete those too if you want the workspace gone.
+
+## Related pages
+
+<CardGroup cols={2}>
+<Card title="Using a template" icon="wand-magic-sparkles" href="/templates/using-templates">
+Stamping an agent for the first time.
+</Card>
+<Card title="Building a template" icon="pen-ruler" href="/templates/building">
+Changing a template so there is something to restamp.
+</Card>
+</CardGroup>

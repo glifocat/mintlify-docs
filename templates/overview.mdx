@@ -1,0 +1,126 @@
+---
+title: "Templates"
+description: "A template is an Agent Plugins 1.0.0 directory you stamp into a working NanoClaw agent — persona, skills, MCP servers, and paused recurring tasks, with no secrets and no provider."
+keywords: ["templates", "agent plugins", "plugin.json", "stamp", "ncl groups create", "template library", "agent template"]
+tag: "NEW"
+---
+
+{/* verified-against: src/templates/{parse,manifest,extension,mcp,skills,tasks,plugin-dir,create-agent,local-dir}.ts, src/cli/resources/groups.ts, docs/templates.md @ 20d61af; setup/{templates,auto}.ts @ 20d61af; nanocoai/nanoclaw-templates @ 601071b */}
+
+A **template** is a reusable directory you stamp into a working agent. It carries the agent's standing instructions, its MCP tool servers, its skills, and optional recurring tasks — but **no secrets and no provider**. Point `ncl` at one and you get a configured agent group in seconds.
+
+```bash
+ncl groups create --template <category>/<template> --name "My Agent"
+```
+
+<Note>
+Templates use the [Agent Plugins 1.0.0](https://agent-plugins.org) format. Templates written for the earlier layout (a bare `context/instructions.md` marker and `.mcp.json`) are no longer read — see [migrating from the pre-plugin layout](/templates/building#migrating-from-the-pre-plugin-layout).
+</Note>
+
+## Why the format is a standard
+
+Templates are [Agent Plugins 1.0.0](https://agent-plugins.org) directories. The portable surface — skills and `mcp.json` — follows the spec exactly. Everything NanoClaw-specific (persona, extra context, scheduled tasks, display name) rides in the spec's own extension mechanism, under the `ai.nanoco.nanoclaw` namespace.
+
+That cuts both ways, which is the point:
+
+<CardGroup cols={2}>
+<Card title="A NanoClaw template is a conformant plugin" icon="arrow-right-from-bracket">
+Drop it into any other spec-compatible client and its skills and MCP servers load. The NanoClaw extras are ignored by rule, not by accident.
+</Card>
+<Card title="A conformant plugin is a stampable template" icon="arrow-right-to-bracket">
+Only `plugin.json` is required. A persona-less third-party plugin stamps as a new agent group with its skills and MCP servers; the NanoClaw-only slots stay empty.
+</Card>
+</CardGroup>
+
+## What a template carries
+
+<Tree>
+<Folder name="<template>" defaultOpen>
+  <File name="plugin.json" />
+  <File name="mcp.json" />
+  <Folder name="skills">
+    <Folder name="<name>">
+      <File name="SKILL.md" />
+    </Folder>
+  </Folder>
+  <Folder name="ai.nanoco.nanoclaw">
+    <Folder name="context">
+      <File name="instructions.md" />
+      <Folder name="additional_context">
+        <File name="*.md" />
+      </Folder>
+    </Folder>
+    <Folder name="tasks">
+      <File name="*.md" />
+    </Folder>
+  </Folder>
+  <File name="README.md" />
+</Folder>
+</Tree>
+
+Only `plugin.json` is required — it is the manifest and the discovery marker. Everything else is optional and defaults sensibly. See [Building a template](/templates/building) for the full anatomy and [the template format reference](/reference/template-format) for field-level rules.
+
+## What a template deliberately does not carry
+
+| Not in a template | Where it lives instead |
+| --- | --- |
+| Provider, model, effort | Set on the agent afterward with `ncl groups config update`. The runtime defaults to the install's configured provider. |
+| API keys and tokens | The [OneCLI Agent Vault](/operate/credentials) injects them into outbound calls at request time. Credential-shaped values in a template are rejected at stamp time. |
+| Channel wiring | Stamping creates the agent group only. Wire it with `/manage-channels` or `ncl wirings create`, exactly as for a hand-built group. |
+| apt/npm packages | `ncl groups config add-package --id <agent-group-id> --apt <pkg>` (or `--npm`), followed by `ncl groups restart --id <agent-group-id> --rebuild`. |
+
+Because the provider is chosen separately, one template works on any provider.
+
+## Templates create new agents only
+
+A template is only ever used to **create** an agent. There is no way to adopt one onto an agent that already exists:
+
+- An agent you built by hand (`ncl groups create --folder …`) can never receive a template.
+- An agent stamped from one template can never be switched to a different one.
+
+The only ongoing operation is [restamping](/templates/updating) — pulling a **newer version of the same template** into the agent that template created. Targeting anything else fails:
+
+```text
+Group "Scout" does not carry plugin "acme-agent" — check the group id, or drop --id to stamp a new agent
+```
+
+If you have an existing agent and want what a template offers, stamp a new agent from the template and wire it up alongside — or copy the pieces you want in by hand.
+
+## Where templates come from
+
+Templates resolve **only from a local directory** — `templates/` at the project root by default (committed, and ships with just a README), or whatever `NANOCLAW_TEMPLATES_DIR` points at. There is no git URL, no `--source`, and no remote fetch at `ncl` time.
+
+The public catalog is [`nanocoai/nanoclaw-templates`](https://github.com/nanocoai/nanoclaw-templates). Get a template from it into your local `templates/` one of two ways:
+
+- **The setup wizard's library picker** clones the registry and copies your pick into `templates/` for you.
+- **By hand** — clone or download the repo and copy the template folder across.
+
+Then stamp it with its bare ref. See [Using a template](/templates/using-templates), or [Getting started with a template](/templates/getting-started) for the guided path from a fresh machine.
+
+## The catalog today
+
+| Template | Ref | What it does |
+| --- | --- | --- |
+| SDR Agent | `sales/sdr` | Prospect research, contact enrichment, outbound sequencing, and CRM hygiene on HubSpot and Exa. |
+| Competitor analysis | `product/competitor-analysis` | Competitor research producing structured docs, a news log, and a tracking spreadsheet. |
+| Data analyst | `data/analyst` | Pipeline checks, query writing, and recurring report integrity. |
+| Journalist | `media/journalist` | Beat monitoring, pitch evaluation, source finding, and interview prep. |
+
+Templates live under a `<category>/<template>/` folder, and that path is exactly the ref you pass to `--template`. The catalog moves faster than these docs — check the repo for the current list.
+
+## Next steps
+
+<CardGroup cols={2}>
+<Card title="Using a template" icon="wand-magic-sparkles" href="/templates/using-templates">
+Stamp an agent during install or anytime with `ncl`, then wire it up and activate its tasks.
+</Card>
+<Card title="Updating a stamped agent" icon="rotate" href="/templates/updating">
+Restamp in place when the template changes — what resets, what is never touched.
+</Card>
+<Card title="Building a template" icon="pen-ruler" href="/templates/building">
+Build one: manifest, MCP servers, skills, persona, tasks, and the no-secrets rule.
+</Card>
+<Card title="Template format reference" icon="book" href="/reference/template-format">
+Field-level validation rules, limits, and the runtime contract.
+</Card>
+</CardGroup>

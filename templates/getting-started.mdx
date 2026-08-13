@@ -1,0 +1,172 @@
+---
+title: "Getting started with a template"
+description: "Go from a fresh machine to a working prebuilt agent — an SDR, a competitor analyst, a data analyst, or a journalist — in about 15 minutes, start to finish."
+keywords: ["getting started", "template", "prebuilt agent", "nanoclaw.sh", "sales/sdr", "first agent", "setup wizard", "stamp a template"]
+tag: "NEW"
+---
+
+{/* verified-against: nanoclaw.sh, setup/{auto,templates}.ts, src/templates/{create-agent,local-dir}.ts, src/cli/resources/{groups,tasks}.ts @ 20d61af; nanocoai/nanoclaw-templates @ 601071b */}
+
+A **template** is a prebuilt agent. Instead of describing what you want an assistant to do and shaping it over days, you pick one that already knows a job — outbound sales, competitor research, data analysis — and it arrives configured: standing instructions, tools, skills, and recurring routines.
+
+This page is the whole path, from a machine with nothing installed to an agent messaging you. About **15 minutes**, most of it waiting on a download.
+
+<Note>
+Want to build an agent from scratch instead? The [quickstart](/quickstart) covers the same install without a template, and [your first agent](/guides/first-agent) builds one by hand.
+</Note>
+
+## Pick what you want first
+
+Choose the agent before you install anything — the installer asks you for it.
+
+- **[`sales/sdr`](https://github.com/nanocoai/nanoclaw-templates/tree/main/sales/sdr)** — researches prospects, enriches contacts, drafts outbound sequences, and keeps the CRM clean. Uses HubSpot and Exa.
+- **[`product/competitor-analysis`](https://github.com/nanocoai/nanoclaw-templates/tree/main/product/competitor-analysis)** — tracks competitors into structured docs, a news log, and a spreadsheet you can read.
+- **[`data/analyst`](https://github.com/nanocoai/nanoclaw-templates/tree/main/data/analyst)** — checks pipelines, writes queries, and verifies recurring reports still hold up.
+- **[`media/journalist`](https://github.com/nanocoai/nanoclaw-templates/tree/main/media/journalist)** — monitors a beat, evaluates pitches, finds sources, drafts stories, and preps interviews.
+
+Each template's own `README.md` says exactly what it does and which accounts it expects. Skim the one you picked — it's the best two minutes you can spend before installing.
+
+## Before you start
+
+- **macOS or Linux** (WSL works) with **4 GB+ RAM** — the installer warns below ~3.7 GB
+- **git**, to clone the repository
+- **A credential for your AI provider** — by default Claude (a Pro/Max subscription, an OAuth token, or an Anthropic API key); pick Codex instead and it's a ChatGPT subscription or an OpenAI API key
+- **A NanoClaw account sign-in**, if you take the recommended prebuilt sandbox image — a quick browser step during setup. Building the image locally instead needs no account
+
+Everything else — Homebrew on macOS, Node 22, pnpm, Docker, the credential vault — the installer handles. Two caveats from its pre-flight checks: don't run as root on Linux, and Google Cloud VMs are known not to work.
+
+You do **not** need API keys for the template's tools yet. Those get connected later, on demand, and never live inside the template.
+
+## The full flow
+
+<Steps>
+
+<Step title="Clone and run the installer">
+
+```bash
+git clone https://github.com/nanocoai/nanoclaw.git
+cd nanoclaw
+bash nanoclaw.sh
+```
+
+Pre-flight checks run, the basics install under one spinner, then the interactive wizard takes over. If a step fails it offers help inline and resumes from the break rather than starting over.
+
+</Step>
+
+<Step title="Choose your template">
+
+The wizard asks **"How should we create your first agent?"** early on — before the long download. Pick:
+
+> **From the NanoClaw template library**
+
+It clones the public catalog and lists what's in it by name, with the ref as a hint beside each row. Pick the one you decided on above, and setup copies it into your install.
+
+The other two options are **Fresh agent** (no template — shape it by chatting) and **From local templates** (anything already in your `templates/` folder).
+
+</Step>
+
+<Step title="Let the rest of the wizard run">
+
+Nothing here is template-specific, and the defaults are good:
+
+1. **Sandbox image** — the recommended default downloads a prebuilt hardened image. This is the slow step: a few minutes, or 3–10 if you choose to build locally instead.
+2. **Credential vault** — installs the vault that holds your API keys. Your agent never sees them directly.
+3. **Provider sign-in** — press Enter for Claude and sign in, or pick Codex.
+4. **Access rules** — starts empty. The sandbox only sees what you share later.
+5. **Background service** — NanoClaw starts under launchd or systemd.
+6. **Your name**, a **first contact** check, then **timezone**.
+7. **Channel** — connect Telegram (recommended), Discord, WhatsApp, Signal, iMessage, Slack, or Teams. Or skip and use the terminal.
+
+Your template is stamped into a working agent, and if you connected a channel it gets wired to it.
+
+</Step>
+
+<Step title="Say hi">
+
+If you connected a channel, your agent messages you first — check your phone. Some templates introduce themselves and ask a few onboarding questions; answer them, they tune how the agent works for you.
+
+No channel? Chat from the terminal:
+
+```bash
+pnpm run chat hi
+```
+
+To watch what's happening under the hood:
+
+```bash
+tail -f logs/nanoclaw.log
+```
+
+</Step>
+
+<Step title="Connect accounts when the agent asks">
+
+Templates ship **no API keys**. The first time your agent calls a service it isn't connected to, it replies with a ready-to-open link for that service. Paste your key there and ask it to retry.
+
+That's the whole flow — no setup up front, and the key lands in your vault rather than in the agent's reach. Details in [Credentials](/operate/credentials).
+
+<Warning>
+Some templates rely on paid services. The template's `README.md` says which, and which plan you need. You always use your own account.
+</Warning>
+
+</Step>
+
+<Step title="Turn on its routines">
+
+Many templates ship recurring work — a morning digest, a weekly review. These arrive **paused**, so nothing runs in the background until you say so:
+
+```bash
+ncl tasks list --status paused
+ncl tasks resume <task-id>
+```
+
+See [Scheduled tasks](/guides/scheduled-tasks) for how they behave once live.
+
+</Step>
+
+</Steps>
+
+## You're set. What now?
+
+<CardGroup cols={2}>
+<Card title="Ask it to do its job" icon="play">
+Give it a real task from the template's README — a prospect to research, a competitor to track. That's what it was built for.
+</Card>
+<Card title="Make it yours" icon="wand-magic-sparkles" href="/guides/customize-an-agent">
+Tell it to change how it works, in chat. It edits its own standing instructions and remembers.
+</Card>
+<Card title="Add a second agent" icon="users" href="/templates/using-templates">
+Stamp another template anytime with `ncl groups create --template <ref>`. Each gets its own sandbox and memory.
+</Card>
+<Card title="Keep it current" icon="rotate" href="/templates/updating">
+When a template improves, pull the new version into your running agent without rebuilding it.
+</Card>
+</CardGroup>
+
+## If something went wrong
+
+| Symptom | What's happening |
+| --- | --- |
+| Agent replies `401` or `403` | Expected on first use — open the connect link it sends you |
+| A routine never fires | Template tasks start paused; resume it (above) |
+| The install broke partway | Re-run `bash nanoclaw.sh`; it resumes and remembers your template pick |
+| No template picker appeared | Installs that already have a channel-wired agent skip it — use [the CLI](/templates/using-templates) instead |
+
+More in [Troubleshooting](/operate/troubleshooting), or ask in [Discord](https://discord.gg/VDdww8qS42).
+
+## Related pages
+
+<CardGroup cols={2}>
+<Card title="Templates" icon="layer-group" href="/templates/overview">
+What a template is, what it carries, and what it deliberately leaves out.
+</Card>
+<Card title="Using a template" icon="terminal" href="/templates/using-templates">
+The full CLI path, ref resolution, and everything stamping creates.
+</Card>
+<Card title="Building a template" icon="pen-ruler" href="/templates/building">
+Make your own for your team, or for the catalog.
+</Card>
+<Card title="Quickstart" icon="bolt" href="/quickstart">
+The same install without a template.
+</Card>
+</CardGroup>

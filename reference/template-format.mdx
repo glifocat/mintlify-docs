@@ -1,0 +1,227 @@
+---
+title: "Template format"
+description: "Field-level reference for the Agent Plugins 1.0.0 template format: manifest and mcp.json validation, failure boundaries, size caps, the secret lint, and the plugin runtime contract."
+keywords: ["template format", "plugin.json", "mcp.json schema", "agent plugins 1.0.0", "PLUGIN_ROOT", "PLUGIN_DATA", "secret lint", "templateReport"]
+tag: "NEW"
+---
+
+{/* verified-against: src/templates/{parse,manifest,extension,mcp,skills,tasks,plugin-dir,create-agent,local-dir}.ts, src/container-config.ts, src/modules/self-mod/request.ts, container/agent-runner/src/plugin-mcp.ts @ 20d61af */}
+
+The precise rules a [template](/templates/overview) is validated against. For a walkthrough of building one, see [Building a template](/templates/building).
+
+Templates are [Agent Plugins 1.0.0](https://agent-plugins.org) directories. NanoClaw is deliberately stricter than the spec in a few places where trust policy is client-owned; those are marked below.
+
+## Resolution
+
+| Rule | Value |
+| --- | --- |
+| Base directory | `templates/` at the project root, or `NANOCLAW_TEMPLATES_DIR` |
+| Ref form | Relative path, resolved under the base directory. Single-segment refs resolve; the registry's own layout is `<category>/<template>` |
+| Plugin root | The leaf folder of the ref |
+| Rejected | Absolute paths, a leading `~`, and any ref resolving outside the base directory |
+| Remote refs | Not supported. No git URLs, no `--source`, no fetch at `ncl` time |
+
+`NANOCLAW_TEMPLATES_DIR` is a local path only, resolved once at load — never a URL, and never changed at runtime.
+
+## Failure boundaries
+
+Per-component failures degrade; structural and trust violations reject the whole template.
+
+| Problem | Result |
+| --- | --- |
+| Missing or invalid `plugin.json` | **Whole template rejected** |
+| Symlink, special file, or path escape anywhere in the tree | **Whole template rejected** |
+| Size cap exceeded | **Whole template rejected** |
+| `env`/`headers` value matching a known credential format | **Whole template rejected** |
+| Task file with invalid frontmatter, or task names colliding on their id slug | **Whole template rejected** |
+| Malformed `mcp.json` (bad JSON, wrong `$schema`, extra top-level field) | MCP component skipped; the rest stamps |
+| Invalid single server entry | That server skipped |
+| Non-conforming `skills/<name>/` | That skill skipped |
+| Unknown top-level manifest field, or non-object `extensions` | Ignored |
+
+Every skip or ignore produces a named line in the create response's `templateReport`. Components are never silently stripped.
+
+## `plugin.json`
+
+Required. It is both the manifest and the discovery marker.
+
+| Field | Type | Rules |
+| --- | --- | --- |
+| `$schema` | string | **Required.** Exactly `https://agent-plugins.org/schemas/1.0.0/plugin.schema.json` |
+| `name` | string | **Required.** 1–64 chars, lowercase alphanumerics, hyphens, periods. Starts and ends alphanumeric. No `--` or `..` runs. |
+| `version` | string | Optional |
+| `description` | string | Optional |
+| `homepage`, `repository`, `license` | string | Optional |
+| `author` | object | Optional. Only `name`, `email`, `url`; each must be a string. |
+| `keywords` | string[] | Optional |
+| `extensions` | object | Optional. Namespace → payload. Foreign namespaces are kept but never validated. |
+
+`name` is the plugin's machine name, independent of the folder path, and is the folder it is stamped under.
+
+### The NanoClaw extension key
+
+| Key | Effect |
+| --- | --- |
+| `extensions["ai.nanoco.nanoclaw"].agentName` | Display name for the stamped group. Must be a non-empty string, or it is ignored with a notice. |
+
+Display-name precedence: `--name` → `agentName` → the template folder name.
+
+Any other key under `ai.nanoco.nanoclaw` is reported as unrecognized and ignored.
+
+## `mcp.json`
+
+Optional. Exactly two top-level fields are allowed — anything else skips the whole MCP component.
+
+| Field | Rules |
+| --- | --- |
+| `$schema` | Exactly `https://agent-plugins.org/schemas/1.0.0/mcp.schema.json` |
+| `mcpServers` | Object of server name → entry. Names are 1–64 chars of `[A-Za-z0-9_-]`. |
+
+Every entry must declare `type`. An `sse` entry is rejected as unsupported — that server is skipped with a notice, not the whole template.
+
+<Tabs>
+<Tab title="stdio">
+
+Allowed fields: `type`, `command`, `args`, `env`, `cwd`.
+
+| Rule | Detail |
+| --- | --- |
+| `command` | A single token — no whitespace, no shell strings |
+| `command` form | A bare executable name, or a `./`-relative path that stays inside the plugin root |
+| `command` expansion | None. `${…}` in a command is rejected. |
+| `env` keys | May not define `PLUGIN_ROOT` or `PLUGIN_DATA` — the client always sets them |
+| `cwd` | Fixed forms only: `./path`, `${PLUGIN_ROOT}[/path]`, `${PLUGIN_DATA}[/path]`. No `..` escapes. |
+| `cwd` default | Omitted `cwd` becomes `${PLUGIN_ROOT}` at stamp time — the spec default |
+
+A `${PLUGIN_DATA}` subdirectory named as `cwd` is created at stamp time. `./` and `${PLUGIN_ROOT}` directories must already exist in the shipped plugin.
+
+</Tab>
+<Tab title="streamable-http">
+
+Allowed fields: `type`, `url`, `headers`.
+
+| Rule | Detail |
+| --- | --- |
+| Scheme | HTTPS required. Plain HTTP only for loopback (`localhost`, `127.0.0.1`, `[::1]`). |
+| Host | Hostnames reaching the container's host machine (`host.docker.internal`, `gateway.docker.internal`, `172.17.0.1`) are rejected |
+| URL contents | No userinfo, no fragments, no credential-looking query parameters (`?api_key=…`, `?token=…`) |
+| Non-secret query params | Allowed — for example `?toolsets=apm` |
+
+</Tab>
+</Tabs>
+
+### Secret lint
+
+Applied to every `env` and `headers` value at stamp time. The literal `"placeholder"` always passes.
+
+| Condition | Result |
+| --- | --- |
+| Value matches `sk-`, `ghp_`, `github_pat_`, `xox[a-z]-`, `AKIA`, or `-----BEGIN ` | **Whole template rejected**, with the key named |
+| Same, after stripping a leading `Bearer `, `Token `, or `Basic ` (case-insensitive) | **Whole template rejected** — so `Bearer sk-…`, the common header shape, is caught too |
+| Key matches `TOKEN`, `SECRET`, `PASSWD`, `PASSWORD`, `API_KEY`, `APIKEY`, `CREDENTIAL`, `PRIVATE_KEY`, `PRIVATEKEY`, or `AUTH`, and the value is not `"placeholder"` | Warning in `templateReport`; the stamp proceeds |
+
+Key matching is case-insensitive and matches anywhere in the name, so `MY_SLACK_TOKEN_V2` matches on `TOKEN`.
+
+<Note>
+The registry's `check-templates.mjs` **fails** on the credential-shaped-key case rather than warning, so a template that stamps cleanly locally can still be rejected by CI. It also does not strip auth-scheme prefixes, so a `Bearer sk-…` value trips the engine but not the registry script — though only when the key itself isn't credential-shaped; an `Authorization` header still fails CI on the key rule. See [Submitting a template](/templates/submitting).
+</Note>
+
+As defense in depth, stored MCP config is re-validated whenever the container config is materialized; invalid entries are dropped and logged.
+
+## `skills/<name>/`
+
+Each immediate child **directory** of `skills/` containing a regular `SKILL.md` is one skill. Stray regular files in `skills/` are ignored. A skill is skipped, with a reason, when:
+
+- there is no `SKILL.md`, or it is not a regular file
+- `SKILL.md` has no YAML frontmatter, or the frontmatter is unclosed, invalid YAML, or not a mapping
+- `name` or `description` is missing or empty
+
+Symlinks are not in this list: the whole-tree walk runs before skills are read and rejects the entire template on the first symlink it finds, so a symlinked `SKILL.md` never degrades to a skipped skill.
+
+The whole folder is copied into the group's skills overlay, keyed to that group and never shared. Executable bits are preserved.
+
+## `ai.nanoco.nanoclaw/`
+
+| Path | Loaded as |
+| --- | --- |
+| `context/instructions.md` | The persona. Must be a regular file. Written to `instructions.prepend.md`. |
+| `context/**/*.md` (all others) | Copied into the workspace, keeping the path relative to `context/` |
+| `tasks/*.md` | Recurring tasks, created paused |
+
+Extra context files are copied with the `context/` prefix stripped, so a reference written as `additional_context/pricing.md` in `instructions.md` resolves unchanged in the agent's workspace. Nothing is injected automatically.
+
+### Task files
+
+Each immediate `.md` file under `tasks/` is one task. The filename is the task name; the body is the prompt.
+
+| Frontmatter field | Rules |
+| --- | --- |
+| `schedule` | **Required.** Non-empty cron expression, validated at stamp time. |
+| `script` | Optional. Non-empty string; single-line or multiline YAML. |
+| Anything else | Rejected — the whole template fails |
+
+The body must be non-empty. Task names must not collide on their truncated id slug; a colliding template is refused at first stamp, before anything is created.
+
+Tasks are created with status `paused`, fire in the group timezone, and follow normal frequency limits — four fires per 24 hours when ungated, more when a script gate is present. Templates cannot create one-time tasks or override the frequency limit.
+
+## Limits and containment
+
+The tree is walked with `lstat` before any content is read, so a hostile template is rejected without its targets being touched.
+
+| Limit | Value |
+| --- | --- |
+| Maximum entries (files and directories) | 2,000 |
+| Maximum total size | 50 MB |
+| Maximum nesting depth | 16 |
+| Symlinks | Rejected outright — stricter than the spec, which permits ones resolving inside the plugin root |
+| Special files (sockets, devices, FIFOs) | Rejected |
+| Path escapes | Rejected |
+
+These are abuse bounds, not sizing guidance; real templates are a few dozen files.
+
+<Note>
+**Plugin content is data on the host and code only in the container.** The host process validates and copies plugin files but never executes, imports, or shells out to anything inside them. stdio servers, skill scripts, and task script gates all run in the agent container.
+</Note>
+
+## Where a stamped template lands
+
+| Surface | Location | Mount |
+| --- | --- | --- |
+| Plugin copy | `groups/<folder>/plugins/<name>/` | Read-only at `/workspace/agent/plugins/<name>` |
+| Plugin state | `groups/<folder>/plugin-data/<name>/` | Writable |
+| Persona | `groups/<folder>/instructions.prepend.md` | Inlined into the project doc every spawn |
+| Context extras | `groups/<folder>/<relative path>` | Workspace |
+| Skills | The group's private skills overlay | Group-scoped |
+| MCP servers | The group's container config, marked plugin-owned | — |
+
+## The runtime contract
+
+stdio servers that shipped inside a plugin get the Agent Plugins runtime contract:
+
+| Behavior | Detail |
+| --- | --- |
+| `PLUGIN_ROOT` | Absolute container path of the plugin copy. Injected last, so configured `env` can never override it. |
+| `PLUGIN_DATA` | Absolute container path of the writable sibling. Injected last. |
+| Expansion | `${PLUGIN_ROOT}` and `${PLUGIN_DATA}` expand once, non-recursively, in `args` elements, `env` values, and `cwd` |
+| Not expanded | The `command`, and `env` keys |
+| `./` resolution | A `./`-relative `command` or `cwd` resolves against the plugin root, so a plugin-shipped binary only ever runs inside the container |
+| `cwd` delivery | Codex sets it natively; providers whose runtime cannot (claude, opencode) launch through a `cd`-then-`exec` shim |
+
+Servers added by `ncl` or through an approval carry no plugin marker and pass through untouched.
+
+## Related pages
+
+<CardGroup cols={2}>
+<Card title="Building a template" icon="pen-ruler" href="/templates/building">
+The narrative version, with examples, registry standards, and the checks script.
+</Card>
+<Card title="Using a template" icon="wand-magic-sparkles" href="/templates/using-templates">
+Stamping an agent and reading the create response.
+</Card>
+<Card title="Container config" icon="box" href="/reference/container-config">
+The per-group config MCP servers are written into.
+</Card>
+<Card title="ncl CLI" icon="terminal" href="/reference/ncl-cli">
+`groups create --template` and the restamp flags.
+</Card>
+</CardGroup>
