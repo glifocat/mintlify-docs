@@ -14,7 +14,7 @@ ncl groups create --template sales/sdr --name "SDR Agent"
 ```
 
 <Note>
-Templates use the [Agent Plugins 1.0.0](https://agent-plugins.org) format. Templates written for the earlier layout (a bare `context/instructions.md` marker and `.mcp.json`) are no longer read — see [migrating from the pre-plugin layout](/templates/authoring#migrating-from-the-pre-plugin-layout).
+Templates use the [Agent Plugins 1.0.0](https://agent-plugins.org) format. Templates written for the earlier layout (a bare `context/instructions.md` marker and `.mcp.json`) are no longer read — see [migrating from the pre-plugin layout](/templates/building#migrating-from-the-pre-plugin-layout).
 </Note>
 
 ## Why the format is a standard
@@ -58,7 +58,7 @@ Only `plugin.json` is required. A persona-less third-party plugin stamps as a ne
 </Folder>
 </Tree>
 
-Only `plugin.json` is required — it is the manifest and the discovery marker. Everything else is optional and defaults sensibly. See [Authoring a template](/templates/authoring) for the full anatomy and [the template format reference](/reference/template-format) for field-level rules.
+Only `plugin.json` is required — it is the manifest and the discovery marker. Everything else is optional and defaults sensibly. See [Building a template](/templates/building) for the full anatomy and [the template format reference](/reference/template-format) for field-level rules.
 
 ## What a template deliberately does not carry
 
@@ -117,7 +117,7 @@ Stamp an agent during install or anytime with `ncl`, then wire it up and activat
 <Card title="Updating a stamped agent" icon="rotate" href="/templates/updating">
 Restamp in place when the template changes — what resets, what is never touched.
 </Card>
-<Card title="Authoring a template" icon="pen-ruler" href="/templates/authoring">
+<Card title="Building a template" icon="pen-ruler" href="/templates/building">
 Build one: manifest, MCP servers, skills, persona, tasks, and the no-secrets rule.
 </Card>
 <Card title="Template format reference" icon="book" href="/reference/template-format">

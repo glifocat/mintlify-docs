@@ -9,7 +9,7 @@ tag: "NEW"
 
 Templates ship in [`nanocoai/nanoclaw-templates`](https://github.com/nanocoai/nanoclaw-templates), a separate repo from NanoClaw itself. Contributions are accepted by pull request, and CI enforces most of the standards below automatically.
 
-Build and test the template first — see [Authoring a template](/templates/authoring). This page covers only what the registry adds on top.
+Build and test the template first — see [Building a template](/templates/building). This page covers only what the registry adds on top.
 
 ## Where it goes
 
@@ -90,10 +90,10 @@ Beyond the standards above, it also catches two migration mistakes: a `.mcp.json
 Fork the registry and create a branch for your template.
 </Step>
 <Step title="Build it">
-Follow [Authoring a template](/templates/authoring) — `plugin.json` first, then `mcp.json`, `skills/<name>/`, tasks, and a `README.md`. Put it at `<category>/<template>/`, and leave the provider unset.
+Follow [Building a template](/templates/building) — `plugin.json` first, then `mcp.json`, `skills/<name>/`, tasks, and a `README.md`. Put it at `<category>/<template>/`, and leave the provider unset.
 </Step>
 <Step title="Check and test">
-Run `node scripts/check-templates.mjs`, then [stamp and drive it against a real install](/templates/authoring#testing-locally).
+Run `node scripts/check-templates.mjs`, then [stamp and drive it against a real install](/templates/building#testing-locally).
 </Step>
 <Step title="Re-read the diff">
 Scan for secrets one more time before you commit.
@@ -115,13 +115,13 @@ Before requesting review, confirm each of these:
 - [ ] Every paid service is declared up front in the README: that it's paid, a link to the tool, the tier the template needs (if any), and that the user brings their own key. No prices quoted.
 - [ ] No affiliate or referral links, no baked-in billing, and no shared or author-owned credential anywhere in the template.
 - [ ] `node scripts/check-templates.mjs` passes.
-- [ ] The template has been [stamped and tested locally](/templates/authoring#testing-locally) with a bare ref.
+- [ ] The template has been [stamped and tested locally](/templates/building#testing-locally) with a bare ref.
 - [ ] No API keys, tokens, or other secrets appear anywhere in the diff.
 
 ## Related pages
 
 <CardGroup cols={2}>
-<Card title="Authoring a template" icon="pen-ruler" href="/templates/authoring">
+<Card title="Building a template" icon="pen-ruler" href="/templates/building">
 Build one and test it before you submit.
 </Card>
 <Card title="Template format reference" icon="book" href="/reference/template-format">
