@@ -1,0 +1,136 @@
+<svg viewBox="0 0 1320 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="nanoclaw-security-dark-title nanoclaw-security-dark-desc" font-family="Inter, ui-sans-serif, system-ui, sans-serif">
+  <title id="nanoclaw-security-dark-title">NanoClaw security: bound what a compromised agent can do</title>
+  <desc id="nanoclaw-security-dark-desc">Containment diagram. An untrusted message passes two host-side gates — sender policies plus engagement gates, then the command gate — before it reaches the agent. The agent is drawn inside an ephemeral per-session container whose blast radius is one agent group, and is labelled with the design assumption that it is already prompt-injected. Three things leave that container, each with an explicit bound: filesystem access limited to mounts and an allowlist, network access through the vault gateway proxy with no raw credentials and optional egress lockdown, and privileged actions that stop for an approval card and a human decision.</desc>
+
+  <defs>
+    <marker id="ns-arrow-d" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#B0B0B0"/>
+    </marker>
+  </defs>
+
+  <!-- Canvas -->
+  <rect width="100%" height="100%" fill="#000000"/>
+
+  <!-- Header -->
+  <text x="64" y="40" fill="#B0B0B0" font-size="8" letter-spacing="0.18em">NANOCLAW · SECURITY</text>
+  <text x="64" y="68" fill="#FFFFFF" font-size="20" font-weight="600" letter-spacing="-0.01em">Assume injection succeeds; bound what it can do</text>
+
+  <!-- ==========================================================
+       CONTAINER BOUNDARY — the ring, drawn before arrows and nodes
+       (dashed = ephemeral, torn down with the session)
+       ========================================================== -->
+  <rect x="352" y="152" width="536" height="336" rx="8" fill="#181818" stroke="#B0B0B0" stroke-width="1.2" stroke-dasharray="8,5"/>
+
+  <!-- ==========================================================
+       ARROWS — drawn before nodes
+       ========================================================== -->
+  <!-- inbound: message clears the host gates, then crosses into the container -->
+  <path d="M 176,232 V 260" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#ns-arrow-d)"/>
+  <path d="M 176,360 V 388" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#ns-arrow-d)"/>
+  <path d="M 288,440 H 372 Q 380,440 380,432 V 368 Q 380,360 388,360 H 436" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#ns-arrow-d)"/>
+
+  <!-- outbound: what crosses the boundary, each to its bound -->
+  <path d="M 804,328 H 896 Q 904,328 904,320 V 208 Q 904,200 912,200 H 968" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#ns-arrow-d)"/>
+  <path d="M 804,360 H 936 Q 944,360 944,352 V 332 Q 944,324 952,324 H 968" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#ns-arrow-d)"/>
+  <path d="M 804,392 H 912 Q 920,392 920,400 V 436 Q 920,444 928,444 H 968" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#ns-arrow-d)"/>
+
+  <!-- ==========================================================
+       BOUNDARY LABEL + ALWAYS-ON HARDENING CHIPS
+       ========================================================== -->
+  <rect x="364" y="164" width="232" height="12" rx="2" fill="#181818"/>
+  <text x="368" y="173" fill="#B0B0B0" font-size="7" letter-spacing="0.14em">CONTAINER · ONE AGENT GROUP'S BLAST RADIUS</text>
+
+  <g font-size="8" letter-spacing="0.08em" fill="#B0B0B0" text-anchor="middle">
+    <rect x="456" y="208" width="120" height="20" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.45" stroke-width="0.8"/>
+    <text x="516" y="221">UNPRIVILEGED USER</text>
+
+    <rect x="600" y="208" width="56" height="20" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.45" stroke-width="0.8"/>
+    <text x="628" y="221">--RM</text>
+
+    <rect x="680" y="208" width="104" height="20" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.45" stroke-width="0.8"/>
+    <text x="732" y="221">--CAP-DROP=ALL</text>
+  </g>
+
+  <!-- Editorial aside — the honest limit -->
+  <text x="64" y="552" fill="#B0B0B0" font-size="12" font-style="italic">Anything the agent can legitimately do, it can do while manipulated.</text>
+  <text x="64" y="572" fill="#B0B0B0" font-size="12" font-style="italic">The layers bound the action space; scoping is yours.</text>
+
+  <!-- ==========================================================
+       NODES
+       ========================================================== -->
+  <!-- Untrusted message (external) -->
+  <rect x="64" y="152" width="224" height="80" rx="6" fill="#202020" stroke="#B0B0B0" stroke-width="1"/>
+  <rect x="72" y="160" width="36" height="12" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.50" stroke-width="0.8"/>
+  <text x="90" y="169" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.08em">EXT</text>
+  <text x="176" y="198" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Untrusted message</text>
+  <text x="176" y="216" fill="#B0B0B0" font-size="9" text-anchor="middle">anyone who can type</text>
+
+  <!-- Sender policies + engagement gates (host) -->
+  <rect x="64" y="264" width="224" height="96" rx="6" fill="#101010" stroke="#B0B0B0" stroke-width="1"/>
+  <rect x="72" y="272" width="44" height="12" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.50" stroke-width="0.8"/>
+  <text x="94" y="281" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.08em">HOST</text>
+  <text x="176" y="310" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Sender policies + gates</text>
+  <text x="176" y="328" fill="#B0B0B0" font-size="9" text-anchor="middle">channel registration · sender policy</text>
+  <text x="176" y="344" fill="#B0B0B0" font-size="9" text-anchor="middle">per-wiring scope</text>
+
+  <!-- Command gate (host) -->
+  <rect x="64" y="392" width="224" height="96" rx="6" fill="#101010" stroke="#B0B0B0" stroke-width="1"/>
+  <rect x="72" y="400" width="44" height="12" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.50" stroke-width="0.8"/>
+  <text x="94" y="409" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.08em">HOST</text>
+  <text x="176" y="438" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Command gate</text>
+  <text x="176" y="456" fill="#B0B0B0" font-size="9" text-anchor="middle">slash commands classified</text>
+  <text x="176" y="472" fill="#B0B0B0" font-size="9" text-anchor="middle">before any container sees them</text>
+
+  <!-- Agent — the single orange element: the assumption itself -->
+  <rect x="436" y="296" width="368" height="128" rx="6" fill="#181818"/>
+  <rect x="436" y="296" width="368" height="128" rx="6" fill="#E85D3A" fill-opacity="0.12" stroke="#E85D3A" stroke-width="1.2"/>
+  <rect x="444" y="304" width="48" height="12" rx="2" fill="none" stroke="#E85D3A" stroke-opacity="0.50" stroke-width="0.8"/>
+  <text x="468" y="313" fill="#E85D3A" font-size="7" text-anchor="middle" letter-spacing="0.08em">AGENT</text>
+  <text x="620" y="364" fill="#FFFFFF" font-size="16" font-weight="600" text-anchor="middle">agent · assume injected</text>
+  <text x="620" y="390" fill="#B0B0B0" font-size="9" text-anchor="middle">acts as if the attacker wrote its instructions</text>
+
+  <!-- Filesystem — bound -->
+  <rect x="968" y="152" width="288" height="96" rx="6" fill="#101010" stroke="#B0B0B0" stroke-width="1"/>
+  <rect x="976" y="160" width="36" height="12" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.50" stroke-width="0.8"/>
+  <text x="994" y="169" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.08em">FILE</text>
+  <text x="1112" y="200" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Filesystem</text>
+  <text x="1112" y="218" fill="#B0B0B0" font-size="9" text-anchor="middle">mounts only · allowlist for extras</text>
+
+  <!-- Network — bound -->
+  <rect x="968" y="272" width="288" height="104" rx="6" fill="#101010" stroke="#B0B0B0" stroke-width="1"/>
+  <rect x="976" y="280" width="36" height="12" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.50" stroke-width="0.8"/>
+  <text x="994" y="289" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.08em">NET</text>
+  <text x="1112" y="326" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Network</text>
+  <text x="1112" y="344" fill="#B0B0B0" font-size="9" text-anchor="middle">vault gateway proxy · no raw credentials</text>
+  <text x="1112" y="360" fill="#B0B0B0" font-size="9" text-anchor="middle">egress lockdown optional</text>
+
+  <!-- Privileged actions — the mint element: the only bound that adds a human -->
+  <rect x="968" y="400" width="288" height="88" rx="6" fill="#56EDD6" stroke="#56EDD6" stroke-width="1"/>
+  <rect x="976" y="408" width="52" height="12" rx="2" fill="none" stroke="#000000" stroke-opacity="0.40" stroke-width="0.8"/>
+  <text x="1002" y="417" fill="#000000" fill-opacity="0.80" font-size="7" text-anchor="middle" letter-spacing="0.08em">HUMAN</text>
+  <text x="1112" y="444" fill="#000000" font-size="12" font-weight="600" text-anchor="middle">Privileged actions</text>
+  <text x="1112" y="462" fill="#000000" fill-opacity="0.72" font-size="9" text-anchor="middle">approval cards · human-in-the-loop</text>
+
+  <!-- ==========================================================
+       LEGEND
+       ========================================================== -->
+  <line x1="64" y1="624" x2="1256" y2="624" stroke="#3A3A3A" stroke-width="0.8"/>
+  <text x="64" y="644" fill="#B0B0B0" font-size="8" letter-spacing="0.18em">LEGEND</text>
+
+  <g font-size="9" fill="#B0B0B0">
+    <rect x="64" y="664" width="14" height="10" rx="2" fill="#E85D3A" fill-opacity="0.12" stroke="#E85D3A" stroke-width="1"/>
+    <text x="84" y="672">Assumed compromised</text>
+
+    <rect x="216" y="664" width="14" height="10" rx="2" fill="#56EDD6" stroke="#56EDD6" stroke-width="1"/>
+    <text x="236" y="672">Human decision required</text>
+
+    <rect x="392" y="664" width="14" height="10" rx="2" fill="#202020" stroke="#B0B0B0" stroke-width="1"/>
+    <text x="412" y="672">Untrusted input</text>
+
+    <rect x="528" y="664" width="14" height="10" rx="2" fill="#181818" stroke="#B0B0B0" stroke-width="1" stroke-dasharray="4,3"/>
+    <text x="548" y="672">Container boundary (ephemeral)</text>
+
+    <line x1="752" y1="668" x2="780" y2="668" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#ns-arrow-d)"/>
+    <text x="788" y="672">Crosses the boundary</text>
+  </g>
+</svg>

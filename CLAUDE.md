@@ -188,6 +188,23 @@ To PR changes to `nanocoai/nanoclaw` from Ethan's fork (`glifocat/nanoclaw-glifo
 - Branch from `upstream/main`, push to `origin`, PR with `--repo nanocoai/nanoclaw --head glifocat:<branch>`
 - The fork may be on a different branch (e.g., `feat/dashboard-api`) — stash before switching
 
+## Diagrams
+
+Diagrams are hand-drawn editorial SVGs (light + dark pairs in `images/diagrams/`),
+embedded per theme with `className="block dark:hidden"` / `"hidden dark:block"`.
+The original Mermaid source is kept in an MDX comment directly above each embed.
+
+- To change a diagram: edit the Mermaid source in the comment for the content, then
+  redraw both SVGs with the [diagram-design](https://github.com/cathrynlavery/diagram-design)
+  skill using the NanoCo palette, matching the style of the existing pair. Do not edit
+  the SVGs by hand for content changes; label-only tweaks are fine.
+- Every text label in these SVGs is a claim about the code and was verified against
+  `nanoclaw` main before shipping. Verify new or changed labels the same way; keep
+  the SVG `<desc>` text in sync with visible labels.
+- Constraints the pair must keep: self-contained (no external fonts/images/scripts),
+  `viewBox` only (no width/height), the page's brand palette, meaningful `alt` text
+  on both `<img>` tags.
+
 ## Token Count
 
 Source of truth: `repo-tokens/badge.svg` in upstream (auto-generated) — the ONLY valid source. Never cite a number from prose, memory, or an automated PR; read the badge first. Last seen: 199k at 2afbd182 (v2.1.21). Update pages that cite the count (e.g., `introduction.mdx`) if the badge value changes significantly.

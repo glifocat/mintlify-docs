@@ -1,0 +1,196 @@
+<svg viewBox="0 0 1400 696" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="entity-model-title entity-model-desc" font-family="Inter, ui-sans-serif, system-ui, sans-serif">
+  <title id="entity-model-title">Five entities; the wiring holds the behavior</title>
+  <desc id="entity-model-desc">Entity-relationship diagram of the NanoClaw data model. Agent groups, where agents run, sit on the left and messaging groups, where people talk, sit on the right; between them is the wirings join table, which carries the five behavior axes engage_mode, sender_scope, ignored_message_policy, session_mode and threads. Each side links to wirings one-to-many, so one chat can feed several agents and one agent can serve several chats. Sessions sit below, owned by an agent group, optionally scoped by a messaging group, with a nullable thread_id. A separate access panel on the left holds users with their user_roles and agent_group_members supporting tables, and notes that privilege lives on users rather than on groups.</desc>
+
+  <!-- Canvas -->
+  <rect width="100%" height="100%" fill="#FFFFFF"/>
+
+  <!-- Header -->
+  <text x="64" y="40" fill="#5C5349" font-size="8" letter-spacing="0.18em">NANOCLAW · ENTITY MODEL</text>
+  <text x="64" y="68" fill="#1A1612" font-size="20" font-weight="600" letter-spacing="-0.01em">Five entities; the wiring holds the behavior</text>
+
+  <!-- ==========================================================
+       ACCESS ZONE — drawn before lines and nodes
+       ========================================================== -->
+  <rect x="64" y="128" width="232" height="368" rx="8" fill="#FAF5EA" stroke="#8A8178" stroke-opacity="0.35" stroke-width="0.8"/>
+  <rect x="80" y="132" width="192" height="12" rx="2" fill="#FAF5EA"/>
+  <text x="80" y="141" fill="#5C5349" font-size="7" letter-spacing="0.10em">PRIVILEGE LIVES ON USERS, NOT GROUPS</text>
+
+  <!-- ==========================================================
+       RELATIONSHIP LINES — drawn before nodes
+       ========================================================== -->
+  <!-- agent_groups — wirings -->
+  <line x1="536" y1="240" x2="680" y2="240" stroke="#8A8178" stroke-width="1"/>
+  <!-- wirings — messaging_groups -->
+  <line x1="1000" y1="240" x2="1144" y2="240" stroke="#8A8178" stroke-width="1"/>
+  <!-- agent_groups — sessions (owns) -->
+  <path d="M 472,280 V 480 Q 472,488 480,488 H 680" fill="none" stroke="#8A8178" stroke-width="1"/>
+  <!-- messaging_groups — sessions (scopes) -->
+  <path d="M 1240,280 V 480 Q 1240,488 1232,488 H 1000" fill="none" stroke="#8A8178" stroke-width="1"/>
+  <!-- agent_groups — members -->
+  <path d="M 408,280 V 428 Q 408,436 400,436 H 280" fill="none" stroke="#8A8178" stroke-width="1"/>
+  <!-- users — user_roles -->
+  <line x1="180" y1="224" x2="180" y2="272" stroke="#8A8178" stroke-width="1"/>
+  <!-- users — members -->
+  <line x1="180" y1="352" x2="180" y2="400" stroke="#8A8178" stroke-width="1"/>
+
+  <!-- ==========================================================
+       CARDINALITY — masked, sitting on the line
+       ========================================================== -->
+  <g font-size="9" font-weight="600" fill="#5C5349" text-anchor="middle">
+    <rect x="540" y="234" width="16" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="548" y="243">1</text>
+    <rect x="660" y="234" width="16" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="668" y="243">N</text>
+
+    <rect x="1004" y="234" width="16" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="1012" y="243">N</text>
+    <rect x="1124" y="234" width="16" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="1132" y="243">1</text>
+
+    <rect x="464" y="290" width="16" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="472" y="299">1</text>
+    <rect x="656" y="482" width="16" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="664" y="491">N</text>
+
+    <rect x="1216" y="290" width="48" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="1240" y="299">0..1</text>
+    <rect x="1008" y="482" width="16" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="1016" y="491">N</text>
+
+    <rect x="400" y="290" width="16" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="408" y="299">1</text>
+    <rect x="284" y="430" width="16" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="292" y="439">N</text>
+
+    <rect x="172" y="254" width="16" height="12" rx="2" fill="#FAF5EA"/>
+    <text x="180" y="263">1</text>
+    <rect x="172" y="230" width="16" height="12" rx="2" fill="#FAF5EA"/>
+    <text x="180" y="239">N</text>
+
+    <rect x="172" y="358" width="16" height="12" rx="2" fill="#FAF5EA"/>
+    <text x="180" y="367">1</text>
+    <rect x="172" y="382" width="16" height="12" rx="2" fill="#FAF5EA"/>
+    <text x="180" y="391">N</text>
+  </g>
+
+  <!-- ==========================================================
+       RELATIONSHIP LABELS — masked, 8-14px clear of the line
+       ========================================================== -->
+  <g font-size="8" letter-spacing="0.06em" fill="#5C5349" text-anchor="middle">
+    <rect x="558" y="214" width="100" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="608" y="223">SERVES CHATS VIA</text>
+
+    <rect x="1012" y="214" width="120" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="1072" y="223">HANDLED BY AGENTS VIA</text>
+
+    <rect x="558" y="468" width="44" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="580" y="477">OWNS</text>
+
+    <rect x="1080" y="468" width="56" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="1108" y="477">SCOPES</text>
+  </g>
+
+  <!-- ==========================================================
+       EDITORIAL ASIDES
+       ========================================================== -->
+  <text x="680" y="372" fill="#5C5349" font-size="12" font-style="italic">One chat can feed several agents.</text>
+  <text x="680" y="392" fill="#5C5349" font-size="12" font-style="italic">One agent can serve several chats.</text>
+
+  <text x="64" y="536" fill="#5C5349" font-size="12" font-style="italic">Access checks walk one chain: owner → global admin → group admin → member → <tspan fill="#E85D3A">denied</tspan>.</text>
+
+  <!-- ==========================================================
+       NODES
+       ========================================================== -->
+  <!-- user_roles -->
+  <rect x="80" y="152" width="200" height="72" rx="6" fill="#FFFFFF" stroke="#8A8178" stroke-width="1"/>
+  <rect x="88" y="160" width="44" height="12" rx="2" fill="none" stroke="#8A8178" stroke-opacity="0.50" stroke-width="0.8"/>
+  <text x="110" y="169" fill="#5C5349" font-size="7" text-anchor="middle" letter-spacing="0.08em">TABLE</text>
+  <text x="96" y="196" fill="#1A1612" font-size="12" font-weight="600">user_roles</text>
+  <text x="96" y="214" fill="#5C5349" font-size="9">owner · admin</text>
+
+  <!-- users -->
+  <rect x="80" y="272" width="200" height="80" rx="6" fill="#FFFFFF" stroke="#8A8178" stroke-width="1"/>
+  <rect x="88" y="280" width="44" height="12" rx="2" fill="none" stroke="#8A8178" stroke-opacity="0.50" stroke-width="0.8"/>
+  <text x="110" y="289" fill="#5C5349" font-size="7" text-anchor="middle" letter-spacing="0.08em">ENTITY</text>
+  <text x="96" y="316" fill="#1A1612" font-size="12" font-weight="600">users</text>
+  <text x="96" y="334" fill="#5C5349" font-size="9">who is allowed to do what</text>
+
+  <!-- members -->
+  <rect x="80" y="400" width="200" height="72" rx="6" fill="#FFFFFF" stroke="#8A8178" stroke-width="1"/>
+  <rect x="88" y="408" width="44" height="12" rx="2" fill="none" stroke="#8A8178" stroke-opacity="0.50" stroke-width="0.8"/>
+  <text x="110" y="417" fill="#5C5349" font-size="7" text-anchor="middle" letter-spacing="0.08em">TABLE</text>
+  <text x="96" y="444" fill="#1A1612" font-size="12" font-weight="600">members</text>
+  <text x="264" y="444" fill="#5C5349" font-size="8" text-anchor="end">agent_group_members</text>
+  <text x="96" y="462" fill="#5C5349" font-size="9">known in agent groups</text>
+
+  <!-- agent_groups -->
+  <rect x="344" y="200" width="192" height="80" rx="6" fill="#FFFFFF" stroke="#8A8178" stroke-width="1"/>
+  <rect x="352" y="208" width="44" height="12" rx="2" fill="none" stroke="#8A8178" stroke-opacity="0.50" stroke-width="0.8"/>
+  <text x="374" y="217" fill="#5C5349" font-size="7" text-anchor="middle" letter-spacing="0.08em">ENTITY</text>
+  <text x="360" y="244" fill="#1A1612" font-size="12" font-weight="600">agent_groups</text>
+  <text x="360" y="262" fill="#5C5349" font-size="9">where agents run</text>
+
+  <!-- messaging_groups -->
+  <rect x="1144" y="200" width="192" height="80" rx="6" fill="#FFFFFF" stroke="#8A8178" stroke-width="1"/>
+  <rect x="1152" y="208" width="44" height="12" rx="2" fill="none" stroke="#8A8178" stroke-opacity="0.50" stroke-width="0.8"/>
+  <text x="1174" y="217" fill="#5C5349" font-size="7" text-anchor="middle" letter-spacing="0.08em">ENTITY</text>
+  <text x="1160" y="244" fill="#1A1612" font-size="12" font-weight="600">messaging_groups</text>
+  <text x="1160" y="262" fill="#5C5349" font-size="9">where people talk</text>
+
+  <!-- wirings — the thesis chip -->
+  <rect x="680" y="152" width="320" height="176" rx="6" fill="#FFFFFF" stroke="#0F756D" stroke-width="1.2"/>
+  <rect x="680" y="152" width="320" height="56" rx="6" fill="#1FB8B0"/>
+  <rect x="680" y="200" width="320" height="8" fill="#1FB8B0"/>
+  <line x1="680" y1="208" x2="1000" y2="208" stroke="#0F756D" stroke-width="1"/>
+  <rect x="688" y="160" width="36" height="12" rx="2" fill="none" stroke="#1A1612" stroke-opacity="0.40" stroke-width="0.8"/>
+  <text x="706" y="169" fill="#1A1612" fill-opacity="0.80" font-size="7" text-anchor="middle" letter-spacing="0.08em">JOIN</text>
+  <text x="696" y="192" fill="#1A1612" font-size="12" font-weight="600">wirings</text>
+  <text x="984" y="192" fill="#1A1612" fill-opacity="0.72" font-size="9" text-anchor="end">messaging_group_agents</text>
+
+  <text x="696" y="232" fill="#1A1612" font-size="9">engage_mode</text>
+  <text x="984" y="232" fill="#5C5349" font-size="8" text-anchor="end">mention | mention-sticky | pattern</text>
+  <text x="696" y="252" fill="#1A1612" font-size="9">sender_scope</text>
+  <text x="984" y="252" fill="#5C5349" font-size="8" text-anchor="end">all | known</text>
+  <text x="696" y="272" fill="#1A1612" font-size="9">ignored_message_policy</text>
+  <text x="984" y="272" fill="#5C5349" font-size="8" text-anchor="end">drop | accumulate</text>
+  <text x="696" y="292" fill="#1A1612" font-size="9">session_mode</text>
+  <text x="984" y="292" fill="#5C5349" font-size="8" text-anchor="end">shared | per-thread | agent-shared</text>
+  <text x="696" y="312" fill="#1A1612" font-size="9">threads</text>
+  <text x="984" y="312" fill="#5C5349" font-size="8" text-anchor="end">NULL inherit | 1 on where supported | 0 off</text>
+
+  <!-- sessions -->
+  <rect x="680" y="440" width="320" height="96" rx="6" fill="#FFFFFF" stroke="#8A8178" stroke-width="1"/>
+  <rect x="688" y="448" width="44" height="12" rx="2" fill="none" stroke="#8A8178" stroke-opacity="0.50" stroke-width="0.8"/>
+  <text x="710" y="457" fill="#5C5349" font-size="7" text-anchor="middle" letter-spacing="0.08em">ENTITY</text>
+  <text x="696" y="484" fill="#1A1612" font-size="12" font-weight="600">sessions</text>
+  <text x="984" y="484" fill="#5C5349" font-size="9" text-anchor="end">the conversation state in between</text>
+  <line x1="680" y1="496" x2="1000" y2="496" stroke="#8A8178" stroke-opacity="0.30" stroke-width="1"/>
+  <text x="696" y="520" fill="#1A1612" font-size="9">thread_id</text>
+  <text x="984" y="520" fill="#5C5349" font-size="8" text-anchor="end">nullable</text>
+
+  <!-- ==========================================================
+       LEGEND
+       ========================================================== -->
+  <line x1="64" y1="600" x2="1336" y2="600" stroke="#E7E0D3" stroke-width="0.8"/>
+  <text x="64" y="620" fill="#5C5349" font-size="8" letter-spacing="0.18em">LEGEND</text>
+
+  <g font-size="9" fill="#5C5349">
+    <rect x="64" y="640" width="14" height="10" rx="2" fill="#1FB8B0" stroke="#0F756D" stroke-width="1"/>
+    <text x="84" y="648">Wiring · the join that holds the behavior</text>
+
+    <rect x="352" y="638" width="44" height="12" rx="2" fill="none" stroke="#8A8178" stroke-opacity="0.50" stroke-width="0.8"/>
+    <text x="374" y="647" font-size="7" text-anchor="middle" letter-spacing="0.08em">ENTITY</text>
+    <text x="404" y="648">one of the five · table in data/v2.db</text>
+
+    <rect x="616" y="638" width="44" height="12" rx="2" fill="none" stroke="#8A8178" stroke-opacity="0.50" stroke-width="0.8"/>
+    <text x="638" y="647" font-size="7" text-anchor="middle" letter-spacing="0.08em">TABLE</text>
+    <text x="668" y="648">supporting table</text>
+
+    <text x="784" y="648" font-weight="600">1 · 0..1 · N</text>
+    <text x="856" y="648">Cardinality · N is zero or more</text>
+
+    <text x="1040" y="648" fill="#E85D3A">denied</text>
+    <text x="1084" y="648">End of the access chain</text>
+  </g>
+</svg>

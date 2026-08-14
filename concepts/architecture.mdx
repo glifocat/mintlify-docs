@@ -18,7 +18,8 @@ One writer per file, opposite directions. A crashed container can never corrupt 
 
 ## A message, end to end
 
-```mermaid
+{/* Diagram source (Mermaid) - kept for regeneration. Edit this, then redraw the
+    SVG pair below with the diagram-design skill (see CLAUDE.md, Diagrams section).
 sequenceDiagram
     participant P as Platform
     participant A as Channel adapter
@@ -44,7 +45,9 @@ sequenceDiagram
         A->>P: send reply
         D->>I: mark delivered
     end
-```
+*/}
+<img className="block dark:hidden" src="/images/diagrams/architecture-light.svg" alt="One host process, one container, two SQLite files: the host routes platform messages into inbound.db, the container reads them, calls the provider, writes replies to outbound.db, and host delivery sends them back out" />
+<img className="hidden dark:block" src="/images/diagrams/architecture-dark.svg" alt="One host process, one container, two SQLite files: the host routes platform messages into inbound.db, the container reads them, calls the provider, writes replies to outbound.db, and host delivery sends them back out" />
 
 Step by step on the inbound side ([`src/router.ts`](https://github.com/nanocoai/nanoclaw/blob/main/src/router.ts)):
 

@@ -1,0 +1,140 @@
+<svg viewBox="0 0 1320 648" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="installation-title installation-desc" font-family="Inter, ui-sans-serif, system-ui, sans-serif">
+  <title id="installation-title">NanoClaw install: three stages, each bootstrapping the next</title>
+  <desc id="installation-desc">Diagram of the NanoClaw installer as a three-stage chain. Stage one, nanoclaw.sh, runs bash-only pre-flight checks — RAM floor, GCE detection, root warning, Homebrew prompt on macOS — and then runs the bootstrap under a spinner. Stage two, setup.sh, detects the platform (macOS or Linux, with a WSL flag), installs Node 22 if Node is missing, puts pnpm on the PATH, runs pnpm install with a frozen lockfile, and checks that the better-sqlite3 native module loads. Stage three, pnpm run setup:auto, is the interactive wizard in setup/auto.ts where the container image, OneCLI vault, provider auth, first agent, service install and channel pairing happen. The order is a dependency chain: each stage can only run because the previous one installed its runtime. Every run writes two logs, a progression log at logs/setup.log and verbatim per-step output under logs/setup-steps.</desc>
+
+  <defs>
+    <marker id="in-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#5C5349"/>
+    </marker>
+  </defs>
+
+  <!-- Canvas -->
+  <rect width="100%" height="100%" fill="#FFFFFF"/>
+
+  <!-- Header -->
+  <text x="64" y="40" fill="#5C5349" font-size="8" letter-spacing="0.18em">NANOCLAW · INSTALLATION</text>
+  <text x="64" y="68" fill="#1A1612" font-size="20" font-weight="600" letter-spacing="-0.01em">Three stages, each bootstrapping the next</text>
+  <text x="64" y="96" fill="#5C5349" font-size="12">One command, bash nanoclaw.sh. The order is a dependency chain, not a preference.</text>
+
+  <!-- ==========================================================
+       ARROWS — drawn before boxes
+       ========================================================== -->
+  <path d="M 384,280 H 500" fill="none" stroke="#5C5349" stroke-width="1.2" marker-end="url(#in-arrow)"/>
+  <path d="M 820,280 H 936" fill="none" stroke="#5C5349" stroke-width="1.2" marker-end="url(#in-arrow)"/>
+
+  <!-- ==========================================================
+       UNDER-ARROW LABELS — the dependency logic, 8px clear of the stroke
+       ========================================================== -->
+  <g font-size="8" letter-spacing="0.08em" fill="#5C5349" text-anchor="middle">
+    <rect x="390" y="288" width="104" height="28" rx="2" fill="#FFFFFF"/>
+    <text x="442" y="300">NOW BASH CAN</text>
+    <text x="442" y="312">HAND OFF</text>
+
+    <rect x="826" y="288" width="104" height="28" rx="2" fill="#FFFFFF"/>
+    <text x="878" y="300">NOW NODE +</text>
+    <text x="878" y="312">DEPS EXIST</text>
+  </g>
+
+  <!-- ==========================================================
+       STAGE 1 — nanoclaw.sh
+       ========================================================== -->
+  <rect x="64" y="160" width="320" height="240" rx="6" fill="#FFFFFF" stroke="#8A8178" stroke-width="1"/>
+  <rect x="80" y="172" width="56" height="12" rx="2" fill="none" stroke="#8A8178" stroke-opacity="0.50" stroke-width="0.8"/>
+  <text x="108" y="181" fill="#5C5349" font-size="7" text-anchor="middle" letter-spacing="0.08em">1 · BASH</text>
+  <text x="80" y="212" fill="#1A1612" font-size="12" font-weight="600">nanoclaw.sh</text>
+  <text x="80" y="232" fill="#5C5349" font-size="9">pre-flight · bash only, nothing else exists yet</text>
+  <line x1="80" y1="252" x2="368" y2="252" stroke="#E7E0D3" stroke-width="0.8"/>
+  <g font-size="9" fill="#3A332B">
+    <rect x="80" y="271" width="6" height="1" fill="#8A8178"/>
+    <text x="96" y="276">RAM floor check</text>
+    <rect x="80" y="291" width="6" height="1" fill="#8A8178"/>
+    <text x="96" y="296">GCE detection</text>
+    <rect x="80" y="311" width="6" height="1" fill="#8A8178"/>
+    <text x="96" y="316">root warning</text>
+    <rect x="80" y="331" width="6" height="1" fill="#8A8178"/>
+    <text x="96" y="336">Homebrew prompt on macOS</text>
+    <rect x="80" y="351" width="6" height="1" fill="#8A8178"/>
+    <text x="96" y="356">runs the bootstrap under a spinner</text>
+  </g>
+
+  <!-- ==========================================================
+       STAGE 2 — setup.sh
+       ========================================================== -->
+  <rect x="500" y="160" width="320" height="240" rx="6" fill="#FFFFFF" stroke="#8A8178" stroke-width="1"/>
+  <rect x="516" y="172" width="56" height="12" rx="2" fill="none" stroke="#8A8178" stroke-opacity="0.50" stroke-width="0.8"/>
+  <text x="544" y="181" fill="#5C5349" font-size="7" text-anchor="middle" letter-spacing="0.08em">2 · BASH</text>
+  <text x="516" y="212" fill="#1A1612" font-size="12" font-weight="600">setup.sh</text>
+  <text x="516" y="232" fill="#5C5349" font-size="9">bootstrap · installs the runtime stage 3 runs on</text>
+  <line x1="516" y1="252" x2="804" y2="252" stroke="#E7E0D3" stroke-width="0.8"/>
+  <g font-size="9" fill="#3A332B">
+    <rect x="516" y="271" width="6" height="1" fill="#8A8178"/>
+    <text x="532" y="276">platform detect · macOS / Linux · WSL flag</text>
+    <rect x="516" y="291" width="6" height="1" fill="#8A8178"/>
+    <text x="532" y="296">Node 22 if Node is missing</text>
+    <rect x="516" y="311" width="6" height="1" fill="#8A8178"/>
+    <text x="532" y="316">pnpm onto the PATH</text>
+    <rect x="516" y="331" width="6" height="1" fill="#8A8178"/>
+    <text x="532" y="336">pnpm install --frozen-lockfile</text>
+    <rect x="516" y="351" width="6" height="1" fill="#8A8178"/>
+    <text x="532" y="356">better-sqlite3 native module check</text>
+  </g>
+
+  <!-- ==========================================================
+       STAGE 3 — the wizard (mint: where the real setup happens)
+       ========================================================== -->
+  <rect x="936" y="160" width="320" height="240" rx="6" fill="#1FB8B0" stroke="#0F756D" stroke-width="1"/>
+  <rect x="952" y="172" width="56" height="12" rx="2" fill="none" stroke="#1A1612" stroke-opacity="0.40" stroke-width="0.8"/>
+  <text x="980" y="181" fill="#1A1612" fill-opacity="0.80" font-size="7" text-anchor="middle" letter-spacing="0.08em">3 · NODE</text>
+  <text x="952" y="212" fill="#1A1612" font-size="12" font-weight="600">pnpm run setup:auto</text>
+  <text x="952" y="232" fill="#1A1612" fill-opacity="0.72" font-size="9">the wizard · setup/auto.ts</text>
+  <line x1="952" y1="252" x2="1240" y2="252" stroke="#1A1612" stroke-opacity="0.25" stroke-width="0.8"/>
+  <g font-size="9" fill="#1A1612" fill-opacity="0.84">
+    <rect x="952" y="271" width="6" height="1" fill="#1A1612" fill-opacity="0.55"/>
+    <text x="968" y="276">container image</text>
+    <rect x="952" y="291" width="6" height="1" fill="#1A1612" fill-opacity="0.55"/>
+    <text x="968" y="296">OneCLI vault</text>
+    <rect x="952" y="311" width="6" height="1" fill="#1A1612" fill-opacity="0.55"/>
+    <text x="968" y="316">provider auth</text>
+    <rect x="952" y="331" width="6" height="1" fill="#1A1612" fill-opacity="0.55"/>
+    <text x="968" y="336">service install</text>
+    <rect x="952" y="351" width="6" height="1" fill="#1A1612" fill-opacity="0.55"/>
+    <text x="968" y="356">channel pairing</text>
+    <rect x="952" y="371" width="6" height="1" fill="#1A1612" fill-opacity="0.55"/>
+    <text x="968" y="376">first agent</text>
+  </g>
+
+  <!-- Editorial aside — the deliberate runtime split -->
+  <text x="64" y="432" fill="#5C5349" font-size="12" font-style="italic">Deliberate runtime split: the host runs Node 20+ and pnpm; the agent container runs our code on Bun.</text>
+
+  <!-- ==========================================================
+       FOOTER NOTE — the two logs
+       ========================================================== -->
+  <rect x="64" y="456" width="1192" height="64" rx="8" fill="#FAF5EA" stroke="#8A8178" stroke-opacity="0.35" stroke-width="0.8"/>
+  <text x="88" y="480" fill="#5C5349" font-size="8" letter-spacing="0.14em">EVERY RUN WRITES TWO LOGS</text>
+  <g font-size="9" fill="#3A332B">
+    <text x="88" y="504">logs/setup.log · one entry per step</text>
+    <text x="392" y="504">logs/setup-steps/NN-name.log · verbatim per-step output</text>
+  </g>
+  <text x="1232" y="504" fill="#5C5349" font-size="12" font-style="italic" text-anchor="end">When something fails, start there.</text>
+
+  <!-- ==========================================================
+       LEGEND
+       ========================================================== -->
+  <line x1="64" y1="560" x2="1256" y2="560" stroke="#E7E0D3" stroke-width="0.8"/>
+  <text x="64" y="580" fill="#5C5349" font-size="8" letter-spacing="0.18em">LEGEND</text>
+
+  <g font-size="9" fill="#5C5349">
+    <rect x="64" y="600" width="14" height="10" rx="2" fill="#1FB8B0" stroke="#0F756D" stroke-width="1"/>
+    <text x="84" y="608">The wizard · where the real setup happens</text>
+
+    <rect x="360" y="600" width="14" height="10" rx="2" fill="#FFFFFF" stroke="#8A8178" stroke-width="1"/>
+    <text x="380" y="608">Shell stage</text>
+
+    <rect x="472" y="598" width="56" height="12" rx="2" fill="none" stroke="#8A8178" stroke-opacity="0.50" stroke-width="0.8"/>
+    <text x="500" y="607" font-size="7" text-anchor="middle" letter-spacing="0.08em">1 · BASH</text>
+    <text x="540" y="608">Stage number · runtime it runs on</text>
+
+    <line x1="792" y1="604" x2="820" y2="604" stroke="#5C5349" stroke-width="1.2" marker-end="url(#in-arrow)"/>
+    <text x="828" y="608">Installs what the next stage needs</text>
+  </g>
+</svg>

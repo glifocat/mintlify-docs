@@ -123,12 +123,15 @@ ncl groups restart --id <agent-id> --rebuild
 
 ## What you built
 
-```mermaid
+{/* Diagram source (Mermaid) - kept for regeneration. Edit this, then redraw the
+    SVG pair below with the diagram-design skill (see CLAUDE.md, Diagrams section).
 graph LR
     A["pnpm run chat<br/>(CLI channel, cli/local)"] --> B["Messaging group<br/>Local CLI"]
     B -- "wiring: pattern ^[Ss]cout\b" --> C["Agent group<br/>Scout"]
     C --> D["Session → container<br/>groups/scout/ + instructions.prepend.md"]
-```
+*/}
+<img className="block dark:hidden" src="/images/diagrams/first-agent-light.svg" alt="The four pieces the tutorial built: the CLI channel feeding the Local CLI messaging group, wired by the Scout pattern rule to the Scout agent group, whose session and container exist on demand" />
+<img className="hidden dark:block" src="/images/diagrams/first-agent-dark.svg" alt="The four pieces the tutorial built: the CLI channel feeding the Local CLI messaging group, wired by the Scout pattern rule to the Scout agent group, whose session and container exist on demand" />
 
 One agent identity, one chat, one routing rule between them — and a session/container pair that only exists because you sent a message. Every channel in NanoClaw works through these same four pieces; only the adapter changes. See the [entity model](/concepts/entity-model) for the full picture.
 

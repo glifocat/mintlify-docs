@@ -43,10 +43,13 @@ Two things are intentionally left behind, plus one the script defers:
 
 The migration is two actors in sequence: the script does everything deterministic, then hands off to Claude for the parts that need judgment.
 
-```mermaid
+{/* Diagram source (Mermaid) - kept for regeneration. Edit this, then redraw the
+    SVG pair below with the diagram-design skill (see CLAUDE.md, Diagrams section).
 flowchart LR
     S["migrate-v2.sh<br/>phases 0–3"] --> W["service switchover"] --> H["handoff.json"] --> K["/migrate-from-v1 skill"] --> V["verify + restart"]
-```
+*/}
+<img className="block dark:hidden" src="/images/diagrams/migrate-from-v1-light.svg" alt="Two-lane migration: the deterministic idempotent migrate-v2.sh phases and service switchover, handing off through handoff.json to the Claude judgment lane with the migrate-from-v1 skill and final verification; the v1 checkout is read-only" />
+<img className="hidden dark:block" src="/images/diagrams/migrate-from-v1-dark.svg" alt="Two-lane migration: the deterministic idempotent migrate-v2.sh phases and service switchover, handing off through handoff.json to the Claude judgment lane with the migrate-from-v1 skill and final verification; the v1 checkout is read-only" />
 
 The script is idempotent — re-running it skips what's already done, so a failed step never forces you to start over.
 

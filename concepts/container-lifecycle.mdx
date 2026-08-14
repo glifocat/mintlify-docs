@@ -27,7 +27,8 @@ When a group installs apt or npm packages, the host generates a Dockerfile `FROM
 
 ## The lifecycle
 
-```mermaid
+{/* Diagram source (Mermaid) - kept for regeneration. Edit this, then redraw the
+    SVG pair below with the diagram-design skill (see CLAUDE.md, Diagrams section).
 stateDiagram-v2
     [*] --> Idle: setup builds base image
     Idle --> Spawning: wakeContainer — inbound message,<br/>due task, or restart
@@ -37,7 +38,9 @@ stateDiagram-v2
     Running --> Killed: sweep kill — ceiling<br/>or claim-stuck
     Killed --> Idle: processing rows reset<br/>with backoff
     Exited --> Idle
-```
+*/}
+<img className="block dark:hidden" src="/images/diagrams/container-lifecycle-light.svg" alt="Container lifecycle states from Idle through Spawning, Running, and Exited or Killed, orbiting the persistent session state in mounted host directories that outlives every container" />
+<img className="hidden dark:block" src="/images/diagrams/container-lifecycle-dark.svg" alt="Container lifecycle states from Idle through Spawning, Running, and Exited or Killed, orbiting the persistent session state in mounted host directories that outlives every container" />
 
 ### Wake — deduplicated, never throws
 

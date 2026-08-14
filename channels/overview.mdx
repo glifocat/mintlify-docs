@@ -12,7 +12,8 @@ NanoClaw trunk ships channel **infrastructure** — the adapter interface, the r
 
 Adapters self-register with the channel registry on import. At startup the host instantiates every registered adapter whose credentials are present (a factory that finds no credentials returns `null` and the channel is skipped with a warning). From there, every channel takes the same path:
 
-```mermaid
+{/* Diagram source (Mermaid) - kept for regeneration. Edit this, then redraw the
+    SVG pair below with the diagram-design skill (see CLAUDE.md, Diagrams section).
 flowchart LR
     P["Platform<br/>(Telegram, Slack, ...)"] -->|event| A[Channel adapter]
     A -->|onInbound| R[Router]
@@ -21,7 +22,9 @@ flowchart LR
     R -->|deliver| A
     A -->|message| P
     REG[Channel registry] -.->|"instantiates at startup,<br/>resolves adapter for delivery"| A
-```
+*/}
+<img className="block dark:hidden" src="/images/diagrams/channels-overview-light.svg" alt="Trunk ships the channel infrastructure and the built-in CLI channel; platform adapters live in the channels-branch catalog and are installed on demand with /add-channel skills; a wiring connects each messaging group to an agent group" />
+<img className="hidden dark:block" src="/images/diagrams/channels-overview-dark.svg" alt="Trunk ships the channel infrastructure and the built-in CLI channel; platform adapters live in the channels-branch catalog and are installed on demand with /add-channel skills; a wiring connects each messaging group to an agent group" />
 
 The adapter normalizes platform events into inbound messages; the router matches them to a wiring (which agent group handles which chat) and writes them into the right session; the agent's reply drains through the delivery module, which looks up the owning adapter in the registry — by the messaging group's `instance` (which defaults to the channel type) — and calls `deliver()`, so a reply always leaves through the same adapter the message arrived on.
 
