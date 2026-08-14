@@ -5,6 +5,19 @@ icon: "file-pen"
 rss: true
 ---
 
+<Update label="Every diagram redrawn: editorial SVGs replace Mermaid" description="2026-08-14" tags={["Updated"]}>
+  All ten diagrams across the docs are now hand-drawn editorial SVGs (light and dark variants, drawn with the open-source [diagram-design](https://github.com/cathrynlavery/diagram-design) skill in the brand palette) instead of rendered Mermaid blocks. Each was also rethought around its page's point rather than restyled 1:1:
+
+  - **[Architecture](/concepts/architecture)** — the seven-lifeline sequence chart became a boundary-first view: host process above, container below, the two SQLite files sitting on the Docker mount boundary as the only crossings, and the end-to-end message story riding as numbered steps.
+  - **[Container lifecycle](/concepts/container-lifecycle)** — the state machine now sits above the persistent mounted session state it orbits, so the disposability thesis is visible: everything above the line dies, everything below survives.
+  - **[Entity model](/concepts/entity-model)** — the wiring is drawn as the join at the center, carrying its five behavior axes; the access chain sits beside it.
+  - **[Isolation levels](/concepts/isolation-levels)** — the decision tree lands on a most-to-least-isolated spectrum, with the shared-filesystem caveat bracketing the three session modes.
+  - **[Security model](/concepts/security)** — containment instead of a pipeline: the assume-injected agent inside the container boundary, host-side gates inbound, bounded filesystem, network, and approval paths out.
+  - **[Channels overview](/channels/overview)** (trunk infrastructure versus the channels-branch catalog), **[first agent](/guides/first-agent)**, **[multi-agent swarm](/guides/multi-agent-swarm)** (directed destination edges, including the host rejecting a send with no row), **[installation](/installation)**, and **[migrate from v1](/migrate-from-v1)** (two-actor swimlanes around `handoff.json`) follow the same treatment.
+
+  Every text label in every diagram was verified against the code at `nanocoai/nanoclaw@48347e1`, and several claims the old Mermaid carried were corrected in the process: the lifecycle now names the host sweep's 30-minute idle ceiling instead of a runner self-exit that doesn't exist, the isolation spectrum orders per-thread above shared, and the entity model names the real `agent_group_members` table. The Mermaid source for each diagram is kept in an MDX comment beside the embed for regeneration; the workflow is documented in the repo's CLAUDE.md.
+</Update>
+
 <Update label="Templates: a new section for the Agent Plugins launch" description="2026-08-13" tags={["New"]}>
   Templates get their own documentation section, written against the Agent Plugins 1.0.0 format ([nanoclaw#3220](https://github.com/nanocoai/nanoclaw/pull/3220), [nanoclaw#2909](https://github.com/nanocoai/nanoclaw/pull/2909), [nanoclaw-templates#19](https://github.com/nanocoai/nanoclaw-templates/pull/19)). Templates shipped in v2.1.24 but had no coverage beyond one line in the `ncl` reference.
 
