@@ -1,0 +1,137 @@
+<svg viewBox="0 0 1320 896" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="multi-agent-swarm-title multi-agent-swarm-desc" font-family="Inter, ui-sans-serif, system-ui, sans-serif">
+  <title id="multi-agent-swarm-title">NanoClaw multi-agent: no swarm engine, just destination rows</title>
+  <desc id="multi-agent-swarm-desc">Topology diagram of a NanoClaw worker, manager and supervisor setup. Your DM reaches a supervisor agent, the supervisor reaches a manager, and the manager reaches worker 1 and worker 2. Every connection is drawn as two separate one-way arrows because each direction is its own agent_destinations row: the downward arrow carries the child destination name and the upward arrow carries parent. Each agent chip has a dashed border to show it is an isolated group with its own containers, workspace and memory, sharing nothing with other groups. One attempted send from worker 1 to the supervisor is drawn as a denied path ending in a cross, labelled no row, host rejects.</desc>
+
+  <defs>
+    <marker id="mas-arrow-dest" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#0F756D"/>
+    </marker>
+  </defs>
+
+  <!-- Canvas -->
+  <rect width="100%" height="100%" fill="#FFFFFF"/>
+
+  <!-- Header -->
+  <text x="64" y="40" fill="#5C5349" font-size="8" letter-spacing="0.18em">NANOCLAW · MULTI-AGENT</text>
+  <text x="64" y="68" fill="#1A1612" font-size="20" font-weight="600" letter-spacing="-0.01em">No swarm engine, just destinations</text>
+
+  <!-- Editorial aside — the caption -->
+  <text x="64" y="136" fill="#5C5349" font-size="12" font-style="italic">agent-to-agent messages ride the same SQLite inbox/outbox</text>
+  <text x="64" y="156" fill="#5C5349" font-size="12" font-style="italic">as any channel — only channel_type differs.</text>
+
+  <!-- Shared isolation note (stated once, not per chip) -->
+  <text x="1256" y="132" fill="#5C5349" font-size="9" text-anchor="end">every agent group is isolated:</text>
+  <text x="1256" y="148" fill="#5C5349" font-size="9" text-anchor="end">own containers, workspace, memory · nothing shared between groups</text>
+
+  <!-- ==========================================================
+       ARROWS — one per direction, drawn before nodes
+       ========================================================== -->
+  <!-- You -> Supervisor -->
+  <path d="M 592,184 V 280" fill="none" stroke="#0F756D" stroke-width="1.4" marker-end="url(#mas-arrow-dest)"/>
+  <!-- Supervisor -> You -->
+  <path d="M 728,280 V 184" fill="none" stroke="#0F756D" stroke-width="1.4" marker-end="url(#mas-arrow-dest)"/>
+  <!-- Supervisor -> Manager -->
+  <path d="M 592,352 V 464" fill="none" stroke="#0F756D" stroke-width="1.4" marker-end="url(#mas-arrow-dest)"/>
+  <!-- Manager -> Supervisor -->
+  <path d="M 728,464 V 352" fill="none" stroke="#0F756D" stroke-width="1.4" marker-end="url(#mas-arrow-dest)"/>
+  <!-- Manager -> Worker 1 -->
+  <path d="M 576,536 V 576 Q 576,584 568,584 H 344 Q 336,584 336,592 V 656" fill="none" stroke="#0F756D" stroke-width="1.4" marker-end="url(#mas-arrow-dest)"/>
+  <!-- Worker 1 -> Manager -->
+  <path d="M 384,656 V 624 Q 384,616 392,616 H 616 Q 624,616 624,608 V 536" fill="none" stroke="#0F756D" stroke-width="1.4" marker-end="url(#mas-arrow-dest)"/>
+  <!-- Manager -> Worker 2 -->
+  <path d="M 744,536 V 576 Q 744,584 752,584 H 976 Q 984,584 984,592 V 656" fill="none" stroke="#0F756D" stroke-width="1.4" marker-end="url(#mas-arrow-dest)"/>
+  <!-- Worker 2 -> Manager -->
+  <path d="M 936,656 V 624 Q 936,616 928,616 H 704 Q 696,616 696,608 V 536" fill="none" stroke="#0F756D" stroke-width="1.4" marker-end="url(#mas-arrow-dest)"/>
+
+  <!-- Denied send: Worker 1 -> Supervisor. No row, so the host never delivers it. -->
+  <path d="M 224,692 H 152 Q 144,692 144,684 V 324 Q 144,316 152,316 H 504" fill="none" stroke="#E85D3A" stroke-width="1.4" stroke-dasharray="5,4"/>
+  <line x1="512" y1="308" x2="528" y2="324" stroke="#E85D3A" stroke-width="1.6"/>
+  <line x1="528" y1="308" x2="512" y2="324" stroke="#E85D3A" stroke-width="1.6"/>
+
+  <!-- ==========================================================
+       ARROW LABELS — masked, 10px clear of the stroke
+       ========================================================== -->
+  <g font-size="8" letter-spacing="0.08em" fill="#0F756D">
+    <!-- You <-> Supervisor: one pair label, two rows of wiring -->
+    <rect x="616" y="214" width="88" height="28" rx="2" fill="#FFFFFF"/>
+    <text x="660" y="224" text-anchor="middle">WIRING +</text>
+    <text x="660" y="236" text-anchor="middle">DESTINATION</text>
+
+    <rect x="492" y="402" width="88" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="576" y="411" text-anchor="end">ROW · MANAGER</text>
+
+    <rect x="740" y="402" width="84" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="744" y="411">ROW · PARENT</text>
+
+    <rect x="396" y="562" width="88" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="440" y="571" text-anchor="middle">ROW · WORKER-1</text>
+
+    <rect x="482" y="626" width="76" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="520" y="635" text-anchor="middle">ROW · PARENT</text>
+
+    <rect x="836" y="562" width="88" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="880" y="571" text-anchor="middle">ROW · WORKER-2</text>
+
+    <rect x="762" y="626" width="76" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="800" y="635" text-anchor="middle">ROW · PARENT</text>
+
+    <!-- Denied send -->
+    <rect x="336" y="294" width="128" height="12" rx="2" fill="#FFFFFF"/>
+    <text x="400" y="303" text-anchor="middle" fill="#E85D3A">NO ROW · HOST REJECTS</text>
+  </g>
+
+  <!-- ==========================================================
+       NODES
+       ========================================================== -->
+  <!-- Your DM — a channel, not an agent -->
+  <rect x="540" y="112" width="240" height="72" rx="6" fill="#F2EBD7" stroke="#8A8178" stroke-width="1"/>
+  <rect x="548" y="120" width="56" height="12" rx="2" fill="none" stroke="#8A8178" stroke-opacity="0.50" stroke-width="0.8"/>
+  <text x="576" y="129" fill="#5C5349" font-size="7" text-anchor="middle" letter-spacing="0.08em">CHANNEL</text>
+  <text x="660" y="158" fill="#1A1612" font-size="12" font-weight="600" text-anchor="middle">Your DM</text>
+
+  <!-- Supervisor -->
+  <rect x="540" y="280" width="240" height="72" rx="6" fill="#FFFFFF" stroke="#8A8178" stroke-width="1" stroke-dasharray="4,3"/>
+  <rect x="548" y="288" width="44" height="12" rx="2" fill="none" stroke="#8A8178" stroke-opacity="0.50" stroke-width="0.8"/>
+  <text x="570" y="297" fill="#5C5349" font-size="7" text-anchor="middle" letter-spacing="0.08em">AGENT</text>
+  <text x="660" y="326" fill="#1A1612" font-size="12" font-weight="600" text-anchor="middle">Supervisor</text>
+
+  <!-- Manager -->
+  <rect x="540" y="464" width="240" height="72" rx="6" fill="#FFFFFF" stroke="#8A8178" stroke-width="1" stroke-dasharray="4,3"/>
+  <rect x="548" y="472" width="44" height="12" rx="2" fill="none" stroke="#8A8178" stroke-opacity="0.50" stroke-width="0.8"/>
+  <text x="570" y="481" fill="#5C5349" font-size="7" text-anchor="middle" letter-spacing="0.08em">AGENT</text>
+  <text x="660" y="510" fill="#1A1612" font-size="12" font-weight="600" text-anchor="middle">Manager</text>
+
+  <!-- Worker 1 -->
+  <rect x="224" y="656" width="224" height="72" rx="6" fill="#FFFFFF" stroke="#8A8178" stroke-width="1" stroke-dasharray="4,3"/>
+  <rect x="232" y="664" width="44" height="12" rx="2" fill="none" stroke="#8A8178" stroke-opacity="0.50" stroke-width="0.8"/>
+  <text x="254" y="673" fill="#5C5349" font-size="7" text-anchor="middle" letter-spacing="0.08em">AGENT</text>
+  <text x="336" y="702" fill="#1A1612" font-size="12" font-weight="600" text-anchor="middle">Worker 1</text>
+
+  <!-- Worker 2 -->
+  <rect x="872" y="656" width="224" height="72" rx="6" fill="#FFFFFF" stroke="#8A8178" stroke-width="1" stroke-dasharray="4,3"/>
+  <rect x="880" y="664" width="44" height="12" rx="2" fill="none" stroke="#8A8178" stroke-opacity="0.50" stroke-width="0.8"/>
+  <text x="902" y="673" fill="#5C5349" font-size="7" text-anchor="middle" letter-spacing="0.08em">AGENT</text>
+  <text x="984" y="702" fill="#1A1612" font-size="12" font-weight="600" text-anchor="middle">Worker 2</text>
+
+  <!-- ==========================================================
+       LEGEND
+       ========================================================== -->
+  <line x1="64" y1="800" x2="1256" y2="800" stroke="#E7E0D3" stroke-width="0.8"/>
+  <text x="64" y="820" fill="#5C5349" font-size="8" letter-spacing="0.18em">LEGEND</text>
+
+  <g font-size="9" fill="#5C5349">
+    <line x1="64" y1="844" x2="92" y2="844" stroke="#0F756D" stroke-width="1.4" marker-end="url(#mas-arrow-dest)"/>
+    <text x="100" y="848">One agent_destinations row · one direction · a policy may still hold it</text>
+
+    <line x1="464" y1="844" x2="488" y2="844" stroke="#E85D3A" stroke-width="1.4" stroke-dasharray="5,4"/>
+    <line x1="492" y1="838" x2="504" y2="850" stroke="#E85D3A" stroke-width="1.6"/>
+    <line x1="504" y1="838" x2="492" y2="850" stroke="#E85D3A" stroke-width="1.6"/>
+    <text x="516" y="848">No row · the host rejects the send</text>
+
+    <rect x="704" y="838" width="14" height="10" rx="2" fill="#FFFFFF" stroke="#8A8178" stroke-width="1" stroke-dasharray="4,3"/>
+    <text x="724" y="848">Isolated agent group</text>
+
+    <rect x="856" y="838" width="14" height="10" rx="2" fill="#F2EBD7" stroke="#8A8178" stroke-width="1"/>
+    <text x="876" y="848">Channel</text>
+  </g>
+</svg>

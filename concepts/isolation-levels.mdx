@@ -43,7 +43,8 @@ The same idea at finer grain: one session per `(chat, thread)`, so each Discord 
 
 ## Choosing a level
 
-```mermaid
+{/* Diagram source (Mermaid) - kept for regeneration. Edit this, then redraw the
+    SVG pair below with the diagram-design skill (see CLAUDE.md, Diagrams section).
 flowchart TD
     Q1{"Different people, trust domains,<br/>or jobs?"} -->|yes| AG["Separate agent groups"]
     Q1 -->|no| Q2{"Should all chats be one<br/>continuous conversation?"}
@@ -51,7 +52,9 @@ flowchart TD
     Q2 -->|no| Q3{"Should each thread be its<br/>own conversation?"}
     Q3 -->|yes| PT["session_mode: per-thread<br/>(forced anyway on threaded group chats)"]
     Q3 -->|no| SH["session_mode: shared"]
-```
+*/}
+<img className="block dark:hidden" src="/images/diagrams/isolation-levels-light.svg" alt="Decision tree over three questions landing on four isolation levels, ordered most to least isolated: separate agent groups, per-thread, shared, agent-shared; the three session modes share the same agent workspace files" />
+<img className="hidden dark:block" src="/images/diagrams/isolation-levels-dark.svg" alt="Decision tree over three questions landing on four isolation levels, ordered most to least isolated: separate agent groups, per-thread, shared, agent-shared; the three session modes share the same agent workspace files" />
 
 When in doubt, start more isolated. Merging two agent groups later means hand-carrying files and memory; splitting one is just creating a new group.
 

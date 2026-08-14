@@ -1,0 +1,223 @@
+<svg viewBox="0 0 1320 896" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="nanoclaw-arch-dark-title nanoclaw-arch-dark-desc" font-family="Inter, ui-sans-serif, system-ui, sans-serif">
+  <title id="nanoclaw-arch-dark-title">NanoClaw architecture: one host process, one container, two SQLite files</title>
+  <desc id="nanoclaw-arch-dark-desc">Architecture diagram showing a Node.js host process holding the channel adapter, router and delivery poller, and a per-session Docker container holding the agent runner. The two processes share nothing but two SQLite files mounted on the container boundary: inbound.db, which the host writes and the container reads, and outbound.db, which the container writes and the host reads. Numbered steps trace a message from the platform through the router into inbound.db, into the container, back out through outbound.db, and back to the platform as a reply. A separate dashed control path shows the host waking or spawning the container.</desc>
+
+  <defs>
+    <marker id="na-arrow-d" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#B0B0B0"/>
+    </marker>
+    <marker id="na-arrow-hi-d" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#E85D3A"/>
+    </marker>
+    <marker id="na-arrow-ctl-d" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polyline points="0 0, 8 3, 0 6" fill="none" stroke="#B0B0B0" stroke-width="1.2"/>
+    </marker>
+  </defs>
+
+  <!-- Canvas -->
+  <rect width="100%" height="100%" fill="#000000"/>
+
+  <!-- Header -->
+  <text x="64" y="40" fill="#B0B0B0" font-size="8" letter-spacing="0.18em">NANOCLAW · ARCHITECTURE</text>
+  <text x="64" y="68" fill="#FFFFFF" font-size="20" font-weight="600" letter-spacing="-0.01em">One host process, one container, two SQLite files</text>
+
+  <!-- ==========================================================
+       ZONES — drawn before arrows and nodes
+       ========================================================== -->
+  <rect x="64" y="232" width="1072" height="176" rx="8" fill="#181818" stroke="#B0B0B0" stroke-opacity="0.30" stroke-width="0.8"/>
+  <rect x="440" y="552" width="696" height="192" rx="8" fill="#181818" stroke="#B0B0B0" stroke-opacity="0.30" stroke-width="0.8"/>
+
+  <!-- ==========================================================
+       CONTAINER BOUNDARY — the only crossing points sit on it
+       ========================================================== -->
+  <line x1="64" y1="488" x2="1256" y2="488" stroke="#B0B0B0" stroke-width="1.6" stroke-dasharray="8,5"/>
+
+  <!-- ==========================================================
+       ARROWS — drawn before nodes
+       ========================================================== -->
+  <!-- 1 platform event -->
+  <path d="M 168,168 V 288" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#na-arrow-d)"/>
+  <!-- 2 route: policy, wiring, engage checks (bypass lane above the row) -->
+  <path d="M 232,288 V 264 Q 232,256 240,256 H 968 Q 976,256 976,264 V 288" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#na-arrow-d)"/>
+  <!-- 3 insert messages_in -->
+  <path d="M 1008,368 V 452" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#na-arrow-d)"/>
+  <!-- control: wake / spawn (docker lifecycle, not data) -->
+  <path d="M 1096,328 H 1192 Q 1200,328 1200,336 V 640 Q 1200,648 1192,648 H 1136" fill="none" stroke="#B0B0B0" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#na-arrow-ctl-d)"/>
+  <!-- 4 poll reads pending -->
+  <path d="M 1008,524 V 636 Q 1008,644 1000,644 H 912" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#na-arrow-d)"/>
+  <!-- 5 format batch, call provider -->
+  <path d="M 752,688 V 704 Q 752,712 760,712 H 840 Q 848,712 848,704 V 688" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#na-arrow-d)"/>
+  <!-- 6 insert messages_out -->
+  <path d="M 688,644 H 608 Q 600,644 600,636 V 524" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#na-arrow-d)"/>
+  <!-- 7 read undelivered -->
+  <path d="M 600,452 V 368" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#na-arrow-d)"/>
+  <!-- 8 deliver -->
+  <path d="M 512,328 H 280" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#na-arrow-d)"/>
+  <!-- 8 reply reaches the platform (single highlight) -->
+  <path d="M 200,288 V 168" fill="none" stroke="#E85D3A" stroke-width="1.6" marker-end="url(#na-arrow-hi-d)"/>
+  <!-- host marks the row delivered (a host write, no step number) -->
+  <path d="M 648,368 V 424 Q 648,432 656,432 H 952 Q 960,432 960,440 V 452" fill="none" stroke="#B0B0B0" stroke-width="1" marker-end="url(#na-arrow-d)"/>
+
+  <!-- ==========================================================
+       ARROW LABELS — masked, 8-10px clear of the stroke
+       ========================================================== -->
+  <g font-size="8" letter-spacing="0.08em" fill="#B0B0B0">
+    <rect x="68" y="214" width="92" height="12" rx="2" fill="#000000"/>
+    <text x="156" y="223" text-anchor="end">PLATFORM EVENT</text>
+
+    <rect x="208" y="190" width="64" height="12" rx="2" fill="#000000"/>
+    <text x="212" y="199" fill="#E85D3A">REPLY SENT</text>
+
+    <rect x="462" y="236" width="196" height="12" rx="2" fill="#181818"/>
+    <text x="560" y="245" text-anchor="middle">ROUTE · POLICY · WIRING · ENGAGE</text>
+
+    <rect x="340" y="306" width="112" height="12" rx="2" fill="#181818"/>
+    <text x="396" y="315" text-anchor="middle">ADAPTER.DELIVER()</text>
+
+    <rect x="876" y="412" width="116" height="12" rx="2" fill="#000000"/>
+    <text x="988" y="421" text-anchor="end">INSERT MESSAGES_IN</text>
+
+    <rect x="488" y="394" width="104" height="12" rx="2" fill="#181818"/>
+    <text x="588" y="403" text-anchor="end">READ UNDELIVERED</text>
+
+    <rect x="760" y="410" width="92" height="12" rx="2" fill="#000000"/>
+    <text x="806" y="419" text-anchor="middle">MARK DELIVERED</text>
+
+    <rect x="884" y="566" width="116" height="12" rx="2" fill="#181818"/>
+    <text x="996" y="575" text-anchor="end">POLL READS PENDING</text>
+
+    <rect x="608" y="566" width="122" height="12" rx="2" fill="#181818"/>
+    <text x="612" y="575">INSERT MESSAGES_OUT</text>
+
+    <rect x="872" y="706" width="172" height="12" rx="2" fill="#181818"/>
+    <text x="876" y="715">FORMAT BATCH · CALL PROVIDER</text>
+
+    <rect x="1104" y="416" width="88" height="28" rx="2" fill="#000000"/>
+    <text x="1108" y="426">WAKE · ROUTER OR</text>
+    <text x="1108" y="438">60S SWEEP · SPAWN</text>
+  </g>
+
+  <!-- ==========================================================
+       STEP BEADS — numbered markers riding the flow
+       ========================================================== -->
+  <g font-size="8" font-weight="600" fill="#FFFFFF" text-anchor="middle">
+    <circle cx="168" cy="192" r="9" fill="#000000" stroke="#B0B0B0" stroke-width="1"/>
+    <text x="168" y="195">1</text>
+
+    <circle cx="430" cy="256" r="9" fill="#181818" stroke="#B0B0B0" stroke-width="1"/>
+    <text x="430" y="259">2</text>
+
+    <circle cx="1008" cy="396" r="9" fill="#181818" stroke="#B0B0B0" stroke-width="1"/>
+    <text x="1008" y="399">3</text>
+
+    <circle cx="1008" cy="600" r="9" fill="#181818" stroke="#B0B0B0" stroke-width="1"/>
+    <text x="1008" y="603">4</text>
+
+    <circle cx="800" cy="712" r="9" fill="#181818" stroke="#B0B0B0" stroke-width="1"/>
+    <text x="800" y="715">5</text>
+
+    <circle cx="600" cy="600" r="9" fill="#181818" stroke="#B0B0B0" stroke-width="1"/>
+    <text x="600" y="603">6</text>
+
+    <circle cx="600" cy="424" r="9" fill="#000000" stroke="#B0B0B0" stroke-width="1"/>
+    <text x="600" y="427">7</text>
+
+    <circle cx="476" cy="328" r="9" fill="#181818" stroke="#B0B0B0" stroke-width="1"/>
+    <text x="476" y="331">8</text>
+  </g>
+
+  <!-- ==========================================================
+       ZONE LABELS + BOUNDARY LABEL
+       ========================================================== -->
+  <rect x="80" y="236" width="148" height="12" rx="2" fill="#181818"/>
+  <text x="154" y="245" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.14em">HOST PROCESS · NODE.JS</text>
+
+  <rect x="456" y="556" width="152" height="12" rx="2" fill="#181818"/>
+  <text x="532" y="565" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.14em">CONTAINER · PER SESSION</text>
+
+  <rect x="64" y="478" width="184" height="20" rx="2" fill="#000000"/>
+  <text x="72" y="492" fill="#B0B0B0" font-size="8" letter-spacing="0.14em">DOCKER MOUNT BOUNDARY</text>
+
+  <!-- Editorial aside -->
+  <text x="80" y="552" fill="#B0B0B0" font-size="12" font-style="italic">One writer per file, opposite directions.</text>
+  <text x="80" y="572" fill="#B0B0B0" font-size="12" font-style="italic">A crashed container cannot corrupt the host queue.</text>
+
+  <!-- ==========================================================
+       NODES
+       ========================================================== -->
+  <!-- Platform (external) -->
+  <rect x="104" y="96" width="176" height="72" rx="6" fill="#202020" stroke="#B0B0B0" stroke-width="1"/>
+  <rect x="112" y="104" width="36" height="12" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.45" stroke-width="0.8"/>
+  <text x="130" y="113" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.08em">EXT</text>
+  <text x="192" y="136" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Platform</text>
+  <text x="192" y="152" fill="#B0B0B0" font-size="9" text-anchor="middle">messaging platform</text>
+
+  <!-- Channel adapter -->
+  <rect x="104" y="288" width="176" height="80" rx="6" fill="#000000" stroke="#B0B0B0" stroke-width="1"/>
+  <rect x="112" y="296" width="36" height="12" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.45" stroke-width="0.8"/>
+  <text x="130" y="305" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.08em">ADPT</text>
+  <text x="192" y="332" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Channel adapter</text>
+  <text x="192" y="350" fill="#B0B0B0" font-size="9" text-anchor="middle">channel plugin</text>
+
+  <!-- Delivery -->
+  <rect x="512" y="288" width="176" height="80" rx="6" fill="#000000" stroke="#B0B0B0" stroke-width="1"/>
+  <rect x="520" y="296" width="36" height="12" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.45" stroke-width="0.8"/>
+  <text x="538" y="305" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.08em">POLL</text>
+  <text x="600" y="332" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Delivery</text>
+  <text x="600" y="350" fill="#B0B0B0" font-size="9" text-anchor="middle">1s active · 60s sweep</text>
+
+  <!-- Router -->
+  <rect x="920" y="288" width="176" height="80" rx="6" fill="#000000" stroke="#B0B0B0" stroke-width="1"/>
+  <rect x="928" y="296" width="36" height="12" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.45" stroke-width="0.8"/>
+  <text x="946" y="305" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.08em">CORE</text>
+  <text x="1008" y="332" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Router</text>
+  <text x="1008" y="350" fill="#B0B0B0" font-size="9" text-anchor="middle">policy + wiring</text>
+
+  <!-- outbound.db — accent, sits ON the boundary -->
+  <rect x="504" y="452" width="192" height="72" rx="6" fill="#56EDD6" stroke="#56EDD6" stroke-width="1"/>
+  <rect x="512" y="460" width="36" height="12" rx="2" fill="none" stroke="#000000" stroke-opacity="0.40" stroke-width="0.8"/>
+  <text x="530" y="469" fill="#000000" fill-opacity="0.80" font-size="7" text-anchor="middle" letter-spacing="0.08em">FILE</text>
+  <text x="600" y="496" fill="#000000" font-size="12" font-weight="600" text-anchor="middle">outbound.db</text>
+  <text x="600" y="514" fill="#000000" fill-opacity="0.72" font-size="9" text-anchor="middle">container writes · host reads</text>
+
+  <!-- inbound.db — accent, sits ON the boundary -->
+  <rect x="912" y="452" width="192" height="72" rx="6" fill="#56EDD6" stroke="#56EDD6" stroke-width="1"/>
+  <rect x="920" y="460" width="36" height="12" rx="2" fill="none" stroke="#000000" stroke-opacity="0.40" stroke-width="0.8"/>
+  <text x="938" y="469" fill="#000000" fill-opacity="0.80" font-size="7" text-anchor="middle" letter-spacing="0.08em">FILE</text>
+  <text x="1008" y="496" fill="#000000" font-size="12" font-weight="600" text-anchor="middle">inbound.db</text>
+  <text x="1008" y="514" fill="#000000" fill-opacity="0.72" font-size="9" text-anchor="middle">host writes · container reads</text>
+
+  <!-- agent-runner (per session — dashed stroke) -->
+  <rect x="688" y="600" width="224" height="88" rx="6" fill="#000000" stroke="#B0B0B0" stroke-width="1" stroke-dasharray="4,3"/>
+  <rect x="696" y="608" width="44" height="12" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.45" stroke-width="0.8"/>
+  <text x="718" y="617" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.08em">AGENT</text>
+  <text x="800" y="648" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">agent-runner</text>
+  <text x="800" y="666" fill="#B0B0B0" font-size="9" text-anchor="middle">poll loop · 1s · no platform access</text>
+
+  <!-- ==========================================================
+       LEGEND
+       ========================================================== -->
+  <line x1="64" y1="800" x2="1256" y2="800" stroke="#3A3A3A" stroke-width="0.8"/>
+  <text x="64" y="820" fill="#B0B0B0" font-size="8" letter-spacing="0.18em">LEGEND</text>
+
+  <g font-size="9" fill="#B0B0B0">
+    <rect x="64" y="840" width="14" height="10" rx="2" fill="#56EDD6" stroke="#56EDD6" stroke-width="1"/>
+    <text x="84" y="848">Mounted SQLite file</text>
+
+    <rect x="208" y="840" width="14" height="10" rx="2" fill="#000000" stroke="#B0B0B0" stroke-width="1"/>
+    <text x="228" y="848">Host component</text>
+
+    <circle cx="331" cy="844" r="7" fill="#000000" stroke="#B0B0B0" stroke-width="1"/>
+    <text x="331" y="847" font-size="7" font-weight="600" fill="#FFFFFF" text-anchor="middle">1</text>
+    <text x="346" y="848">Step order</text>
+
+    <line x1="424" y1="844" x2="452" y2="844" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#na-arrow-d)"/>
+    <text x="460" y="848">Rows written / read</text>
+
+    <line x1="584" y1="844" x2="612" y2="844" stroke="#B0B0B0" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#na-arrow-ctl-d)"/>
+    <text x="620" y="848">Docker control</text>
+
+    <line x1="720" y1="844" x2="748" y2="844" stroke="#E85D3A" stroke-width="1.6" marker-end="url(#na-arrow-hi-d)"/>
+    <text x="756" y="848">Reply to the user</text>
+  </g>
+</svg>

@@ -1,0 +1,163 @@
+<svg viewBox="0 0 1320 816" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="nanoclaw-lifecycle-dark-title nanoclaw-lifecycle-dark-desc" font-family="Inter, ui-sans-serif, system-ui, sans-serif">
+  <title id="nanoclaw-lifecycle-dark-title">Container lifecycle: the container is disposable, the session state is not</title>
+  <desc id="nanoclaw-lifecycle-dark-desc">State machine for one session's Docker container. Setup builds the base image, then the session sits Idle until wakeContainer fires on an inbound message, a due task, or a restart, moving it to Spawning. Spawning either aborts back to Idle when the vault is unreachable, leaving the message pending, or reaches Running through docker run with the remove flag. Running ends either as Exited, when the runner self-exits on a crash or a corrupt database, or as Killed by the host sweep on the idle ceiling or a claim-stuck message; a kill returns to Idle with processing rows reset with backoff, up to five tries. Below the cycle, a persistent band shows the session state held in mounted host directories, which outlives every state above, so a kill loses only the in-flight provider call.</desc>
+
+  <defs>
+    <marker id="nl-arrow-d" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#B0B0B0"/>
+    </marker>
+    <marker id="nl-arrow-hi-d" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#E85D3A"/>
+    </marker>
+    <marker id="nl-arrow-abort-d" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polyline points="0 0, 8 3, 0 6" fill="none" stroke="#B0B0B0" stroke-width="1.2"/>
+    </marker>
+  </defs>
+
+  <!-- Canvas -->
+  <rect width="100%" height="100%" fill="#000000"/>
+
+  <!-- Header -->
+  <text x="64" y="40" fill="#B0B0B0" font-size="8" letter-spacing="0.18em">NANOCLAW · CONTAINER LIFECYCLE</text>
+  <text x="64" y="68" fill="#FFFFFF" font-size="20" font-weight="600" letter-spacing="-0.01em">Containers are disposable; the session state is not</text>
+
+  <!-- ==========================================================
+       BOUNDARY — everything above it is thrown away
+       ========================================================== -->
+  <line x1="64" y1="536" x2="1256" y2="536" stroke="#B0B0B0" stroke-width="1.6" stroke-dasharray="8,5"/>
+
+  <!-- ==========================================================
+       TRANSITIONS — drawn before the state boxes
+       ========================================================== -->
+  <!-- entry: setup builds the base image -->
+  <path d="M 256,96 V 160" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#nl-arrow-d)"/>
+  <!-- Spawning -> Idle : abort (safety path, muted + dashed) -->
+  <path d="M 560,240 V 272 Q 560,280 552,280 H 256 Q 248,280 248,272 V 240" fill="none" stroke="#B0B0B0" stroke-width="1" stroke-opacity="0.70" stroke-dasharray="4,3" marker-end="url(#nl-arrow-abort-d)"/>
+  <!-- Idle -> Spawning : wake -->
+  <path d="M 320,216 H 512" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#nl-arrow-d)"/>
+  <!-- Spawning -> Running : docker run -->
+  <path d="M 736,216 H 928" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#nl-arrow-d)"/>
+  <!-- Running -> Exited -->
+  <path d="M 976,240 V 288 Q 976,296 968,296 H 632 Q 624,296 624,304 V 352" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#nl-arrow-d)"/>
+  <!-- Running -> Killed : the sweep kill (single highlight) -->
+  <path d="M 1040,240 V 352" fill="none" stroke="#E85D3A" stroke-width="1.6" marker-end="url(#nl-arrow-hi-d)"/>
+  <!-- Exited -> Idle -->
+  <path d="M 512,396 H 224 Q 216,396 216,388 V 240" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#nl-arrow-d)"/>
+  <!-- Killed -> Idle : rows reset with backoff -->
+  <path d="M 1040,440 V 480 Q 1040,488 1032,488 H 192 Q 184,488 184,480 V 240" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#nl-arrow-d)"/>
+
+  <!-- ==========================================================
+       TRANSITION LABELS — masked, 10-12px clear of the stroke
+       ========================================================== -->
+  <g font-size="8" letter-spacing="0.08em" fill="#B0B0B0">
+    <rect x="116" y="114" width="124" height="12" rx="2" fill="#000000"/>
+    <text x="240" y="123" text-anchor="end">SETUP PULLS OR BUILDS</text>
+    <rect x="172" y="128" width="68" height="12" rx="2" fill="#000000"/>
+    <text x="240" y="137" text-anchor="end">BASE IMAGE</text>
+
+    <rect x="332" y="288" width="144" height="12" rx="2" fill="#000000"/>
+    <text x="404" y="297" text-anchor="middle">VAULT UNREACHABLE · ABORT</text>
+    <rect x="340" y="302" width="128" height="12" rx="2" fill="#000000"/>
+    <text x="404" y="311" text-anchor="middle">MESSAGE STAYS PENDING</text>
+
+    <rect x="332" y="178" width="168" height="12" rx="2" fill="#000000"/>
+    <text x="416" y="187" text-anchor="middle">WAKECONTAINER · INBOUND MESSAGE</text>
+    <rect x="358" y="192" width="116" height="12" rx="2" fill="#000000"/>
+    <text x="416" y="201" text-anchor="middle">DUE TASK · OR RESTART</text>
+
+    <rect x="784" y="192" width="96" height="12" rx="2" fill="#000000"/>
+    <text x="832" y="201" text-anchor="middle">DOCKER RUN --RM</text>
+
+    <rect x="688" y="274" width="224" height="12" rx="2" fill="#000000"/>
+    <text x="800" y="283" text-anchor="middle">RUNNER SELF-EXITS · CRASH OR CORRUPT DB</text>
+
+    <rect x="1052" y="280" width="144" height="12" rx="2" fill="#000000"/>
+    <text x="1056" y="289" fill="#E85D3A">SWEEP KILL · IDLE CEILING</text>
+    <rect x="1052" y="294" width="92" height="12" rx="2" fill="#000000"/>
+    <text x="1056" y="303" fill="#E85D3A">OR CLAIM-STUCK</text>
+
+    <rect x="512" y="466" width="200" height="12" rx="2" fill="#000000"/>
+    <text x="612" y="475" text-anchor="middle">PROCESSING ROWS RESET · WITH BACKOFF</text>
+  </g>
+
+  <!-- Boundary label -->
+  <rect x="64" y="526" width="240" height="20" rx="2" fill="#000000"/>
+  <text x="72" y="540" fill="#B0B0B0" font-size="8" letter-spacing="0.14em">DISPOSABLE ABOVE · PERSISTS BELOW</text>
+
+  <!-- ==========================================================
+       STATES
+       ========================================================== -->
+  <!-- entry dot -->
+  <circle cx="256" cy="88" r="6" fill="#FFFFFF"/>
+
+  <!-- Idle -->
+  <rect x="96" y="160" width="224" height="80" rx="8" fill="#000000" stroke="#B0B0B0" stroke-width="1"/>
+  <rect x="104" y="168" width="40" height="12" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.45" stroke-width="0.8"/>
+  <text x="124" y="177" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.08em">STATE</text>
+  <text x="208" y="204" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Idle</text>
+  <text x="208" y="222" fill="#B0B0B0" font-size="9" text-anchor="middle">no container running</text>
+
+  <!-- Spawning -->
+  <rect x="512" y="160" width="224" height="80" rx="8" fill="#000000" stroke="#B0B0B0" stroke-width="1"/>
+  <rect x="520" y="168" width="40" height="12" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.45" stroke-width="0.8"/>
+  <text x="540" y="177" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.08em">STATE</text>
+  <text x="624" y="204" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Spawning</text>
+  <text x="624" y="222" fill="#B0B0B0" font-size="9" text-anchor="middle">mounts assembled · vault wired</text>
+
+  <!-- Running -->
+  <rect x="928" y="160" width="224" height="80" rx="8" fill="#000000" stroke="#B0B0B0" stroke-width="1"/>
+  <rect x="936" y="168" width="40" height="12" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.45" stroke-width="0.8"/>
+  <text x="956" y="177" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.08em">STATE</text>
+  <text x="1040" y="204" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Running</text>
+  <text x="1040" y="222" fill="#B0B0B0" font-size="9" text-anchor="middle">polls inbound.db · beats while working</text>
+
+  <!-- Exited -->
+  <rect x="512" y="352" width="224" height="88" rx="8" fill="#000000" stroke="#B0B0B0" stroke-width="1"/>
+  <rect x="520" y="360" width="40" height="12" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.45" stroke-width="0.8"/>
+  <text x="540" y="369" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.08em">STATE</text>
+  <text x="624" y="400" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Exited</text>
+  <text x="624" y="418" fill="#B0B0B0" font-size="9" text-anchor="middle">crash or bail · --rm removes it</text>
+
+  <!-- Killed -->
+  <rect x="928" y="352" width="224" height="88" rx="8" fill="#000000" stroke="#B0B0B0" stroke-width="1"/>
+  <rect x="936" y="360" width="40" height="12" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.45" stroke-width="0.8"/>
+  <text x="956" y="369" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.08em">STATE</text>
+  <text x="1040" y="400" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Killed</text>
+  <text x="1040" y="418" fill="#B0B0B0" font-size="9" text-anchor="middle">docker stop -t 1 · SIGTERM</text>
+
+  <!-- ==========================================================
+       THE THING THAT SURVIVES — mounted host state
+       ========================================================== -->
+  <rect x="96" y="576" width="1056" height="88" rx="8" fill="#56EDD6" stroke="#56EDD6" stroke-width="1"/>
+  <rect x="104" y="584" width="36" height="12" rx="2" fill="none" stroke="#000000" stroke-opacity="0.40" stroke-width="0.8"/>
+  <text x="122" y="593" fill="#000000" fill-opacity="0.80" font-size="7" text-anchor="middle" letter-spacing="0.08em">FILE</text>
+  <text x="624" y="616" fill="#000000" font-size="12" font-weight="600" text-anchor="middle">Session state · mounted host dirs</text>
+  <text x="624" y="636" fill="#000000" fill-opacity="0.72" font-size="9" text-anchor="middle">data/v2-sessions/&lt;group&gt;/&lt;session&gt;/ · groups/&lt;folder&gt;/</text>
+  <text x="624" y="652" fill="#000000" fill-opacity="0.72" font-size="9" text-anchor="middle">read-write each spawn · config read-only · outlives every state above</text>
+
+  <!-- Editorial aside -->
+  <text x="96" y="700" fill="#B0B0B0" font-size="12" font-style="italic">a kill loses only the in-flight provider call · host sweep retries · five tries max</text>
+
+  <!-- ==========================================================
+       LEGEND
+       ========================================================== -->
+  <line x1="64" y1="736" x2="1256" y2="736" stroke="#3A3A3A" stroke-width="0.8"/>
+  <text x="64" y="756" fill="#B0B0B0" font-size="8" letter-spacing="0.18em">LEGEND</text>
+
+  <g font-size="9" fill="#B0B0B0">
+    <rect x="64" y="776" width="14" height="10" rx="2" fill="#56EDD6" stroke="#56EDD6" stroke-width="1"/>
+    <text x="84" y="784">Mounted host state · persists</text>
+
+    <rect x="264" y="776" width="14" height="10" rx="2" fill="#000000" stroke="#B0B0B0" stroke-width="1"/>
+    <text x="284" y="784">Lifecycle state</text>
+
+    <line x1="416" y1="780" x2="444" y2="780" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#nl-arrow-d)"/>
+    <text x="452" y="784">Transition</text>
+
+    <line x1="552" y1="780" x2="580" y2="780" stroke="#E85D3A" stroke-width="1.6" marker-end="url(#nl-arrow-hi-d)"/>
+    <text x="588" y="784">Sweep kill</text>
+
+    <line x1="692" y1="780" x2="720" y2="780" stroke="#B0B0B0" stroke-width="1" stroke-opacity="0.70" stroke-dasharray="4,3" marker-end="url(#nl-arrow-abort-d)"/>
+    <text x="728" y="784">Abort · message stays pending</text>
+  </g>
+</svg>

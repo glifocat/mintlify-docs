@@ -1,0 +1,147 @@
+<svg viewBox="0 0 1328 768" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="nc-iso-dark-title nc-iso-dark-desc" font-family="Inter, ui-sans-serif, system-ui, sans-serif">
+  <title id="nc-iso-dark-title">NanoClaw isolation levels: two dials, four levels</title>
+  <desc id="nc-iso-dark-desc">A decision guide with three questions that land on a four-level isolation spectrum, ordered most to least isolated: separate agent groups, then session_mode per-thread, shared and agent-shared. Answering yes to different people, trust domains or jobs gives separate agent groups; otherwise, wanting one continuous conversation across all chats gives agent-shared, wanting each thread to be its own conversation gives per-thread, and anything else gives shared. A bracket under the three session_mode levels notes that they all sit in one agent group and therefore share the same files at /workspace/agent.</desc>
+
+  <defs>
+    <marker id="nc-iso-arrow-d" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#B0B0B0"/>
+    </marker>
+  </defs>
+
+  <!-- Canvas -->
+  <rect width="100%" height="100%" fill="#000000"/>
+
+  <!-- Header -->
+  <text x="64" y="40" fill="#B0B0B0" font-size="8" letter-spacing="0.18em">NANOCLAW · ISOLATION LEVELS</text>
+  <text x="64" y="68" fill="#FFFFFF" font-size="20" font-weight="600" letter-spacing="-0.01em">Two dials, four levels of isolation</text>
+
+  <!-- ==========================================================
+       ARROWS — drawn before nodes
+       ========================================================== -->
+  <!-- Q1 no -> Q2 -->
+  <path d="M 352,192 H 976" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#nc-iso-arrow-d)"/>
+  <!-- Q1 yes -> separate agent groups -->
+  <path d="M 208,248 V 448" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#nc-iso-arrow-d)"/>
+  <!-- Q2 no -> Q3 -->
+  <path d="M 1048,220 V 248 Q 1048,256 1040,256 H 664 Q 656,256 656,264 V 280" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#nc-iso-arrow-d)"/>
+  <!-- Q2 yes -> agent-shared -->
+  <path d="M 1120,248 V 448" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#nc-iso-arrow-d)"/>
+  <!-- Q3 no -> shared -->
+  <path d="M 800,336 H 808 Q 816,336 816,344 V 448" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#nc-iso-arrow-d)"/>
+  <!-- Q3 yes -> per-thread -->
+  <path d="M 512,336 V 448" fill="none" stroke="#B0B0B0" stroke-width="1.2" marker-end="url(#nc-iso-arrow-d)"/>
+
+  <!-- ==========================================================
+       ARROW LABELS — masked, 8-12px clear of the stroke
+       ========================================================== -->
+  <g font-size="8" letter-spacing="0.12em" fill="#B0B0B0">
+    <rect x="648" y="168" width="32" height="12" rx="2" fill="#000000"/>
+    <text x="664" y="177" text-anchor="middle">NO</text>
+
+    <rect x="216" y="300" width="32" height="12" rx="2" fill="#000000"/>
+    <text x="220" y="309">YES</text>
+
+    <rect x="840" y="232" width="32" height="12" rx="2" fill="#000000"/>
+    <text x="856" y="241" text-anchor="middle">NO</text>
+
+    <rect x="1128" y="300" width="32" height="12" rx="2" fill="#000000"/>
+    <text x="1132" y="309">YES</text>
+
+    <rect x="824" y="388" width="24" height="12" rx="2" fill="#000000"/>
+    <text x="828" y="397">NO</text>
+
+    <rect x="464" y="388" width="32" height="12" rx="2" fill="#000000"/>
+    <text x="492" y="397" text-anchor="end">YES</text>
+  </g>
+
+  <!-- ==========================================================
+       ISOLATION SPECTRUM — axis rule, broken where answers land
+       ========================================================== -->
+  <g stroke="#3A3A3A" stroke-width="0.8">
+    <line x1="64" y1="424" x2="192" y2="424"/>
+    <line x1="224" y1="424" x2="496" y2="424"/>
+    <line x1="528" y1="424" x2="800" y2="424"/>
+    <line x1="832" y1="424" x2="1104" y2="424"/>
+    <line x1="1136" y1="424" x2="1264" y2="424"/>
+  </g>
+  <text x="64" y="412" fill="#B0B0B0" font-size="8" letter-spacing="0.18em">MOST ISOLATED</text>
+  <text x="1264" y="412" fill="#B0B0B0" font-size="8" letter-spacing="0.18em" text-anchor="end">LEAST ISOLATED</text>
+
+  <!-- ==========================================================
+       QUESTIONS — diamonds
+       ========================================================== -->
+  <polygon points="208,136 352,192 208,248 64,192" fill="#000000" stroke="#B0B0B0" stroke-width="1"/>
+  <text x="208" y="184" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Different people, trust</text>
+  <text x="208" y="200" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">domains, or jobs?</text>
+
+  <polygon points="1120,136 1264,192 1120,248 976,192" fill="#000000" stroke="#B0B0B0" stroke-width="1"/>
+  <text x="1120" y="184" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Should all chats be one</text>
+  <text x="1120" y="200" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">continuous conversation?</text>
+
+  <polygon points="656,280 800,336 656,392 512,336" fill="#000000" stroke="#B0B0B0" stroke-width="1"/>
+  <text x="656" y="328" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">Should each thread be</text>
+  <text x="656" y="344" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">its own conversation?</text>
+
+  <!-- ==========================================================
+       THE SPECTRUM — four levels, most to least isolated
+       ========================================================== -->
+  <!-- 1 · separate agent groups (the safe default) -->
+  <rect x="64" y="448" width="288" height="112" rx="6" fill="#56EDD6" stroke="#56EDD6" stroke-width="1"/>
+  <rect x="72" y="456" width="44" height="12" rx="2" fill="none" stroke="#000000" stroke-opacity="0.40" stroke-width="0.8"/>
+  <text x="94" y="465" fill="#000000" fill-opacity="0.80" font-size="7" text-anchor="middle" letter-spacing="0.08em">GROUP</text>
+  <text x="208" y="504" fill="#000000" font-size="12" font-weight="600" text-anchor="middle">Separate agent groups</text>
+  <text x="208" y="524" fill="#000000" fill-opacity="0.72" font-size="9" text-anchor="middle">no shared workspace</text>
+
+  <!-- 2 · per-thread -->
+  <rect x="368" y="448" width="288" height="112" rx="6" fill="#202020" stroke="#B0B0B0" stroke-width="1"/>
+  <rect x="376" y="456" width="40" height="12" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.45" stroke-width="0.8"/>
+  <text x="396" y="465" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.08em">MODE</text>
+  <text x="512" y="504" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">session_mode: per-thread</text>
+  <text x="512" y="524" fill="#B0B0B0" font-size="9" text-anchor="middle">a session per thread</text>
+  <text x="512" y="540" fill="#B0B0B0" font-size="9" text-anchor="middle">forced on threaded group chats · agent-shared exempt</text>
+
+  <!-- 3 · shared -->
+  <rect x="672" y="448" width="288" height="112" rx="6" fill="#181818" stroke="#B0B0B0" stroke-width="1"/>
+  <rect x="680" y="456" width="40" height="12" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.45" stroke-width="0.8"/>
+  <text x="700" y="465" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.08em">MODE</text>
+  <text x="816" y="504" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">session_mode: shared</text>
+  <text x="816" y="524" fill="#B0B0B0" font-size="9" text-anchor="middle">a session per chat</text>
+
+  <!-- 4 · agent-shared -->
+  <rect x="976" y="448" width="288" height="112" rx="6" fill="#101010" stroke="#B0B0B0" stroke-width="1"/>
+  <rect x="984" y="456" width="40" height="12" rx="2" fill="none" stroke="#B0B0B0" stroke-opacity="0.45" stroke-width="0.8"/>
+  <text x="1004" y="465" fill="#B0B0B0" font-size="7" text-anchor="middle" letter-spacing="0.08em">MODE</text>
+  <text x="1120" y="504" fill="#FFFFFF" font-size="12" font-weight="600" text-anchor="middle">session_mode: agent-shared</text>
+  <text x="1120" y="524" fill="#B0B0B0" font-size="9" text-anchor="middle">one conversation everywhere</text>
+
+  <!-- ==========================================================
+       BRACKET — the three session_mode levels share one group
+       ========================================================== -->
+  <path d="M 368,576 V 584 H 1264 V 576" fill="none" stroke="#B0B0B0" stroke-width="1"/>
+  <text x="816" y="612" fill="#FFFFFF" font-size="12" text-anchor="middle">Same agent group = the same files at /workspace/agent</text>
+  <text x="816" y="632" fill="#B0B0B0" font-size="12" font-style="italic" text-anchor="middle">Conversations are isolated; the filesystem is not.</text>
+
+  <!-- Editorial aside, under the safe default -->
+  <text x="64" y="612" fill="#B0B0B0" font-size="12" font-style="italic">When in doubt, start more isolated.</text>
+  <text x="64" y="632" fill="#B0B0B0" font-size="12" font-style="italic">Splitting later is cheap; merging is not.</text>
+
+  <!-- ==========================================================
+       LEGEND
+       ========================================================== -->
+  <line x1="64" y1="688" x2="1264" y2="688" stroke="#3A3A3A" stroke-width="0.8"/>
+  <text x="64" y="708" fill="#B0B0B0" font-size="8" letter-spacing="0.18em">LEGEND</text>
+
+  <g font-size="9" fill="#B0B0B0">
+    <polygon points="76,724 92,732 76,740 60,732" fill="#000000" stroke="#B0B0B0" stroke-width="1"/>
+    <text x="104" y="736">Question you answer when wiring a chat</text>
+
+    <rect x="384" y="728" width="24" height="10" rx="2" fill="#56EDD6" stroke="#56EDD6" stroke-width="1"/>
+    <text x="416" y="736">Dial 1 · which agent group the wiring points at</text>
+
+    <rect x="736" y="728" width="24" height="10" rx="2" fill="#181818" stroke="#B0B0B0" stroke-width="1"/>
+    <text x="768" y="736">Dial 2 · the wiring's session_mode</text>
+
+    <path d="M 1032,740 V 732 H 1056 V 740" fill="none" stroke="#B0B0B0" stroke-width="1"/>
+    <text x="1064" y="736">One agent group · one shared filesystem</text>
+  </g>
+</svg>

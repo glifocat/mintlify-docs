@@ -10,7 +10,8 @@ NanoClaw connects an AI agent with real tools — a shell, a filesystem, network
 
 Everything below answers the question that assumption forces: *what can a fully compromised agent actually do?* Each layer shrinks that answer. This page is the why; the configuration lives in [Hardening](/operate/hardening) and [Credentials](/operate/credentials).
 
-```mermaid
+{/* Diagram source (Mermaid) - kept for regeneration. Edit this, then redraw the
+    SVG pair below with the diagram-design skill (see CLAUDE.md, Diagrams section).
 flowchart TD
     M["Untrusted message"] --> S["Sender policies + engagement gates"]
     S --> CG["Command gate (host)"]
@@ -18,7 +19,9 @@ flowchart TD
     C --> F["Filesystem: mounts only,<br/>allowlist for anything extra"]
     C --> N["Network: vault proxy,<br/>egress lockdown optional"]
     N --> A["Approval cards for<br/>privileged actions"]
-```
+*/}
+<img className="block dark:hidden" src="/images/diagrams/security-light.svg" alt="Containment view of the security model: an assumed-injected agent inside the container boundary, sender policies and the command gate on the inbound side, and bounded filesystem, network, and privileged-action paths crossing out" />
+<img className="hidden dark:block" src="/images/diagrams/security-dark.svg" alt="Containment view of the security model: an assumed-injected agent inside the container boundary, sender policies and the command gate on the inbound side, and bounded filesystem, network, and privileged-action paths crossing out" />
 
 ## Container isolation — the blast radius is one session
 

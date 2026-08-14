@@ -16,7 +16,8 @@ There is no swarm engine. Multi-agent in NanoClaw is the same three things every
 - **Agent-to-agent messages are queue rows.** A message to another agent travels through the same SQLite inbox/outbox pipeline as a WhatsApp message; only `channel_type` differs (`agent` instead of a platform).
 - **Destinations are the permission edges.** A row in `agent_destinations` means "agent A may send to target B, and calls it `local-name`". No row, no delivery — the host rejects unauthorized sends. Channels and agents share one namespace, so messaging an agent is just `send_message` with `to` set to its name.
 
-```mermaid
+{/* Diagram source (Mermaid) - kept for regeneration. Edit this, then redraw the
+    SVG pair below with the diagram-design skill (see CLAUDE.md, Diagrams section).
 graph TD
     You["Your DM (channel)"]
     S["Supervisor"]
@@ -27,7 +28,9 @@ graph TD
     S <-->|destination: manager / parent| M
     M <-->|destination: worker-1 / parent| W1
     M <-->|destination: worker-2 / parent| W2
-```
+*/}
+<img className="block dark:hidden" src="/images/diagrams/multi-agent-swarm-light.svg" alt="Worker, manager, and supervisor agent groups connected by directed agent_destinations rows; a send with no row is rejected by the host" />
+<img className="hidden dark:block" src="/images/diagrams/multi-agent-swarm-dark.svg" alt="Worker, manager, and supervisor agent groups connected by directed agent_destinations rows; a send with no row is rejected by the host" />
 
 Every arrow is one or two `agent_destinations` rows. Each direction is a separate row — A having an edge to B does not give B an edge back.
 
