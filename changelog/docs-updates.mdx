@@ -5,6 +5,12 @@ icon: "file-pen"
 rss: true
 ---
 
+<Update label="Add Agent to Slack launch guide" description="2026-08-18" tags={["Updated"]}>
+  Rebuilt [Slack](/channels/slack) around the new managed-app and multi-agent experience. The guide now separates managed provisioning from the manual app path, explains per-agent Slack identities, shared agent rooms, canvases, per-thread sessions, the agent-to-agent safety boundary, and every Slack-specific environment variable in one place. The channels overview and skills catalog now point to the same model.
+
+  This staging revision matches the feature's current upstream boundaries: managed first-app provisioning is merged behind `--slack-agents` in [nanoclaw#3314](https://github.com/nanocoai/nanoclaw/pull/3314), while the canonical Slack payload and optional `slack-agent-flow` skill are merged on the channels branch in [nanoclaw#3315](https://github.com/nanocoai/nanoclaw/pull/3315). The page carries an explicit opt-in warning until the launch-default and packaging follow-ups land. Verified against trunk `53ea1e8b` and channels `d69c9c5d`.
+</Update>
+
 <Update label="Every diagram redrawn: editorial SVGs replace Mermaid" description="2026-08-14" tags={["Updated"]}>
   All ten diagrams across the docs are now hand-drawn editorial SVGs (light and dark variants, drawn with the open-source [diagram-design](https://github.com/cathrynlavery/diagram-design) skill in the brand palette) instead of rendered Mermaid blocks. Each was also rethought around its page's point rather than restyled 1:1:
 

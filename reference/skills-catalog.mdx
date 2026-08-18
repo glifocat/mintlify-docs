@@ -2,9 +2,10 @@
 title: "Skills catalog"
 description: "Every skill that ships with NanoClaw — host-side workspace skills you invoke from your coding harness, and container skills mounted into every agent container."
 keywords: ["skills", "catalog", "reference", "add-channel", "providers", "tools", "container skills", "workspace skills", "slash commands"]
+tag: "UPDATED"
 ---
 
-{/* verified-against: .claude/skills/ and container/skills/ listings + each skill's SKILL.md frontmatter @ 639577c3 */}
+{/* verified-against: main .claude/skills/ and container/skills/ listings + each skill's SKILL.md frontmatter @ 53ea1e8b; channels .claude/skills/{add-slack,slack-a2a-rooms,slack-agent-flow,slack-multi-instance}/SKILL.md @ d69c9c5d */}
 
 NanoClaw ships two kinds of skills:
 
@@ -40,6 +41,16 @@ Each skill wires up one messaging channel. See [Channels](/channels/overview) fo
 | `/add-wechat` | Adds the [WeChat](/channels/more-channels#wechat) personal channel via Tencent's official iLink Bot API — long-polling and QR scan, no webhook |
 | `/add-whatsapp` | Adds the [WhatsApp](/channels/whatsapp) channel via native Baileys adapter — QR code or pairing code authentication |
 | `/add-whatsapp-cloud` | Adds the [WhatsApp Business Cloud API](/channels/more-channels#whatsapp-cloud-api) channel via Chat SDK — official Meta API |
+
+### Slack feature skills
+
+These skills live on the `channels` branch. They are not included in the 45-skill trunk count above.
+
+| Skill | What it does |
+| --- | --- |
+| `/slack-a2a-rooms` | Allows sibling NanoClaw bots to exchange mention-driven messages in explicitly allowlisted Slack group DMs, with a consecutive-hop limit. Applied as a companion when the current `/add-slack` payload is installed. |
+| `/slack-agent-flow` | Extends `create_agent` in Slack so a new agent gets its own provisioned bot, operator DM, shared room, canvas, and hot-started adapter. This is a separate optional feature skill. |
+| `/slack-multi-instance` | Documents the native `SLACK_INSTANCES` convention for running several Slack bot identities on one NanoClaw host. The adapter behavior is installed by `/add-slack`; this skill makes no code changes. |
 
 ## Provider installs
 

@@ -1,76 +1,201 @@
 ---
-title: "Slack"
-description: "Connect NanoClaw to a Slack workspace via the Chat SDK adapter — app creation, OAuth scopes, webhook URL, and thread sessions."
-keywords: ["slack", "bot token", "signing secret", "add-slack", "webhook", "event subscriptions", "interactivity", "mrkdwn", "chat sdk", "threads"]
+title: "Add Agent to Slack"
+sidebarTitle: "Slack"
+description: "Give NanoClaw agents their own Slack identities, direct messages, shared rooms, and canvases — with managed app creation or a manual Slack app."
+keywords: ["slack", "add agent to slack", "slack agent", "managed slack app", "multi-agent", "slack bot", "socket mode", "slack-agent-flow", "slack rooms", "canvas"]
+tag: "UPDATED"
 ---
 
-{/* verified-against: src/channels/chat-sdk-bridge.ts, src/webhook-server.ts, src/router.ts, .claude/skills/add-slack/SKILL.md @ 639577c3; channels branch src/channels/slack.ts, container/skills/slack-formatting/SKILL.md @ 6ee516ad */}
+{/* verified-against: main setup/channels/{slack-auto-register,slack-auto,companions}.ts, nanoclaw.sh, src/channels/channel-registry.ts @ 53ea1e8b; channels .claude/skills/{add-slack,slack-agent-flow,slack-a2a-rooms,slack-multi-instance}/SKILL.md, src/channels/{slack,slack-a2a-guard}.ts, src/provisioning/slack-app.ts, setup/channels/slack-companions.ts @ d69c9c5d */}
 
-The Slack adapter connects NanoClaw to a Slack app you create in your workspace. It's built on the Chat SDK bridge (`@chat-adapter/slack` 4.29.0, pinned) and supports two delivery modes:
+Give each NanoClaw agent its own identity in Slack. You can talk to an agent in a direct message, bring several agents into one shared room, and use a room canvas as shared working context.
 
-- **Socket Mode** (the setup default) — the bot opens an outbound WebSocket to Slack, so events arrive over that connection and NanoClaw needs **no public URL**. Ideal for local dev or a host behind NAT. Setting `SLACK_APP_TOKEN` (`xapp-…`) is what flips the adapter into this mode.
-- **Webhook mode** — Slack POSTs to `/webhook/slack` on NanoClaw's shared webhook server, which needs a **public HTTPS URL** that reaches your machine. The adapter uses this mode whenever `SLACK_APP_TOKEN` is unset.
+The managed setup path creates the Slack app and installs it for you. You do not need to build a manifest, choose scopes, or paste tokens when your workspace allows automatic app installation. A manual path remains available for self-managed and restricted workspaces.
 
-The bot works in public channels, private channels, DMs, and threads.
+<Warning>
+  Managed Slack setup is currently opt-in. Start setup with `bash nanoclaw.sh --slack-agents` or set `NANOCLAW_SLACK_AGENTS=1`. Without the flag, the wizard uses the manual app flow. The one-bot-per-agent extension is also a separate `slack-agent-flow` skill on the `channels` branch; the base `/add-slack` install does not apply it automatically yet.
+</Warning>
 
-## Prerequisites
+## What you get
 
-- A Slack workspace where you can install apps
-- A working NanoClaw install ([quickstart](/quickstart))
-- A Slack app created **From scratch** at [api.slack.com/apps](https://api.slack.com/apps) with these **Bot Token Scopes** (under **OAuth & Permissions**): `chat:write`, `im:write`, `im:history`, `channels:read`, `channels:history`, `groups:read`, `groups:history`, `users:read`, `reactions:write`, `files:read`, `files:write`
-- **App Home** → enable the **Messages Tab** and check "Allow users to send slash commands and messages from the messages tab" — without this you can't DM the bot
-- The **Bot User OAuth Token** (`xoxb-…`, shown after **Install to Workspace**), plus the credential for your chosen mode: an **App-Level Token** (`xapp-…` with the `connections:write` scope, under **Basic Information** → **App-Level Tokens**) for Socket Mode, or the **Signing Secret** (under **Basic Information**) for webhook mode. In Socket Mode the signing secret is optional — Slack signs socket frames separately.
-- **Webhook mode only:** a way to expose port 3000 publicly — ngrok, Cloudflare Tunnel, or a reverse proxy on a VPS. Socket Mode needs none of this.
+- A Slack app for the first NanoClaw agent
+- Direct messages with per-thread agent sessions for newly created wirings
+- Public channels, private channels, and threaded conversations
+- File delivery, reactions, interactive questions, and Slack-native formatting
 
-## Install
+Managed Slack apps also include:
 
-Slack is offered in the first-run setup wizard, or add it later by running `/add-slack` in Claude Code. The wizard flow:
+- A separate Slack identity for each agent you create
+- Shared group-DM rooms where a human and several agents can work together
+- A canvas in each managed room for plans, decisions, and shared context
 
-<Steps>
-  <Step title="Create the Slack app">
-    The wizard opens [api.slack.com/apps](https://api.slack.com/apps) and walks you through the app creation checklist above: scopes, Messages Tab, signing secret, and workspace install.
-  </Step>
-  <Step title="Choose a delivery mode and paste credentials">
-    The wizard first asks **how Slack should deliver events** — **Socket Mode** (default; no public URL) or **Public webhook**. Then it collects the **Bot User OAuth Token** plus the mode credential: an **App-Level Token** (`xapp-…`) for Socket Mode, or the **Signing Secret** for webhook mode. All are password prompts, format-validated (`xoxb-`/`xapp-` prefixes, hex secret); the wizard then calls `auth.test` to confirm Slack accepts the token and resolve your workspace and bot identity. Existing values in `.env` are offered for reuse.
-  </Step>
-  <Step title="Adapter install">
-    The `/add-slack` skill copies the adapter from the `channels` branch, installs the pinned package, builds, writes `SLACK_BOT_TOKEN` plus either `SLACK_APP_TOKEN` (Socket Mode) or `SLACK_SIGNING_SECRET` (webhook) to `.env` (synced to `data/env/env`), and restarts the service.
-  </Step>
-  <Step title="Identify yourself">
-    The wizard asks for your Slack member ID (`U…` — in Slack, click your profile picture → **Profile** → **⋮** → **Copy member ID**), then calls `conversations.open` to get a DM channel with you.
-  </Step>
-  <Step title="Name the agent and get the welcome DM">
-    The wizard asks for your operator role and an agent name (default `Nano`), wires the DM to your first agent group, and sends a welcome message. The DM is delivered outbound via `chat.postMessage`, so it arrives even before webhooks are configured — but the bot can't hear your replies yet.
-  </Step>
-  <Step title="Finish in Slack">
-    **Socket Mode:** in your Slack app, go to **Socket Mode** → toggle **Enable Socket Mode** on. Keep **Event Subscriptions** enabled with the bot events below — under Socket Mode no Request URL is required. That's it; just DM the bot.
+## Before you start
 
-    **Webhook mode:** make port 3000 publicly reachable (ngrok, Cloudflare Tunnel, or a reverse proxy), then:
-    - **Event Subscriptions** → enable, set the Request URL to `https://<your-public-host>/webhook/slack` (Slack sends a verification challenge that must pass)
-    - **Interactivity & Shortcuts** → enable, same Request URL
-    - Reinstall the app when Slack prompts you to apply the new settings
+You need:
 
-    Either mode subscribes to the same bot events: `message.channels`, `message.groups`, `message.im`, and `app_mention`.
-  </Step>
-</Steps>
+- A working [NanoClaw install](/quickstart)
+- Permission to install apps in the target Slack workspace
 
-To wire workspace channels or more DMs later, run `/manage-channels`. Channels are identified as `slack:<channelId>` (right-click the channel name → **View channel details** — the ID starts with `C` and sits at the bottom); DMs as `slack:<dmId>` (starts with `D`). Add the bot to a channel before wiring it.
+For managed setup, you also need a NanoClaw account or a Slack manager token for direct provisioning. The manual app path needs neither.
 
-## Platform notes
+Slack workspace policy still applies. If your workspace requires admin approval, NanoClaw creates the app and gives you an install link. After approval, paste the Bot User OAuth Token when setup asks for it.
 
-- **Event delivery** — in **Socket Mode** the bot holds an outbound WebSocket to Slack, so nothing inbound needs to be reachable. In **webhook mode** the bridge registers Slack on the shared webhook server (port 3000, configurable via `WEBHOOK_PORT`), routes `/webhook/slack` to the adapter, and authenticates requests with your signing secret — the public URL must stay reachable, or the bot silently stops hearing messages if your tunnel dies.
-- **Threads** — the adapter sets `supportsThreads: true`, so in group channels the router forces `per-thread` sessions: each Slack thread gets its own agent session (unless the wiring uses `agent-shared`, which keeps one session across all of an agent's messaging groups). DMs collapse sub-threads into one session. See the [entity model](/concepts/entity-model).
-- **Mentions and engagement** — @mentioning the bot in an unwired channel reaches the router as a platform-confirmed mention (the `app_mention` event); in mention-sticky wirings the bot then sticks to that thread (plain mention wirings respond per mention without subscribing). DMs are always treated as addressed to the bot.
-- **Interactive questions** — when an agent asks a multiple-choice question, it renders as a card with buttons. Clicks arrive over the same channel as events — the socket in Socket Mode, the `/webhook/slack` route (via **Interactivity & Shortcuts**) in webhook mode — and the card updates in place to show the selection. If buttons do nothing in webhook mode, Interactivity isn't configured.
-- **Attachments and reactions** — file uploads are downloaded and passed to the agent as data (`files:read`), and the agent can react to messages (`reactions:write`).
-- **Formatting** — Slack uses [mrkdwn](https://api.slack.com/reference/surfaces/formatting), not standard Markdown (`*bold*` not `**bold**`, `<url|text>` links, no headings). The `slack-formatting` container skill is mounted into agent containers with a full mrkdwn reference.
-- **No outbound chunking** — the adapter doesn't set the bridge's `maxTextLength`, so long replies are posted as a single message. Slack's message limit is high enough that this rarely matters.
+## Set up the first agent
+
+<Tabs>
+  <Tab title="Managed setup">
+    <Steps>
+      <Step title="Start the opt-in setup">
+        Run the installer with managed Slack setup enabled:
+
+        ```bash
+        bash nanoclaw.sh --slack-agents
+        ```
+      </Step>
+      <Step title="Choose Slack">
+        Select Slack when the setup wizard asks for a channel. When it asks how to create the app, select **Create it for me**.
+      </Step>
+      <Step title="Connect your workspace">
+        Sign in with your NanoClaw account if prompted. Approve the Slack workspace connection in your browser, then return to the terminal.
+
+        If more than one workspace is connected, select the workspace where the agent should live.
+      </Step>
+      <Step title="Let NanoClaw create the app">
+        NanoClaw creates a Socket Mode app, installs it, and stores the derived bot and app tokens in `.env`. The host never receives the workspace-level manager credential when provisioning runs through the managed service.
+
+        If Slack blocks automatic installation, finish the install from the URL shown by setup. Then paste the `xoxb-…` bot token from **OAuth & Permissions**.
+      </Step>
+      <Step title="Open the agent DM">
+        Setup resolves your Slack member ID, wires the direct message to the first agent group, restarts the service, and sends the welcome message. Reply in Slack to verify the connection.
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Manual app">
+    Use this path when you do not want managed provisioning or your workspace requires a self-managed app.
+
+    <Steps>
+      <Step title="Create the app">
+        Go to [api.slack.com/apps](https://api.slack.com/apps), select **Create New App**, then select **From scratch**.
+      </Step>
+      <Step title="Add bot scopes">
+        Under **OAuth & Permissions**, add these Bot Token Scopes:
+
+        ```text
+        chat:write
+        im:write
+        channels:history
+        groups:history
+        im:history
+        channels:read
+        groups:read
+        mpim:read
+        users:read
+        reactions:write
+        files:read
+        files:write
+        ```
+      </Step>
+      <Step title="Enable direct messages">
+        Under **App Home**, enable the Messages Tab. Then enable **Allow users to send Slash commands and messages from the messages tab**.
+      </Step>
+      <Step title="Choose event delivery">
+        For Socket Mode, create an App-Level Token with `connections:write`, enable Socket Mode, and subscribe to `message.channels`, `message.groups`, `message.im`, and `app_mention`. Socket Mode needs no public URL.
+
+        For webhook delivery, keep the Signing Secret and point Event Subscriptions and Interactivity to `https://<your-public-host>/webhook/slack`. Your public HTTPS endpoint must reach NanoClaw's webhook port, which defaults to `3000`.
+      </Step>
+      <Step title="Install and connect">
+        Install the app to the workspace. Run `/add-slack` from Claude Code, `$add-slack` from Codex, or load `add-slack` with your harness's skill tool. Choose the same delivery mode and paste the credentials when prompted.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+<Note>
+  The manual checklist matches the base `/add-slack` app. Managed apps receive additional scopes and events for group-DM agent rooms, canvases, onboarding, and membership updates. Use managed provisioning for the full one-bot-per-agent experience.
+</Note>
+
+## Create agents from Slack
+
+The optional `slack-agent-flow` skill extends `create_agent` for conversations that originate in Slack. It requires managed provisioning access and a Slack owner or admin identity in NanoClaw. After the skill is installed, ask an existing agent in plain language:
+
+> Create an agent called Research to compare the three deployment options.
+
+NanoClaw then:
+
+1. Creates the new agent group.
+2. Creates or reuses a Slack app for that agent.
+3. Registers the app as another Slack adapter instance.
+4. Opens a direct message between you and the new bot.
+5. Opens a shared group DM with you, the originating agent, and the new agent.
+6. Adds a canvas to the room and wires both agents to it.
+
+The new Slack adapter starts without a host restart and normally answers within about 10 seconds. If the Slack leg fails, the agent group still exists and remains reachable through NanoClaw's agent-to-agent messaging. The error includes an idempotent finish command that resumes provisioning.
+
+<Note>
+  Agent-enabled Slack apps do not work for workspace guests. Ask for guest access when creating the agent to provision a plain Slack app instead.
+</Note>
+
+## Build a team in one room
+
+For a team of agents, create each agent without an individual room. Then create one room for the whole team:
+
+> Create Research and QA as separate agents without rooms. Then create one room with both of them.
+
+The Slack extension adds two room actions:
+
+- `create_room` creates one shared room with several agents.
+- `add_to_room` adds another agent to an existing room.
+
+Agents respond in shared rooms when mentioned. Engagement then stays active within that thread. Bot-to-bot turns are mention-driven, and NanoClaw stops further bot-authored turns after six consecutive hops by default. A human message resets the counter.
+
+## Slack behavior
+
+### Conversations and threads
+
+New Slack DM and channel wirings use per-thread sessions. Each Slack thread gets its own agent session, while the channel timeline provides surrounding context. Existing wirings keep the session behavior they were created with.
+
+The bot responds automatically in a direct message. In channels and shared rooms, mention the bot to start or resume its participation in that thread.
+
+### Rooms and membership
+
+When a Slack user invites an agent bot into a room, NanoClaw can adopt the room and create the required messaging group. Removing the bot detaches that identity from the room. Shared agent rooms admit bot-authored messages only when the room is on the `SLACK_A2A_ROOMS` allowlist; bot messages remain blocked everywhere else.
+
+### Canvases
+
+Managed rooms use a Slack canvas as shared, durable context. Agents can create, read, and edit canvas sections through the bot identity attached to the current session. Use the canvas for plans and decisions that should remain visible outside the message stream.
+
+### Files and formatting
+
+Agents can receive files, send generated files, and add reactions. Slack uses [mrkdwn](https://api.slack.com/reference/surfaces/formatting), not standard Markdown. The Slack channel payload installs formatting guidance into agent containers.
+
+## Configuration reference
+
+| Variable | Purpose |
+| --- | --- |
+| `SLACK_BOT_TOKEN` | Bot User OAuth Token for the default Slack identity. Starts with `xoxb-`. |
+| `SLACK_APP_TOKEN` | App-Level Token for Socket Mode. Starts with `xapp-`. When present, the adapter uses Socket Mode. |
+| `SLACK_SIGNING_SECRET` | Verifies incoming requests in webhook mode. Not required for Socket Mode. |
+| `NANOCLAW_SLACK_AGENTS` | Set to `1` to register managed provisioning in the current setup wizard. `bash nanoclaw.sh --slack-agents` sets it for that run. |
+| `SLACK_MANAGER_TOKEN` | Optional workspace manager token for direct app provisioning. It is not passed into agent containers. |
+| `SLACK_SERVICE_BASE` | Overrides the managed Slack service URL. Most installs should leave it unset. |
+| `SLACK_INSTANCES` | Comma-separated names for additional Slack bot identities, such as `research,qa`. |
+| `SLACK_BOT_TOKEN_<NAME>` | Bot token for a named identity. Uppercase the name and replace dashes with underscores. |
+| `SLACK_APP_TOKEN_<NAME>` | Socket Mode app token for a named identity. |
+| `SLACK_SIGNING_SECRET_<NAME>` | Webhook signing secret for a named identity. |
+| `SLACK_A2A_ROOMS` | Comma-separated Slack conversation IDs that admit messages from sibling bots. Re-read within about 30 seconds. |
+| `SLACK_A2A_MAX_HOPS` | Consecutive bot-authored messages allowed before a human must speak. Default `6`. |
+
+After editing instance tokens by hand, restart NanoClaw so the adapter registers the new identity. Programmatically created agents are hot-started and do not need that restart.
 
 ## Troubleshooting
 
-- **"Slack didn't accept that token"** — `auth.test` rejected it (`invalid_auth` or `token_revoked`). Copy the token again from **OAuth & Permissions** and retry setup. "Couldn't reach Slack" instead means a network problem.
-- **Welcome DM arrived but the bot never replies** — outbound works regardless; inbound depends on your mode. In **Socket Mode**, confirm `SLACK_APP_TOKEN` is set and **Enable Socket Mode** is toggled on in the app. In **webhook mode**, check that your public URL is up, Event Subscriptions is enabled with a verified Request URL, and the bot events are subscribed (URL verification fails if the signing secret in `.env` doesn't match the app).
-- **`missing_scope` when opening the DM** — your app lacks `im:write`. Add it under **OAuth & Permissions**, reinstall the app to the workspace, then retry setup.
-- **Webhook returns 404 `Unknown adapter: slack`** — the adapter never registered, usually because `SLACK_BOT_TOKEN` is missing from the environment the service reads (the factory returns `null` without it). Verify `.env` and `data/env/env`, then restart the service.
+- **Managed setup does not appear** — start with `bash nanoclaw.sh --slack-agents`, or set `NANOCLAW_SLACK_AGENTS=1` before setup. The current default wizard does not register the managed pre-step without this flag.
+- **Slack asks for admin approval** — finish the install from the URL setup prints. Then paste the new `xoxb-…` token. Automatic provisioning does not bypass Slack's app-approval policy.
+- **The welcome DM arrives, but replies disappear** — for Socket Mode, confirm `SLACK_APP_TOKEN` is set, Socket Mode is enabled, and the four bot events are subscribed. For webhook mode, confirm the public URL is reachable and uses the matching Signing Secret.
+- **The token is rejected** — use the Bot User OAuth Token from **OAuth & Permissions**, not a user token. A bot token starts with `xoxb-`; an App-Level Token starts with `xapp-`.
+- **A new agent exists but has no Slack bot** — follow the finish command in the failure message. The agent group remains usable while the Slack provisioning leg is retried.
+- **Agents do not answer each other in a room** — confirm the room ID is in `SLACK_A2A_ROOMS`, mention the next bot explicitly, and verify that the sender is permitted by the room's access policy.
+- **A manually added instance does not connect** — verify its name is present in `SLACK_INSTANCES`, check the matching suffixed token keys, then restart the service.
 
-For service-level checks (logs, restarts, wiring queries), see [troubleshooting](/operate/troubleshooting).
+For service logs, restarts, and wiring checks, see [Troubleshooting](/operate/troubleshooting). For the general agent collaboration model, see [Multi-agent swarm](/guides/multi-agent-swarm).
