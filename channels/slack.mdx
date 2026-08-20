@@ -1,33 +1,57 @@
 ---
-title: "Add Agent to Slack"
+title: "Slack"
 sidebarTitle: "Slack"
-description: "Give NanoClaw agents their own Slack identities, direct messages, shared rooms, and canvases — with managed app creation or a manual Slack app."
+description: "Give NanoClaw agents their own Slack identities, direct messages, shared rooms, and canvases, with managed app creation or a manual Slack app."
 keywords: ["slack", "add agent to slack", "slack agent", "managed slack app", "multi-agent", "slack bot", "socket mode", "slack-agent-flow", "slack rooms", "canvas"]
 tag: "UPDATED"
 ---
 
-{/* verified-against: main setup/channels/{slack-auto-register,slack-auto,companions}.ts, nanoclaw.sh, src/channels/channel-registry.ts @ 53ea1e8b; channels .claude/skills/{add-slack,slack-agent-flow,slack-a2a-rooms,slack-multi-instance}/SKILL.md, src/channels/{slack,slack-a2a-guard}.ts, src/provisioning/slack-app.ts, setup/channels/slack-companions.ts @ d69c9c5d */}
+{/* verified-against: main setup/channels/{slack-auto,slack-auto-register}.ts @ 9673da4a; channels .claude/skills/{add-slack,slack-agent-flow,slack-a2a-rooms}/SKILL.md, .claude/skills/slack-agent-flow/src/modules/slack-agent-flow/{orchestrate,index,provision}.ts, .claude/skills/slack-a2a-rooms/src/channels/slack-a2a.ts, src/provisioning/slack-app.ts @ d7fc4c39 */}
 
 Give each NanoClaw agent its own identity in Slack. You can talk to an agent in a direct message, bring several agents into one shared room, and use a room canvas as shared working context.
 
-The managed setup path creates the Slack app and installs it for you. You do not need to build a manifest, choose scopes, or paste tokens when your workspace allows automatic app installation. A manual path remains available for self-managed and restricted workspaces.
+Setup asks how you want to create the Slack app. **Create it for me** is the default: NanoClaw builds the manifest, chooses the scopes, installs the app, and stores the tokens. **I will supply my own bot token** is the advanced alternative, for operators who create the app themselves at [api.slack.com/apps](https://api.slack.com/apps).
+
+Setup also falls back to the manual walkthrough on its own. It does that when you do not complete the NanoClaw sign-in, when Slack rejects the app creation, or when the managed Slack service cannot be reached.
 
 <Warning>
-  Managed Slack setup is currently opt-in. Start setup with `bash nanoclaw.sh --slack-agents` or set `NANOCLAW_SLACK_AGENTS=1`. Without the flag, the wizard uses the manual app flow. The one-bot-per-agent extension is also a separate `slack-agent-flow` skill on the `channels` branch; the base `/add-slack` install does not apply it automatically yet.
+  Managed Slack setup is currently opt-in. Start setup with `bash nanoclaw.sh --slack-agents`, or set `NANOCLAW_SLACK_AGENTS=1`. Without that flag setup never offers managed app creation, and it does not apply the `slack-a2a-rooms` and `slack-agent-flow` skills. `/add-slack` on its own installs the base single-bot channel.
 </Warning>
 
 ## What you get
 
-- A Slack app for the first NanoClaw agent
+`/add-slack` installs the base Slack channel:
+
+- One Slack app and one bot identity
 - Direct messages with per-thread agent sessions for newly created wirings
 - Public channels, private channels, and threaded conversations
 - File delivery, reactions, interactive questions, and Slack-native formatting
 
-Managed Slack apps also include:
+The agents feature adds per-agent identities, rooms, and canvases:
 
 - A separate Slack identity for each agent you create
 - Shared group-DM rooms where a human and several agents can work together
-- A canvas in each managed room for plans, decisions, and shared context
+- A canvas in each room for plans, decisions, and shared context
+- Direct-message onboarding prompts and the Slack section of the welcome tour
+- The `create_room` and `add_to_room` actions, plus the extended `create_agent` tool
+
+Two things gate the agents feature.
+
+First, the feature skills. `bash nanoclaw.sh --slack-agents` applies `slack-a2a-rooms` and then `slack-agent-flow`. You can also apply both skills on top of an existing `/add-slack` install.
+
+Second, a provisioning credential. Signing in with a NanoClaw account is enough, and the managed path is the common case. `SLACK_MANAGER_TOKEN` is the operator-supplied alternative. Without either one, agent creation still succeeds, but the Slack leg reports `no-credentials` and prints a finish command.
+
+A manually created app can run the agents feature. Add these Bot Token Scopes to it, because the manual checklist below does not include them:
+
+```text
+app_mentions:read
+mpim:write
+mpim:history
+canvases:read
+canvases:write
+```
+
+Without those scopes, room creation and canvases fail.
 
 ## Before you start
 
@@ -36,9 +60,9 @@ You need:
 - A working [NanoClaw install](/quickstart)
 - Permission to install apps in the target Slack workspace
 
-For managed setup, you also need a NanoClaw account or a Slack manager token for direct provisioning. The manual app path needs neither.
+Managed setup also needs a NanoClaw account. Setup prompts you to sign in, then stores the install token at `~/.config/nanoclaw/account.json`. You never create or paste that token yourself. The manual app path needs no account.
 
-Slack workspace policy still applies. If your workspace requires admin approval, NanoClaw creates the app and gives you an install link. After approval, paste the Bot User OAuth Token when setup asks for it.
+Slack workspace policy still applies. A workspace that turns on Slack's Admin Approved Apps policy refuses the automatic install, and a workspace admin has to approve the app before you can finish setup.
 
 ## Set up the first agent
 
@@ -63,7 +87,7 @@ Slack workspace policy still applies. If your workspace requires admin approval,
       <Step title="Let NanoClaw create the app">
         NanoClaw creates a Socket Mode app, installs it, and stores the derived bot and app tokens in `.env`. The host never receives the workspace-level manager credential when provisioning runs through the managed service.
 
-        If Slack blocks automatic installation, finish the install from the URL shown by setup. Then paste the `xoxb-…` bot token from **OAuth & Permissions**.
+        A workspace that turns on Slack's Admin Approved Apps policy refuses the automatic install. Setup prints a note titled **Finish installing in Slack** and continues. Ask a workspace admin to approve the app. After approval, install the app, open **OAuth & Permissions**, and paste the `xoxb-…` Bot User OAuth Token at the next prompt. The app-level token is already stored, so the bot token is the only value you paste.
       </Step>
       <Step title="Open the agent DM">
         Setup resolves your Slack member ID, wires the direct message to the first agent group, restarts the service, and sends the welcome message. Reply in Slack to verify the connection.
@@ -112,25 +136,41 @@ Slack workspace policy still applies. If your workspace requires admin approval,
 </Tabs>
 
 <Note>
-  The manual checklist matches the base `/add-slack` app. Managed apps receive additional scopes and events for group-DM agent rooms, canvases, onboarding, and membership updates. Use managed provisioning for the full one-bot-per-agent experience.
+  The manual checklist matches the base `/add-slack` app. A managed app is created with the full scope and event set, including the scopes for group-DM agent rooms, canvases, onboarding, and membership updates. To run the agents feature on a manually created app, add the extra scopes listed under "What you get" above.
 </Note>
 
 ## Create agents from Slack
 
-The optional `slack-agent-flow` skill extends `create_agent` for conversations that originate in Slack. It requires managed provisioning access and a Slack owner or admin identity in NanoClaw. After the skill is installed, ask an existing agent in plain language:
+The `slack-agent-flow` skill extends `create_agent` for sessions that start in Slack. Ask an existing Slack agent in plain language:
 
 > Create an agent called Research to compare the three deployment options.
 
-NanoClaw then:
+<Steps>
+  <Step title="Resolve the operator">
+    NanoClaw identifies the Slack user making the request. That user needs a `slack:U…` identity in `user_roles`. Grant one with `ncl roles grant` if the flow reports `operator-identity`.
+  </Step>
+  <Step title="Verify the current bot">
+    NanoClaw checks the originating bot's token against Slack before it provisions anything.
+  </Step>
+  <Step title="Provision the new Slack app">
+    NanoClaw creates a Slack app for the new agent, then writes its bot and app tokens to `.env` under the `SLACK_INSTANCES` key scheme.
+  </Step>
+  <Step title="Start the new adapter">
+    NanoClaw registers the `slack-<slug>` adapter and starts it in the running host. No restart is needed.
+  </Step>
+  <Step title="Open the operator DM">
+    The new bot opens a direct message with the operator and wires it to the new agent group.
+  </Step>
+  <Step title="Open the shared room">
+    The new bot opens a group DM holding the operator, the originating bot, and itself. NanoClaw allowlists that room for agent-to-agent messages and creates the room canvas.
+  </Step>
+</Steps>
 
-1. Creates the new agent group.
-2. Creates or reuses a Slack app for that agent.
-3. Registers the app as another Slack adapter instance.
-4. Opens a direct message between you and the new bot.
-5. Opens a shared group DM with you, the originating agent, and the new agent.
-6. Adds a canvas to the room and wires both agents to it.
+A canvas failure never blocks the flow. If another step fails, the agent group still exists and stays reachable through NanoClaw's agent-to-agent messaging, and the error carries an idempotent finish command:
 
-The new Slack adapter starts without a host restart and normally answers within about 10 seconds. If the Slack leg fails, the agent group still exists and remains reachable through NanoClaw's agent-to-agent messaging. The error includes an idempotent finish command that resumes provisioning.
+```bash
+pnpm exec tsx scripts/slack-agent-flow-finish.ts --group <group-id> --name <slug> --source-group <source-group-id>
+```
 
 <Note>
   Agent-enabled Slack apps do not work for workspace guests. Ask for guest access when creating the agent to provision a plain Slack app instead.
@@ -142,7 +182,7 @@ For a team of agents, create each agent without an individual room. Then create 
 
 > Create Research and QA as separate agents without rooms. Then create one room with both of them.
 
-The Slack extension adds two room actions:
+The `slack-agent-flow` skill adds two room actions:
 
 - `create_room` creates one shared room with several agents.
 - `add_to_room` adds another agent to an existing room.
@@ -159,15 +199,15 @@ The bot responds automatically in a direct message. In channels and shared rooms
 
 ### Rooms and membership
 
-When a Slack user invites an agent bot into a room, NanoClaw can adopt the room and create the required messaging group. Removing the bot detaches that identity from the room. Shared agent rooms admit bot-authored messages only when the room is on the `SLACK_A2A_ROOMS` allowlist; bot messages remain blocked everywhere else.
+The agents feature adds room membership handling. When a Slack user invites an agent bot into a room, NanoClaw can adopt the room and create the required messaging group. Removing the bot detaches that identity from the room. Shared agent rooms admit bot-authored messages only when the room is on the `SLACK_A2A_ROOMS` allowlist; bot messages remain blocked everywhere else.
 
 ### Canvases
 
-Managed rooms use a Slack canvas as shared, durable context. Agents can create, read, and edit canvas sections through the bot identity attached to the current session. Use the canvas for plans and decisions that should remain visible outside the message stream.
+Agent rooms use a Slack canvas as shared, durable context. Agents can create, read, and edit canvas sections through the bot identity attached to the current session. Use the canvas for plans and decisions that should remain visible outside the message stream. The canvas tool and its container skill install with `/slack-agent-flow`.
 
 ### Files and formatting
 
-Agents can receive files, send generated files, and add reactions. Slack uses [mrkdwn](https://api.slack.com/reference/surfaces/formatting), not standard Markdown. The Slack channel payload installs formatting guidance into agent containers.
+Agents can receive files, send generated files, and add reactions. Slack uses [mrkdwn](https://api.slack.com/reference/surfaces/formatting), not standard Markdown. The base `/add-slack` payload installs the `slack-formatting` container skill, so formatting guidance reaches agent containers without the agents feature.
 
 ## Configuration reference
 
@@ -176,8 +216,8 @@ Agents can receive files, send generated files, and add reactions. Slack uses [m
 | `SLACK_BOT_TOKEN` | Bot User OAuth Token for the default Slack identity. Starts with `xoxb-`. |
 | `SLACK_APP_TOKEN` | App-Level Token for Socket Mode. Starts with `xapp-`. When present, the adapter uses Socket Mode. |
 | `SLACK_SIGNING_SECRET` | Verifies incoming requests in webhook mode. Not required for Socket Mode. |
-| `NANOCLAW_SLACK_AGENTS` | Set to `1` to register managed provisioning in the current setup wizard. `bash nanoclaw.sh --slack-agents` sets it for that run. |
-| `SLACK_MANAGER_TOKEN` | Optional workspace manager token for direct app provisioning. It is not passed into agent containers. |
+| `NANOCLAW_SLACK_AGENTS` | Set to `1` so setup offers managed app creation and applies the `slack-a2a-rooms` and `slack-agent-flow` skills. `bash nanoclaw.sh --slack-agents` sets it for that run. |
+| `SLACK_MANAGER_TOKEN` | Advanced alternative to the managed service. Supply your own Slack workspace manager token to create apps directly against Slack. Setup never produces one. It is not passed into agent containers. |
 | `SLACK_SERVICE_BASE` | Overrides the managed Slack service URL. Most installs should leave it unset. |
 | `SLACK_INSTANCES` | Comma-separated names for additional Slack bot identities, such as `research,qa`. |
 | `SLACK_BOT_TOKEN_<NAME>` | Bot token for a named identity. Uppercase the name and replace dashes with underscores. |
@@ -190,8 +230,8 @@ After editing instance tokens by hand, restart NanoClaw so the adapter registers
 
 ## Troubleshooting
 
-- **Managed setup does not appear** — start with `bash nanoclaw.sh --slack-agents`, or set `NANOCLAW_SLACK_AGENTS=1` before setup. The current default wizard does not register the managed pre-step without this flag.
-- **Slack asks for admin approval** — finish the install from the URL setup prints. Then paste the new `xoxb-…` token. Automatic provisioning does not bypass Slack's app-approval policy.
+- **Managed setup does not appear** — start with `bash nanoclaw.sh --slack-agents`, or set `NANOCLAW_SLACK_AGENTS=1` before setup. Without that flag the wizard registers neither the managed provisioning step nor the two companion skills.
+- **Slack asks for admin approval** — ask a workspace admin to approve the app. Install it after approval, then paste the new `xoxb-…` token. Automatic provisioning does not bypass Slack's Admin Approved Apps policy.
 - **The welcome DM arrives, but replies disappear** — for Socket Mode, confirm `SLACK_APP_TOKEN` is set, Socket Mode is enabled, and the four bot events are subscribed. For webhook mode, confirm the public URL is reachable and uses the matching Signing Secret.
 - **The token is rejected** — use the Bot User OAuth Token from **OAuth & Permissions**, not a user token. A bot token starts with `xoxb-`; an App-Level Token starts with `xapp-`.
 - **A new agent exists but has no Slack bot** — follow the finish command in the failure message. The agent group remains usable while the Slack provisioning leg is retried.

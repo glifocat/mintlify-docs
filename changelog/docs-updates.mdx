@@ -5,10 +5,12 @@ icon: "file-pen"
 rss: true
 ---
 
-<Update label="Add Agent to Slack launch guide" description="2026-08-18" tags={["Updated"]}>
-  Rebuilt [Slack](/channels/slack) around the new managed-app and multi-agent experience. The guide now separates managed provisioning from the manual app path, explains per-agent Slack identities, shared agent rooms, canvases, per-thread sessions, the agent-to-agent safety boundary, and every Slack-specific environment variable in one place. The channels overview and skills catalog now point to the same model.
+<Update label="Slack guide rebuilt around the payload split" description="2026-08-20" tags={["Updated"]}>
+  Rebuilt [Slack](/channels/slack) around the managed-app flow and the multi-agent experience. The guide separates the base single-bot channel from the agents feature, explains per-agent Slack identities, shared agent rooms, canvases, per-thread sessions, the agent-to-agent safety boundary, and every Slack-specific environment variable in one place. The channels overview and skills catalog now point to the same model.
 
-  This staging revision matches the feature's current upstream boundaries: managed first-app provisioning is merged behind `--slack-agents` in [nanoclaw#3314](https://github.com/nanocoai/nanoclaw/pull/3314), while the canonical Slack payload and optional `slack-agent-flow` skill are merged on the channels branch in [nanoclaw#3315](https://github.com/nanocoai/nanoclaw/pull/3315). The page carries an explicit opt-in warning until the launch-default and packaging follow-ups land. Verified against trunk `53ea1e8b` and channels `d69c9c5d`.
+  The page follows the upstream payload split. `/add-slack` installs the base channel: adapter, shared lib, bot-inbound guard, provisioning core, and the `slack-formatting` container skill. Rooms, canvases, direct-message onboarding, the extended `create_agent`, and the `create_room` and `add_to_room` actions install with `/slack-a2a-rooms` and `/slack-agent-flow`.
+
+  This revision also corrects what setup actually asks and what it actually needs. Setup offers "Create it for me" by default and falls back to the manual walkthrough when sign-in, the Slack API, or the managed service fails. Managed setup needs only a NanoClaw account sign-in; `SLACK_MANAGER_TOKEN` is an advanced operator-supplied alternative, not a requirement. A workspace running Slack's Admin Approved Apps policy needs an admin to approve the app before the bot token can be pasted. The "Create agents from Slack" section now follows the implemented step order. The page keeps its opt-in warning: managed setup still requires `--slack-agents`, which is also what applies the two companion skills. Verified against trunk `9673da4a` and channels `d7fc4c39`.
 </Update>
 
 <Update label="Every diagram redrawn: editorial SVGs replace Mermaid" description="2026-08-14" tags={["Updated"]}>

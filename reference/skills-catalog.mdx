@@ -34,7 +34,7 @@ Each skill wires up one messaging channel. See [Channels](/channels/overview) fo
 | `/add-matrix` | Adds the [Matrix](/channels/more-channels#matrix) channel via Chat SDK — works with any homeserver |
 | `/add-resend` | Adds the [Resend](/channels/more-channels#resend-email) email channel via Chat SDK |
 | `/add-signal` | Adds the [Signal](/channels/signal) channel via signal-cli TCP daemon — native adapter, no Chat SDK bridge |
-| `/add-slack` | Adds the [Slack](/channels/slack) channel via Chat SDK |
+| `/add-slack` | Adds the base [Slack](/channels/slack) channel via Chat SDK — one bot, direct messages, and channel chat |
 | `/add-teams` | Adds the [Microsoft Teams](/channels/teams) channel via Chat SDK |
 | `/add-telegram` | Adds the [Telegram](/channels/telegram) channel via Chat SDK |
 | `/add-webex` | Adds the [Webex](/channels/more-channels#webex) channel via Chat SDK |
@@ -48,8 +48,8 @@ These skills live on the `channels` branch. They are not included in the 45-skil
 
 | Skill | What it does |
 | --- | --- |
-| `/slack-a2a-rooms` | Allows sibling NanoClaw bots to exchange mention-driven messages in explicitly allowlisted Slack group DMs, with a consecutive-hop limit. Applied as a companion when the current `/add-slack` payload is installed. |
-| `/slack-agent-flow` | Extends `create_agent` in Slack so a new agent gets its own provisioned bot, operator DM, shared room, canvas, and hot-started adapter. This is a separate optional feature skill. |
+| `/slack-a2a-rooms` | Allows sibling NanoClaw bots to exchange mention-driven messages in explicitly allowlisted Slack group DMs, with a consecutive-hop limit. Setup applies it as a companion only when run with `--slack-agents`; you can also apply it on top of an existing `/add-slack` install. |
+| `/slack-agent-flow` | Extends `create_agent` in Slack so a new agent gets its own provisioned bot, operator DM, shared room, canvas, and hot-started adapter. Also installs room membership handling, canvas actions, DM onboarding, and the `create_room` and `add_to_room` actions. Requires `/slack-a2a-rooms` first. |
 | `/slack-multi-instance` | Documents the native `SLACK_INSTANCES` convention for running several Slack bot identities on one NanoClaw host. The adapter behavior is installed by `/add-slack`; this skill makes no code changes. |
 
 ## Provider installs
