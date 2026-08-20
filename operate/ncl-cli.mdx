@@ -123,7 +123,10 @@ Read-only view of the runtime units — one row per (agent group, messaging grou
 
 ```bash
 ncl sessions list --agent_group_id <group-id>
+ncl sessions history <session-id> --limit 100
 ```
+
+`history` merges inbound and outbound messages into a chronological transcript. Group-scoped agents can only read sessions owned by their own agent group. Human output truncates message text to 200 characters; add `--json` for the raw rows and full text.
 
 ### tasks
 
@@ -139,7 +142,7 @@ ncl tasks pause --id <task-id>
 
 ### dropped-messages
 
-Read-only log of messages the router dropped, aggregated per sender and chat with a `reason` (`no_agent_wired`, `no_agent_engaged`, `unknown_sender_strict`, `unknown_sender_request_approval`). Your first stop when a message got no reply:
+Read-only log of messages the router dropped, aggregated per sender and chat with a `reason` (`no_agent_wired`, `no_agent_engaged`, `unknown_sender_strict`, `unknown_sender_request_approval`, `unknown_sender_decline_notify`). Your first stop when a message got no reply:
 
 ```bash
 ncl dropped-messages list

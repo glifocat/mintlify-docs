@@ -71,6 +71,7 @@ Each messaging group carries an `unknown_sender_policy` that decides what happen
 |---|---|
 | `strict` | Message dropped silently and recorded in the dropped-messages log (`ncl dropped-messages list`). |
 | `request_approval` | Message dropped, and an Allow / Deny card is DM'd to an owner or admin. On approve, the sender becomes a group member and the original message is re-routed. Duplicate requests from the same sender are deduplicated while a card is pending. |
+| `decline_notify` | For an unknown DM sender, the bot sends a short polite decline and sends an owner or admin a one-line FYI. Repeated attempts are deduplicated for 24 hours. On a group chat this behaves as `strict`, with no public decline or FYI. |
 | `public` | Anyone can talk to the agent — the access check is skipped entirely. |
 
 Channels auto-created by the router (someone @mentions or DMs the bot in an unwired chat) get `request_approval`. To harden a chat to silent-drop:

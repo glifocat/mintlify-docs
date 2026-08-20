@@ -5,7 +5,7 @@ tag: "UPDATED"
 keywords: ["database", "schema", "sqlite", "v2.db", "inbound.db", "outbound.db", "messages_in", "messages_out", "sessions", "container_configs", "pending_sender_approvals", "migrations"]
 ---
 
-{/* verified-against: src/db/schema.ts, src/db/connection.ts, src/db/session-db.ts, src/session-manager.ts, src/db/migrations/{001-initial,002-chat-sdk-state,module-approvals-pending-approvals,module-agent-to-agent-destinations,module-approvals-title-options,008-dropped-messages,009-drop-pending-credentials,010-engage-modes,011-pending-sender-approvals,012-channel-registration,013-approval-render-metadata,014-container-configs,015-cli-scope,016-messaging-group-instance,017-agent-message-policies,018-approvals-approver-user-id,019-wiring-threads,020-container-config-timezone,021-approval-question,index}.ts, src/modules/agent-to-agent/db/agent-message-policies.ts, container/agent-runner/src/db/messages-out.ts, src/modules/scheduling/db.ts @ 639577c3 */}
+{/* verified-against: src/db/schema.ts, src/db/connection.ts, src/db/session-db.ts, src/session-manager.ts, src/db/migrations/{001-initial,002-chat-sdk-state,module-approvals-pending-approvals,module-agent-to-agent-destinations,module-approvals-title-options,008-dropped-messages,009-drop-pending-credentials,010-engage-modes,011-pending-sender-approvals,012-channel-registration,013-approval-render-metadata,014-container-configs,015-cli-scope,016-messaging-group-instance,017-agent-message-policies,018-approvals-approver-user-id,019-wiring-threads,020-container-config-timezone,021-approval-question,022-messaging-group-detached,023-approvals-instance,index}.ts, src/modules/agent-to-agent/db/agent-message-policies.ts, container/agent-runner/src/db/messages-out.ts, src/modules/scheduling/db.ts @ dce271c6 */}
 
 NanoClaw stores everything in SQLite, split across two layers:
 
@@ -46,8 +46,9 @@ Platform chats and channels, one row per `(channel_type, platform_id, instance)`
 | `instance` | TEXT | — | Adapter instance that owns the chat — distinguishes N adapters of one platform (e.g. three Slack apps). `NOT NULL`; migration 016 backfills `instance = channel_type`, so the default instance is the channel type itself |
 | `name` | TEXT | `NULL` | Display name |
 | `is_group` | INTEGER | `0` | `1` for group chats, `0` for DMs |
-| `unknown_sender_policy` | TEXT | `'strict'` | `'strict'` \| `'request_approval'` \| `'public'` — what happens when a never-seen sender posts |
+| `unknown_sender_policy` | TEXT | `'strict'` | `'strict'` \| `'request_approval'` \| `'decline_notify'` \| `'public'` — what happens when a never-seen sender posts |
 | `denied_at` | TEXT | `NULL` | Set when the owner denies channel registration — future messages drop silently (migration 012) |
+| `detached_at` | TEXT | `NULL` | Set when NanoClaw's own bot leaves the conversation; delivery is refused until a membership hook clears it on rejoin (migration 022) |
 | `created_at` | TEXT | — | ISO timestamp |
 
 The `'strict'` column default is mostly vestigial: every creation callsite passes the policy explicitly, and the router's auto-create path hardcodes `'request_approval'`.
@@ -172,6 +173,7 @@ Host-side records for any approval-requiring request: `install_packages` / `add_
 | `payload` | TEXT | — | JSON request payload |
 | `agent_group_id` | TEXT | `NULL` | FK → `agent_groups(id)` |
 | `channel_type` / `platform_id` / `platform_message_id` | TEXT | `NULL` | Where the admin card lives, for later edits |
+| `instance` | TEXT | `NULL` | Adapter instance that delivered the card, so later edits resolve the same bot identity; `NULL` means the default instance (`channel_type`) (migration 023) |
 | `expires_at` | TEXT | `NULL` | Expiry for credential approvals |
 | `status` | TEXT | `'pending'` | `pending` \| `approved` \| `rejected` \| `expired` \| `awaiting_reason` (a reject-with-reason hold, see [security](/concepts/security#human-in-the-loop-approvals)) |
 | `title` | TEXT | `''` | Card title (render metadata) |

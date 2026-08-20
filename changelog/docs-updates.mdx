@@ -5,6 +5,16 @@ icon: "file-pen"
 rss: true
 ---
 
+<Update label="Post-v2.2 drift sweep: runtime, access policy, and session history" description="2026-08-20" tags={["Updated", "Fixed"]}>
+  Re-verified the public docs against `nanocoai/nanoclaw@dce271c6` and corrected the user-facing drift introduced after the v2.2.0 release.
+
+  - **Node 22 is now the minimum** — [installation](/installation) no longer says Node 20 satisfies the host requirement. The package engine and bootstrap both require 22 or newer, and setup upgrades an older install.
+  - **Unknown-sender policy coverage is complete** — [hardening](/operate/hardening#restrict-who-can-talk-to-your-agents), [security](/concepts/security#who-can-talk-to-your-agents), the [entity model](/concepts/entity-model#sender-policies), [adapter interface](/reference/adapter-interface#wiring-defaults), both `ncl` pages, troubleshooting, and the database schema now include `decline_notify`: a polite unknown-DM decline plus an owner/admin FYI, deduplicated for 24 hours. Group chats still drop silently.
+  - **Cross-session catch-up is documented** — [`ncl sessions history`](/reference/ncl-cli#sessions) merges inbound and outbound rows for another session in the same agent group, with scoped access, bounded human output, and full JSON output.
+  - **Conversation lifecycle schema caught up** — messaging groups now document `detached_at`, which preserves wiring and history while blocking delivery after the bot leaves, and pending approvals document the adapter `instance` used for later card edits. The CLI reference also fixes messaging-group identity to the full `(channel_type, platform_id, instance)` triple.
+  - **Adapter defaults include `sessionMode`** — channel authors can declare a thread-rooted context as `per-thread`; wiring creation stamps both the session mode and thread honoring together.
+</Update>
+
 <Update label="Slack guide rebuilt around the payload split" description="2026-08-20" tags={["Updated"]}>
   Rebuilt [Slack](/channels/slack) around the managed-app flow and the multi-agent experience. The guide separates the base single-bot channel from the agents feature, explains per-agent Slack identities, shared agent rooms, canvases, per-thread sessions, the agent-to-agent safety boundary, and every Slack-specific environment variable in one place. The channels overview and skills catalog now point to the same model.
 

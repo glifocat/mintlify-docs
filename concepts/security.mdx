@@ -54,7 +54,7 @@ Rules and tooling in [Hardening](/operate/hardening#gate-additional-mounts).
 Every layer above limits what a compromised agent can do; this one limits who gets to attempt the compromise. Prompt injection needs a delivery channel, and the cheapest one is just *messaging the bot*. Three gates stand in the way:
 
 - **Channel registration** — a mention or DM in a chat NanoClaw has never seen doesn't reach any agent. It escalates to a human (group admins, then global admins, then owners) with an approve/deny card; denied chats drop silently forever.
-- **Sender policies** — each known chat carries an `unknown_sender_policy`: `strict` silently drops strangers, `request_approval` asks an admin before admitting them, `public` lets anyone in. Auto-created chats default to `request_approval`.
+- **Sender policies** — each known chat carries an `unknown_sender_policy`: `strict` silently drops strangers, `request_approval` asks an admin before admitting them, `decline_notify` politely declines unknown DM senders and sends an owner or admin a one-line FYI, and `public` lets anyone in. On group chats, `decline_notify` falls back to a silent drop. Auto-created chats default to `request_approval`.
 - **Per-wiring scope** — `sender_scope: known` requires owner, admin, or group membership even in a `public` chat. Crucially, messages refused here are never even accumulated as context, so a rejected sender can't smuggle instructions into the agent's next batch.
 
 Configuration in [Hardening](/operate/hardening#restrict-who-can-talk-to-your-agents); how senders, roles, and wirings fit together in the [entity model](/concepts/entity-model).

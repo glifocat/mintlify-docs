@@ -67,6 +67,7 @@ Trace the message through the pipeline, in order:
     | `no_agent_engaged` | A wiring exists but its engage rules didn't fire | Check `engage_mode`: `mention` needs an @mention (or a DM); `pattern` matches `engage_pattern` against each message |
     | `unknown_sender_strict` | Sender not recognized, strict policy | Add the sender, or relax the policy — see [Hardening](/operate/hardening#restrict-who-can-talk-to-your-agents) |
     | `unknown_sender_request_approval` | Sender not recognized; an Allow/Deny card was sent to an approver's DM | The approver answers the card in their DM; `ncl dropped-messages list` shows the recorded drop either way |
+    | `unknown_sender_decline_notify` | Sender not recognized; in a DM the bot politely declined and notified an owner or admin | Add the sender if they should have access, or change the policy — repeated declines are deduplicated for 24 hours |
   </Step>
   <Step title="Did a container spawn?">
     ```bash

@@ -38,7 +38,7 @@ An agent group is a workspace: a folder under `groups/<name>/` with its own work
 
 ## Messaging groups — a platform conversation
 
-A messaging group is one chat or channel on one platform, identified by `(channel_type, platform_id, instance)` — a Discord channel, a WhatsApp group, a DM. The `instance` names the adapter that owns the chat, so running several adapters of one platform (say three Slack apps in one workspace) keeps their chats distinct; it defaults to the channel type, so single-instance installs effectively key on `(channel_type, platform_id)` as before. It carries an `unknown_sender_policy` (`strict` / `request_approval` / `public`) and can be denied (`denied_at`), after which messages from it drop silently.
+A messaging group is one chat or channel on one platform, identified by `(channel_type, platform_id, instance)` — a Discord channel, a WhatsApp group, a DM. The `instance` names the adapter that owns the chat, so running several adapters of one platform (say three Slack apps in one workspace) keeps their chats distinct; it defaults to the channel type, so single-instance installs effectively key on `(channel_type, platform_id)` as before. It carries an `unknown_sender_policy` (`strict` / `request_approval` / `decline_notify` / `public`) and can be denied (`denied_at`), after which messages from it drop silently. Channel membership hooks can also mark it detached (`detached_at`) when the bot leaves; the wiring and history survive, but delivery stops until the bot rejoins.
 
 You don't pre-register these. When a mention or DM arrives on a chat NanoClaw has never seen, the router auto-creates the row with `unknown_sender_policy = 'request_approval'` — and if no agent is wired to it, escalates to an approver (group admins first, then global admins, then owners) with an approve/deny card before any agent responds. Plain chatter in unwired channels is ignored entirely.
 
@@ -105,7 +105,7 @@ Access checks walk exactly this chain: owner → global admin → admin of this 
 
 ## Sender policies
 
-Each messaging group's `unknown_sender_policy` decides what happens when someone outside that chain writes in: `strict` drops silently, `request_approval` drops and DMs an approval card to an admin (approve makes them a member and replays the message), `public` lets anyone through. Full details, including auditing dropped messages, are in [hardening](/operate/hardening#restrict-who-can-talk-to-your-agents).
+Each messaging group's `unknown_sender_policy` decides what happens when someone outside that chain writes in: `strict` drops silently, `request_approval` drops and DMs an approval card to an admin (approve makes them a member and replays the message), `decline_notify` politely declines an unknown DM sender and sends an owner or admin a one-line FYI, and `public` lets anyone through. On group chats, `decline_notify` behaves as `strict`. Full details, including auditing dropped messages, are in [hardening](/operate/hardening#restrict-who-can-talk-to-your-agents).
 
 ## Related pages
 

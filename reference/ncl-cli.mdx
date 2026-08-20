@@ -5,7 +5,7 @@ tag: "UPDATED"
 keywords: ["ncl", "cli", "reference", "commands", "flags", "groups", "wirings", "sessions", "roles", "members", "destinations", "approvals", "cli_scope"]
 ---
 
-{/* verified-against: src/cli/dispatch.ts, src/cli/crud.ts, src/cli/client.ts, src/cli/format.ts, src/cli/transport-errors.ts, src/cli/registry.ts, src/cli/frame.ts, src/cli/commands/help.ts, src/cli/resources/{approvals,destinations,dropped-messages,groups,members,messaging-groups,policies,roles,sessions,tasks,user-dms,users,wirings}.ts, src/channels/channel-defaults.ts, bin/ncl @ 639577c3; template behavior @ 20d61af */}
+{/* verified-against: src/cli/dispatch.ts, src/cli/crud.ts, src/cli/client.ts, src/cli/format.ts, src/cli/transport-errors.ts, src/cli/registry.ts, src/cli/frame.ts, src/cli/commands/help.ts, src/cli/resources/{approvals,destinations,dropped-messages,groups,members,messaging-groups,policies,roles,sessions,tasks,user-dms,users,wirings}.ts, src/channels/channel-defaults.ts, src/modules/cross-session-context/{index,history}.ts, bin/ncl @ dce271c6; template behavior @ 20d61af */}
 
 Exhaustive reference for the `ncl` admin CLI. For a task-oriented walkthrough, see [The ncl admin CLI](/operate/ncl-cli).
 
@@ -73,7 +73,7 @@ Log of messages dropped by the router or access gate, aggregated by `(channel_ty
 | --- | --- | --- |
 | list | `ncl dropped-messages list [--reason <value>] [...]` | open |
 
-Columns: `channel_type`, `platform_id`, `user_id`, `sender_name`, `reason` (`no_agent_wired` | `no_agent_engaged` | `unknown_sender_strict` | `unknown_sender_request_approval`), `messaging_group_id`, `agent_group_id`, `message_count`, `first_seen`, `last_seen`.
+Columns: `channel_type`, `platform_id`, `user_id`, `sender_name`, `reason` (`no_agent_wired` | `no_agent_engaged` | `unknown_sender_strict` | `unknown_sender_request_approval` | `unknown_sender_decline_notify`), `messaging_group_id`, `agent_group_id`, `message_count`, `first_seen`, `last_seen`.
 
 ## groups
 
@@ -110,7 +110,7 @@ Membership rows granting unprivileged users access to an agent group. Admins/own
 
 ## messaging-groups
 
-One chat or channel on one platform. Identity is the unique `(channel_type, platform_id)` pair.
+One chat or channel on one platform. Identity is the unique `(channel_type, platform_id, instance)` triple.
 
 | Operation | Invocation | Access |
 | --- | --- | --- |
@@ -127,8 +127,10 @@ One chat or channel on one platform. Identity is the unique `(channel_type, plat
 | `--instance` | string | Updatable. Adapter instance that owns the chat when running N adapters of one channel type. Defaults to the `--channel-type` value when omitted. |
 | `--name` | string | Updatable. Display name, often auto-populated by the adapter. |
 | `--is-group` | number | Updatable, default `0`. `1` = multi-user group chat, `0` = DM. Affects session scoping. |
-| `--unknown-sender-policy` | enum | Updatable, default `strict`. `strict` drops silently; `request_approval` sends an approval card to an admin; `public` allows anyone. |
+| `--unknown-sender-policy` | enum | Updatable, default declared by the adapter for DM or group context (`strict` for undeclared adapters). `strict` drops silently; `request_approval` sends an approval card to an admin; `decline_notify` politely declines an unknown DM sender and sends an owner or admin a one-line FYI; `public` allows anyone. On group chats, `decline_notify` behaves as `strict` to avoid a public reply. |
 | `--denied-at` | string | Updatable. Set when the owner denies registering the channel; router drops all messages silently while set. Cleared by any explicit wiring mutation. |
+
+`detached_at` is read-only state maintained by channel membership hooks. It records when NanoClaw's bot left a conversation. The row, wiring, destinations, and history remain intact; outbound delivery is refused until the bot rejoins and the hook clears the marker.
 
 ## policies
 
@@ -160,8 +162,11 @@ The runtime unit — one `(agent_group, messaging_group, thread)` combination ma
 | --- | --- | --- |
 | list | `ncl sessions list [--agent-group-id <id>] [--status active] [...]` | open |
 | get | `ncl sessions get --id <session-id>` | open |
+| history | `ncl sessions history <session-id> [--limit <n>]` | open |
 
 Columns: `id`, `agent_group_id`, `messaging_group_id` (null for agent-shared sessions), `thread_id` (per-thread mode only), `agent_provider` (null = inherit from group), `status` (`active` | `closed`), `container_status` (`running` | `idle` | `stopped` — `idle` is reserved and currently unused), `last_active`, `created_at`.
+
+`history` merges inbound and outbound rows chronologically so an agent can catch up on another session in its own group. Human output is `timestamp|direction|kind|sender|text`, with text capped at 200 characters. `--json` returns the raw rows with full text. The default limit is 50; the command selects the newest rows and prints them oldest-to-newest.
 
 ## tasks
 
