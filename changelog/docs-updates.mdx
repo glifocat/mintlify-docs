@@ -5,6 +5,14 @@ icon: "file-pen"
 rss: true
 ---
 
+<Update label="Slack guide rebuilt around the payload split" description="2026-08-20" tags={["Updated"]}>
+  Rebuilt [Slack](/channels/slack) around the managed-app flow and the multi-agent experience. The guide separates the base single-bot channel from the agents feature, explains per-agent Slack identities, shared agent rooms, canvases, per-thread sessions, the agent-to-agent safety boundary, and every Slack-specific environment variable in one place. The channels overview and skills catalog now point to the same model.
+
+  The page follows the upstream payload split. `/add-slack` installs the base channel: adapter, shared lib, bot-inbound guard, provisioning core, and the `slack-formatting` container skill. Rooms, canvases, direct-message onboarding, the extended `create_agent`, and the `create_room` and `add_to_room` actions install with `/slack-a2a-rooms` and `/slack-agent-flow`.
+
+  This revision also corrects what setup actually asks and what it actually needs. Setup offers "Create it for me" by default and falls back to the manual walkthrough when sign-in, the Slack API, or the managed service fails. Managed setup needs only a NanoClaw account sign-in; `SLACK_MANAGER_TOKEN` is an advanced operator-supplied alternative, not a requirement. A workspace running Slack's Admin Approved Apps policy needs an admin to approve the app before the bot token can be pasted. The "Create agents from Slack" section now follows the implemented step order. Setup applies the two Slack agent feature skills by default. Manual apps need the additional room and membership events as well as the additional scopes. Verified against trunk `001dfa02` and channels `9740352a`.
+</Update>
+
 <Update label="Every diagram redrawn: editorial SVGs replace Mermaid" description="2026-08-14" tags={["Updated"]}>
   All ten diagrams across the docs are now hand-drawn editorial SVGs (light and dark variants, drawn with the open-source [diagram-design](https://github.com/cathrynlavery/diagram-design) skill in the brand palette) instead of rendered Mermaid blocks. Each was also rethought around its page's point rather than restyled 1:1:
 

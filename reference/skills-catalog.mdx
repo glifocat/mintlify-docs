@@ -2,9 +2,10 @@
 title: "Skills catalog"
 description: "Every skill that ships with NanoClaw — host-side workspace skills you invoke from your coding harness, and container skills mounted into every agent container."
 keywords: ["skills", "catalog", "reference", "add-channel", "providers", "tools", "container skills", "workspace skills", "slash commands"]
+tag: "UPDATED"
 ---
 
-{/* verified-against: .claude/skills/ and container/skills/ listings + each skill's SKILL.md frontmatter @ 639577c3 */}
+{/* verified-against: main .claude/skills/ and container/skills/ listings + each skill's SKILL.md frontmatter @ 53ea1e8b; channels .claude/skills/{add-slack,slack-a2a-rooms,slack-agent-flow,slack-multi-instance}/SKILL.md @ d69c9c5d; current main setup/channels/slack-auto-register.ts @ 001dfa02 */}
 
 NanoClaw ships two kinds of skills:
 
@@ -33,13 +34,23 @@ Each skill wires up one messaging channel. See [Channels](/channels/overview) fo
 | `/add-matrix` | Adds the [Matrix](/channels/more-channels#matrix) channel via Chat SDK — works with any homeserver |
 | `/add-resend` | Adds the [Resend](/channels/more-channels#resend-email) email channel via Chat SDK |
 | `/add-signal` | Adds the [Signal](/channels/signal) channel via signal-cli TCP daemon — native adapter, no Chat SDK bridge |
-| `/add-slack` | Adds the [Slack](/channels/slack) channel via Chat SDK |
+| `/add-slack` | Adds the base [Slack](/channels/slack) channel via Chat SDK — one bot, direct messages, and channel chat |
 | `/add-teams` | Adds the [Microsoft Teams](/channels/teams) channel via Chat SDK |
 | `/add-telegram` | Adds the [Telegram](/channels/telegram) channel via Chat SDK |
 | `/add-webex` | Adds the [Webex](/channels/more-channels#webex) channel via Chat SDK |
 | `/add-wechat` | Adds the [WeChat](/channels/more-channels#wechat) personal channel via Tencent's official iLink Bot API — long-polling and QR scan, no webhook |
 | `/add-whatsapp` | Adds the [WhatsApp](/channels/whatsapp) channel via native Baileys adapter — QR code or pairing code authentication |
 | `/add-whatsapp-cloud` | Adds the [WhatsApp Business Cloud API](/channels/more-channels#whatsapp-cloud-api) channel via Chat SDK — official Meta API |
+
+### Slack feature skills
+
+These skills live on the `channels` branch. They are not included in the 45-skill trunk count above.
+
+| Skill | What it does |
+| --- | --- |
+| `/slack-a2a-rooms` | Allows sibling NanoClaw bots to exchange mention-driven messages in explicitly allowlisted Slack group DMs, with a consecutive-hop limit. Setup applies it as a companion after `/add-slack`; you can also apply it on top of an existing Slack install. |
+| `/slack-agent-flow` | Extends `create_agent` in Slack so a new agent gets its own provisioned bot, operator DM, shared room, canvas, and hot-started adapter. Also installs room membership handling, canvas actions, DM onboarding, and the `create_room` and `add_to_room` actions. Requires `/slack-a2a-rooms` first. |
+| `/slack-multi-instance` | Documents the native `SLACK_INSTANCES` convention for running several Slack bot identities on one NanoClaw host. The adapter behavior is installed by `/add-slack`; this skill makes no code changes. |
 
 ## Provider installs
 
