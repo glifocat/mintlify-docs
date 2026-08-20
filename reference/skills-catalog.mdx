@@ -5,7 +5,7 @@ keywords: ["skills", "catalog", "reference", "add-channel", "providers", "tools"
 tag: "UPDATED"
 ---
 
-{/* verified-against: main .claude/skills/ and container/skills/ listings + each skill's SKILL.md frontmatter @ 53ea1e8b; channels .claude/skills/{add-slack,slack-a2a-rooms,slack-agent-flow,slack-multi-instance}/SKILL.md @ d69c9c5d */}
+{/* verified-against: main .claude/skills/ and container/skills/ listings + each skill's SKILL.md frontmatter @ 53ea1e8b; channels .claude/skills/{add-slack,slack-a2a-rooms,slack-agent-flow,slack-multi-instance}/SKILL.md @ d69c9c5d; current main setup/channels/slack-auto-register.ts @ 001dfa02 */}
 
 NanoClaw ships two kinds of skills:
 
@@ -48,7 +48,7 @@ These skills live on the `channels` branch. They are not included in the 45-skil
 
 | Skill | What it does |
 | --- | --- |
-| `/slack-a2a-rooms` | Allows sibling NanoClaw bots to exchange mention-driven messages in explicitly allowlisted Slack group DMs, with a consecutive-hop limit. Setup applies it as a companion only when run with `--slack-agents`; you can also apply it on top of an existing `/add-slack` install. |
+| `/slack-a2a-rooms` | Allows sibling NanoClaw bots to exchange mention-driven messages in explicitly allowlisted Slack group DMs, with a consecutive-hop limit. Setup applies it as a companion after `/add-slack`; you can also apply it on top of an existing Slack install. |
 | `/slack-agent-flow` | Extends `create_agent` in Slack so a new agent gets its own provisioned bot, operator DM, shared room, canvas, and hot-started adapter. Also installs room membership handling, canvas actions, DM onboarding, and the `create_room` and `add_to_room` actions. Requires `/slack-a2a-rooms` first. |
 | `/slack-multi-instance` | Documents the native `SLACK_INSTANCES` convention for running several Slack bot identities on one NanoClaw host. The adapter behavior is installed by `/add-slack`; this skill makes no code changes. |
 
