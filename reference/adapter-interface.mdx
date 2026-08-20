@@ -184,7 +184,8 @@ export interface ChannelContextDefaults {
   engageMode: 'pattern' | 'mention' | 'mention-sticky';
   engagePattern?: string;   // required iff engageMode === 'pattern'; may contain the literal {name}
   threads: boolean;         // default thread honoring; must be false when supportsThreads is false
-  unknownSenderPolicy: 'strict' | 'request_approval' | 'public';
+  sessionMode?: 'shared' | 'per-thread'; // omitted means shared
+  unknownSenderPolicy: 'strict' | 'request_approval' | 'decline_notify' | 'public';
 }
 
 export interface ChannelDefaults {
@@ -194,7 +195,7 @@ export interface ChannelDefaults {
 }
 ```
 
-These feed the wiring defaults an operator gets when they don't pass explicit `--engage-mode`/`--threads` flags (see [ncl wirings](/reference/ncl-cli#wirings)), and the per-context `threads` value is what a per-wiring `--threads` override is hard-ANDed against. Omitting `defaults` falls back to a core default keyed on `supportsThreads` (`fallbackChannelDefaults` in `channel-registry.ts`), so stale adapter copies keep working.
+These feed the wiring defaults an operator gets when they don't pass explicit `--engage-mode`/`--threads` flags (see [ncl wirings](/reference/ncl-cli#wirings)), and the per-context `threads` value is what a per-wiring `--threads` override is hard-ANDed against. A context can declare `sessionMode: 'per-thread'` when each platform thread is structurally its own conversation; creation then stamps both `session_mode = 'per-thread'` and `threads = 1`. Omitting `sessionMode` keeps `shared`. Omitting `defaults` falls back to core defaults keyed on `supportsThreads`, so stale adapter copies keep working.
 
 ## The Chat SDK path
 
