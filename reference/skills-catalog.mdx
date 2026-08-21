@@ -5,11 +5,11 @@ keywords: ["skills", "catalog", "reference", "add-channel", "providers", "tools"
 tag: "UPDATED"
 ---
 
-{/* verified-against: main .claude/skills/ and container/skills/ listings + each skill's SKILL.md frontmatter @ 53ea1e8b; channels .claude/skills/{add-slack,slack-a2a-rooms,slack-agent-flow,slack-multi-instance}/SKILL.md @ d69c9c5d; current main setup/channels/slack-auto-register.ts @ 001dfa02 */}
+{/* verified-against: main .claude/skills/ and container/skills/ listings + each skill's SKILL.md frontmatter @ 475ba766; channels .claude/skills/{add-slack,slack-a2a-rooms,slack-agent-flow,slack-multi-instance}/SKILL.md @ d69c9c5d; current main setup/channels/slack-auto-register.ts @ 001dfa02 */}
 
 NanoClaw ships two kinds of skills:
 
-- **Host-side workspace skills** (`.claude/skills/`) — invoked from your coding harness in your NanoClaw checkout. They install channels, providers, and tools, or operate and maintain your install. 45 skills total: 17 channel installs, 3 provider installs, 10 tool installs, and 15 operational skills.
+- **Host-side workspace skills** (`.claude/skills/`) — invoked from your coding harness in your NanoClaw checkout. They install channels, providers, and tools, or operate and maintain your install. 49 skills total: 19 channel installs, 3 provider installs, 12 tool installs, and 15 operational skills.
 - **Container skills** (`container/skills/`) — 5 skills mounted into every agent container at `/app/skills`. The agent loads them at runtime; you don't invoke them yourself.
 
 <Note>
@@ -24,6 +24,8 @@ Each skill wires up one messaging channel. See [Channels](/channels/overview) fo
 
 | Skill | What it does |
 | --- | --- |
+| `/add-dial` | Adds the [Dial](/channels/dial) channel — a real phone number for SMS and AI voice calls through the `dial` CLI; native adapter, email sign-in, 6-digit SMS pairing, owner-only or public line |
+| `/add-dial-number` | Adds another phone number to an installed [Dial](/channels/dial) channel — a second owner-only or public line, wired to the same agent or a different one |
 | `/add-deltachat` | Adds the [Delta Chat](/channels/more-channels#delta-chat) channel via `@deltachat/stdio-rpc-server` — native adapter, email-based messaging with end-to-end encryption |
 | `/add-discord` | Adds the [Discord](/channels/discord) bot channel via Chat SDK |
 | `/add-emacs` | Adds [Emacs](/channels/more-channels#emacs) as a channel — interactive chat buffer and org-mode integration over a local HTTP bridge, no bot token needed |
@@ -44,7 +46,7 @@ Each skill wires up one messaging channel. See [Channels](/channels/overview) fo
 
 ### Slack feature skills
 
-These skills live on the `channels` branch. They are not included in the 45-skill trunk count above.
+These skills live on the `channels` branch. They are not included in the 49-skill trunk count above.
 
 | Skill | What it does |
 | --- | --- |
@@ -68,9 +70,11 @@ Each skill adds a capability or MCP tool to your agents. See [Tools](/extend/too
 
 | Skill | What it does |
 | --- | --- |
+| `/add-anydoc` | Adds local office-document-to-Markdown conversion to agent containers with the pinned Firecrawl AnyDoc CLI — Word, PowerPoint, Excel, OpenDocument, RTF, EPUB, CSV, and text-based PDF without uploading to a hosted parser |
 | `/add-atomic-chat-tool` | Adds the Atomic Chat MCP server so agents can call local models served by the Atomic Chat desktop app via its OpenAI-compatible API |
 | `/add-clidash` | Adds clidash — a zero-dependency, read-only web dashboard that derives its tabs and tables at runtime from any CLI that lists resources as JSON, pre-wired for NanoClaw's `ncl` CLI |
 | `/add-dashboard` | Adds a monitoring dashboard — installs `@nanoco/nanoclaw-dashboard` and a pusher that sends periodic JSON snapshots |
+| `/add-dial-tool` | Gives chosen agents the [Dial](/channels/dial#the-dial-tool-sms-and-calls-from-inside-the-sandbox) `dial` CLI as a container tool — SMS, AI voice calls, and inbound codes from the sandbox; OneCLI credential injection for `api.getdial.ai`, scoped per agent with block rules |
 | `/add-karpathy-llm-wiki` | Adds a persistent wiki knowledge base to a group, based on Karpathy's LLM Wiki pattern |
 | `/add-macos-statusbar` | Adds a macOS menu bar status indicator with Start, Stop, and Restart controls (macOS only) |
 | `/add-mnemon` | Adds persistent graph-based memory via mnemon — agents recall past context before responding and remember insights after each turn |
@@ -95,11 +99,11 @@ Setup, maintenance, migration, and day-to-day administration of your install.
 | `/migrate-from-openclaw` | Migrates from OpenClaw to NanoClaw v2 — detects an existing install, extracts identity, credentials, and tasks, then guides interactive migration |
 | `/migrate-from-v1` | Finishes migrating a NanoClaw v1 install into v2 after `migrate-v2.sh` — seeds the owner, reconciles container configs, helps port custom v1 code |
 | `/migrate-memory` | Carries an agent group's memory across a provider switch (e.g. Claude ↔ Codex) — run after `ncl groups config update --provider`; reads the source provider's memory store, distills it into the target's, and restarts the group |
+| `/migrate-slack-agents` | Migrates a classic single-bot Slack install to one provisioned Slack app per agent group, preserving identities, workspaces, memory, and wiring — or records the choice to stay on classic |
 | `/migrate-nanoclaw` | Extracts your customizations from a fork, generates a replayable migration guide, and upgrades to upstream by reapplying them on a clean base |
 | `/setup` | Runs initial NanoClaw setup — install, configure, first-time setup |
 | `/update-nanoclaw` | Brings upstream updates into a customized install with preview, selective cherry-pick, and low token usage |
 | `/update-skills` | Re-applies your installed skills to pull their latest code from upstream |
-| `/use-native-credential-proxy` | Opts out of the OneCLI gateway — reads Anthropic credentials from `.env` and injects them into the container's API requests |
 
 ## Container skills
 
@@ -113,7 +117,7 @@ Mounted into every agent container at `/app/skills`. The agent picks them up aut
 | `self-customize` | Lets the agent customize itself — add capabilities, install packages, add MCP servers, edit code or its memory files |
 | `welcome` | Introduces the agent to a newly connected channel — triggered automatically when a channel is first wired |
 
-Channel-specific formatting skills (`slack-formatting`, `whatsapp-formatting`) are not part of the base image — they live on the `channels` branch and install alongside their channel via `/add-slack` and `/add-whatsapp`. The `vercel-cli` container skill is also opt-in: `/add-vercel` ships it together with the Vercel CLI instead of baking either into every image.
+Channel-specific formatting skills (`slack-formatting`, `whatsapp-formatting`) are not part of the base image — they live on the `channels` branch and install alongside their channel via `/add-slack` and `/add-whatsapp`. The `vercel-cli` and `dial-cli` container skills are also opt-in: `/add-vercel` and `/add-dial-tool` ship them together with their CLIs instead of baking them into every image.
 
 ## Related pages
 

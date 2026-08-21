@@ -1,0 +1,84 @@
+---
+title: "Dial"
+tag: "NEW"
+description: "Give NanoClaw a real phone number via Dial — SMS and AI-handled voice calls, email sign-in, 6-digit SMS pairing, owner-only or public lines, and the optional in-sandbox dial CLI tool."
+keywords: ["dial", "getdial", "phone number", "sms", "voice calls", "add-dial", "add-dial-number", "add-dial-tool", "pairing code", "10dlc", "dial cli", "native adapter"]
+---
+
+{/* verified-against: .claude/skills/{add-dial,add-dial-number,add-dial-tool}/SKILL.md, setup/pair-dial.ts, setup/auto.ts @ 475ba766; channels branch src/channels/dial.ts + dial-pairing.ts @ a45fab71 */}
+
+The Dial adapter gives your agent a **real phone number** through [Dial](https://getdial.ai): people text or call it, and the agent answers over SMS; the agent can also place outbound calls that Dial's AI voice agent handles. It's a **native adapter** — no Chat SDK bridge — and both directions go through the `dial` CLI: outbound SMS is `dial message --json`, inbound events arrive through the `dial listen` daemon, which runs a small handler script that spools each event into `data/dial/inbound/` for the adapter to pick up. No public URL, webhook, or open port.
+
+One number is a **shared line**: the number itself is the messaging group, and every person who texts it gets their own thread (and so their own session). Because a phone number is guessable and the agent holds an account-scoped Dial credential, each line carries an explicit access policy — **owner-only** (the default) or **public**.
+
+## Prerequisites
+
+- A working NanoClaw install ([quickstart](/quickstart)) with Node available to the service (the `dial` CLI is a Node script)
+- An email address you can read — Dial signs you in with a one-time code; the wizard creates the account if you don't have one (you accept Dial's [Terms](https://getdial.ai/terms) and [Privacy Policy](https://getdial.ai/privacy) by continuing)
+- A phone to pair from — the first phone that completes pairing becomes the install's owner
+- A user-service supervisor (launchd on macOS, `systemd --user` on Linux) for the `dial listen` daemon; without one, outbound works but inbound doesn't start on its own
+
+## Install
+
+Dial is offered in the first-run setup wizard (**Yes, connect Dial**), or add it later by running `/add-dial` in Claude Code. The wizard flow:
+
+<Steps>
+  <Step title="Install the CLI and pin its path">
+    The wizard installs the `dial` CLI if it's missing (`curl -fsSL https://getdial.ai/install | bash`) and writes its **absolute** path to `.env` as `DIAL_CLI_PATH`. The adapter runs inside the background service, which doesn't inherit your shell's `PATH`; a bare `dial` there fails with `ENOENT` and the channel comes up connected but deaf.
+  </Step>
+  <Step title="Sign in with your email">
+    If the host is already signed in, the wizard offers to reuse that account or switch. Otherwise it asks for your email, Dial sends a 6-digit code, and you paste it. Verification provisions your number and installs Dial's `nanoclaw` agent profile. The wizard then sets the number's inbound voice instruction (a friendly receptionist that takes a message) and pins that number as the CLI's default sender — on multi-number accounts the CLI's saved default is the *oldest* number, which would otherwise send from a line nobody is listening on.
+  </Step>
+  <Step title="Choose who may text the line">
+    `owner` admits only the phone you pair next; everyone else is refused — including people your agent calls, so they can't text back. `public` lets anyone who knows the number start a conversation, each in their own thread. The answer is written to the line's `unknown_sender_policy` when the line is registered and can be changed later with `ncl messaging-groups update --id <id> --unknown-sender-policy public|strict`.
+  </Step>
+  <Step title="Restart and register the line">
+    The service restarts so the adapter is live and polling, `dial listen install` starts the event daemon, `dial local-target add cmd …/data/dial/handle-dial-event.sh` registers NanoClaw as the command target, and the line is created as a group (`ncl messaging-groups create --channel-type dial --platform-id <E.164> --is-group 1 …`). Re-runs return the existing row and never reset a policy you changed.
+  </Step>
+  <Step title="Pair your phone">
+    The terminal shows a one-time **6-digit code** and a scannable QR (an `SMSTO:` link that opens Messages pre-filled). Text exactly those 6 digits to your Dial line. The live adapter matches the code, replies "Paired ✅", and records your number; the wizard — never an inbound SMS — then grants you the `owner` role (at most one owner per install) and wires the line to your first agent. The step waits 5 minutes; codes expire after 10.
+  </Step>
+  <Step title="Add phone superpowers (optional)">
+    The wizard offers to run `/add-dial-tool`, which puts the `dial` CLI inside the agents you choose so they can text and call from any channel. See [The Dial tool](#the-dial-tool-sms-and-calls-from-inside-the-sandbox) below. Saying no keeps the channel working without it.
+  </Step>
+</Steps>
+
+Right after pairing the wizard tells you what the line can do: **calls both ways and inbound texts work immediately**. Outbound SMS to **US** numbers needs 10DLC registration on the Dial side ($25, usually 3–5 business days, from the [Dial dashboard](https://getdial.ai/dashboard/numbers)); until then US carriers drop those texts and the adapter reports each one as a delivery failure (below). Non-US recipients are unaffected.
+
+To wire more lines or move the line between agents later, run `/manage-channels`. To add a **second number** to the same install, run `/add-dial-number` — each number is its own line with its own access policy, wired to the same agent or a different one, and replies always go out from the number the person texted.
+
+## Platform notes
+
+- **Identifiers** — the line's platform id is the bare E.164 number (`+14155550123`, no prefix); senders are `dial:<E.164>` and each correspondent is a thread keyed by their number. The adapter sets `supportsThreads: true` and creates lines as groups with `threads: true`, so `per-thread` isolation is what keeps correspondents apart — see the [entity model](/concepts/entity-model).
+- **Text only** — the adapter sends the text of a reply; attachments are not delivered over SMS. Long replies are split into 1,500-character chunks at paragraph breaks. A reply with no thread (no correspondent to send to) is dropped with a warning.
+- **Delivery verdicts** — `dial message` returns as soon as Dial accepts the text; the carrier's verdict arrives later as a `message.status_changed` event. The adapter tracks every send (persisted in `data/dial/pending-sends.json`, so a restart can't turn a bounce into silence), reconciles anything without a verdict after 3 minutes by reading back `dial message list` once a minute, and gives up tracking after 24 hours. An `undelivered`/`failed` verdict is logged as an error and routed into the same thread as a `[NanoClaw system notice: …]` telling the agent the person did not get the message, not to reply, and not to resend over SMS — at most one notice per correspondent per hour, so a bouncing conversation can't loop.
+- **Voice calls** — when a call ends the agent gets a `[Voice call inbound|outbound … ended, Ns.]` notice; an inbound call's notice goes to the caller's thread, an outbound call's to the **owner's** thread (the person who asked for the call). Shortly after, `call.transcribed` delivers the transcript inline (clipped at 4,000 characters; `dial call get <id>` has the rest). Inbound calls are answered by Dial's AI voice agent using the number's inbound instruction, which you change with `dial number set <number> --inbound-instruction "…"`.
+- **Pairing guard** — codes expire after 10 minutes; five wrong codes texted to a line inside 10 minutes lock that line for 15 minutes, during which even the right code is refused and nothing is texted back. Tune with `DIAL_PAIRING_TTL_MS`, `DIAL_PAIRING_MAX_ATTEMPTS`, `DIAL_PAIRING_ATTEMPT_WINDOW_MS`, `DIAL_PAIRING_COOLDOWN_MS`. Pending codes live in `data/dial-pairings.json`.
+- **Credentials** — the adapter never sees a key. The CLI authenticates from the auth file it wrote at sign-in (`~/.local/share/dial/auth.v1.json`, or under `$XDG_DATA_HOME`); the adapter only reads it to learn the account's number and to confirm the host is signed in — no auth file, and the channel is skipped at startup. Every `dial` call the setup makes carries `DIAL_USER_AGENT=nanoclaw/<version>` so the account's requests are attributable to this install in Dial's logs.
+- **Forged notices** — inbound text and transcripts that contain the literal `NanoClaw system notice:` prefix are rewritten to `(sender-typed) NanoClaw system notice:` before an agent sees them, so a stranger can't impersonate the adapter.
+
+## The Dial tool: SMS and calls from inside the sandbox
+
+`/add-dial-tool` is independent of the channel — you can install it alone, or let `/add-dial` offer it. It gives chosen agents the `dial` CLI as a **container tool**:
+
+- Pins `@getdial/cli` (0.37.0) in `container/cli-tools.json` and rebuilds the image, and mounts a sandbox-aware `dial-cli` skill so the agent knows the CLI runs keyless in there.
+- Stores the account's API key in the [OneCLI vault](/operate/credentials) for `api.getdial.ai`, so requests from the container are authenticated at the gateway — the key never enters the sandbox.
+- Asks **which agents may use Dial** (`all`, `none`, or a list of `ag-…` ids) and enforces it with a per-agent OneCLI block rule. An agent you left out sees `403 blocked_by_policy`; a `401` means the vault secret needs refreshing. Agents created *after* the run have Dial until you re-run the skill, which is also how you change the list.
+
+<Warning>
+An agent with the tool can text and call **any** number and buy more numbers, billed to your Dial account. Grant it deliberately, and remember that on a `public` line every stranger who reaches that agent gets a turn with it.
+</Warning>
+
+After `/add-dial`, the skill also appends the wired line to the container skill so agents always pass `--from-number <your line>` — inside the sandbox there is no auth file, so the CLI has no default sender.
+
+## Troubleshooting
+
+- **Channel is connected but nothing comes in** — the command target isn't registered or the daemon isn't running. `dial doctor --json` should show `listen.running: true`; `dial local-target list` should list `…/data/dial/handle-dial-event.sh`. Fix with `dial listen install` (needs launchd / `systemd --user`) and make sure `DIAL_CLI_PATH` in `.env` is absolute and the service can resolve `node`.
+- **Pairing never completes** — the adapter must be running to observe the code, and the text must be *only* the 6 digits. If it timed out (5 min) or the code went stale (10 min), re-run the step for a fresh one.
+- **"Pairing is paused for about N min"** — the brute-force lock; wait it out, then re-run for a new code.
+- **Texts to US numbers never arrive** — 10DLC registration is pending. The agent receives a delivery-failure notice per correspondent; register the number in the Dial dashboard.
+- **Replies come from the wrong number** (multi-number accounts) — the installed adapter predates multi-line routing. `/add-dial-number` checks for this and tells you to refresh `dial.ts` from the `channels` branch.
+- **A tool-enabled agent gets `403 blocked_by_policy`** — it wasn't chosen; re-run `/add-dial-tool`. `dial: command not found` inside a container means the image predates the manifest entry: `./container/build.sh`, then `ncl groups restart --id <group-id>`.
+- **Everything green but no replies** — `pnpm exec vitest run src/channels/dial-registration.test.ts`; red means the barrel import drifted, so re-run `/add-dial`.
+
+For service-level checks (logs, restarts, wiring queries), see [troubleshooting](/operate/troubleshooting).
