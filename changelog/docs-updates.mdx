@@ -5,6 +5,14 @@ icon: "file-pen"
 rss: true
 ---
 
+<Update label="Dial channel: a real phone number for SMS and voice" description="2026-08-21" tags={["New", "Updated"]}>
+  Dial landed on trunk ([nanoclaw#3050](https://github.com/nanocoai/nanoclaw/pull/3050), adapter on the `channels` branch via [nanoclaw#3041](https://github.com/nanocoai/nanoclaw/pull/3041)) — verified against `nanocoai/nanoclaw@475ba766` and `channels@a45fab71`.
+
+  - **New [channels/dial](/channels/dial)** — the native `dial`-CLI adapter, the setup-wizard flow (CLI install and `DIAL_CLI_PATH`, email one-time-code sign-in, owner-only vs public line, restart and line registration, 6-digit SMS pairing with QR, the 10DLC note, the optional tool install), the shared-line model (number = messaging group, each correspondent a thread), delivery verdicts and the `[NanoClaw system notice: …]` failure path, voice-call and transcript routing, the pairing brute-force guard and its `DIAL_PAIRING_*` knobs, `/add-dial-number`, and `/add-dial-tool` with its per-agent OneCLI block rules.
+  - **[Channels overview](/channels/overview)** — Dial row (setup wizard: yes) and card; native-adapter and no-public-URL lists. **[Quick start](/quickstart)** and **[Installation](/installation)** — Dial in the wizard's channel step, `pair-dial` in the setup steps list.
+  - **[Skills catalog](/reference/skills-catalog)** — rows for `/add-dial`, `/add-dial-number`, `/add-dial-tool`, plus the rest of the trunk drift since the last stamp: `/add-anydoc` and `/migrate-slack-agents` added, `/use-native-credential-proxy` removed (retired upstream). Count 45 → 49. **[Tools](/extend/tools)** — a Dial section next to Tavily and the local-model tools.
+</Update>
+
 <Update label="Post-v2.2 drift sweep: runtime, access policy, and session history" description="2026-08-20" tags={["Updated", "Fixed"]}>
   Re-verified the public docs against `nanocoai/nanoclaw@dce271c6` and corrected the user-facing drift introduced after the v2.2.0 release.
 

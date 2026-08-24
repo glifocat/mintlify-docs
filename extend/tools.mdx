@@ -1,10 +1,10 @@
 ---
 title: "Give agents tools"
 description: "Two ways to add MCP tools to NanoClaw agents — install a tool skill like /add-tavily-tool, or register any MCP server yourself via the container config."
-keywords: ["tools", "mcp", "tavily", "web search", "gmail", "ollama", "atomic chat", "agent-browser", "web access", "add-mcp-server", "tool skills"]
+keywords: ["tools", "mcp", "tavily", "web search", "gmail", "ollama", "atomic chat", "agent-browser", "web access", "add-mcp-server", "tool skills", "dial", "sms", "phone calls", "add-dial-tool"]
 ---
 
-{/* verified-against: .claude/skills/{add-tavily-tool,add-ollama-tool,add-atomic-chat-tool}/SKILL.md, container/skills/agent-browser/SKILL.md, container/cli-tools.json, src/db/container-configs.ts, src/container-config.ts, src/cli/resources/groups.ts, src/container-runner.ts @ 639577c3 */}
+{/* verified-against: .claude/skills/{add-tavily-tool,add-ollama-tool,add-atomic-chat-tool}/SKILL.md, container/skills/agent-browser/SKILL.md, container/cli-tools.json, src/db/container-configs.ts, src/container-config.ts, src/cli/resources/groups.ts, src/container-runner.ts @ 639577c3; .claude/skills/add-dial-tool/SKILL.md @ 475ba766 */}
 
 Agents get tools two ways:
 
@@ -35,6 +35,10 @@ Two skills let the agent offload work to local models. In both cases **the agent
 <Note>
 Don't confuse `/add-ollama-tool` with `/add-ollama-provider`. The tool skill keeps your existing provider as the agent's brain and gives it a local model to call; the provider skill **replaces** the agent's brain with a local Ollama model for an entire group. See [Providers](/extend/providers).
 </Note>
+
+## Phone: SMS and voice calls with Dial
+
+`/add-dial-tool` gives the agents you choose a real phone number as a **CLI tool** rather than an MCP server. The pinned `@getdial/cli` lands in the agent image through `container/cli-tools.json`, a sandbox-aware `dial-cli` skill teaches the agent to text, place AI-handled voice calls, and wait for inbound codes, and the account key sits in the [OneCLI vault](/operate/credentials) for `api.getdial.ai` — injected at the gateway, never inside the container. The skill asks which agents may use Dial and blocks the rest with per-agent OneCLI rules (`403 blocked_by_policy`). It spends real money and reaches real people, so grant it deliberately. Details, and the separate `/add-dial` messaging channel, are on the [Dial channel page](/channels/dial#the-dial-tool-sms-and-calls-from-inside-the-sandbox).
 
 ## Web access
 
