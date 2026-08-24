@@ -5,7 +5,7 @@ description: "Give NanoClaw a real phone number via Dial — SMS and AI-handled 
 keywords: ["dial", "getdial", "phone number", "sms", "voice calls", "add-dial", "add-dial-number", "add-dial-tool", "pairing code", "10dlc", "dial cli", "native adapter"]
 ---
 
-{/* verified-against: .claude/skills/{add-dial,add-dial-number,add-dial-tool}/SKILL.md, setup/pair-dial.ts, setup/auto.ts @ 475ba766; channels branch src/channels/dial.ts + dial-pairing.ts @ a45fab71 */}
+{/* verified-against: .claude/skills/{add-dial,add-dial-tool}/SKILL.md, setup/pair-dial.ts, setup/auto.ts @ 475ba766; .claude/skills/add-dial-number/SKILL.md @ ee8d9905; channels branch src/channels/dial.ts + dial-pairing.ts @ a45fab71 */}
 
 The Dial adapter gives your agent a **real phone number** through [Dial](https://getdial.ai): people text or call it, and the agent answers over SMS; the agent can also place outbound calls that Dial's AI voice agent handles. It's a **native adapter** — no Chat SDK bridge — and both directions go through the `dial` CLI: outbound SMS is `dial message --json`, inbound events arrive through the `dial listen` daemon, which runs a small handler script that spools each event into `data/dial/inbound/` for the adapter to pick up. No public URL, webhook, or open port.
 
@@ -77,7 +77,7 @@ After `/add-dial`, the skill also appends the wired line to the container skill 
 - **Pairing never completes** — the adapter must be running to observe the code, and the text must be *only* the 6 digits. If it timed out (5 min) or the code went stale (10 min), re-run the step for a fresh one.
 - **"Pairing is paused for about N min"** — the brute-force lock; wait it out, then re-run for a new code.
 - **Texts to US numbers never arrive** — 10DLC registration is pending. The agent receives a delivery-failure notice per correspondent; register the number in the Dial dashboard.
-- **Replies come from the wrong number** (multi-number accounts) — the installed adapter predates multi-line routing. `/add-dial-number` checks for this and tells you to refresh `dial.ts` from the `channels` branch.
+- **Replies come from the wrong number** (multi-number accounts) — the installed adapter predates multi-line routing. `/add-dial-number` detects this and refreshes `dial.ts` (with its user-agent helper) from the `channels` branch before continuing.
 - **A tool-enabled agent gets `403 blocked_by_policy`** — it wasn't chosen; re-run `/add-dial-tool`. `dial: command not found` inside a container means the image predates the manifest entry: `./container/build.sh`, then `ncl groups restart --id <group-id>`.
 - **Everything green but no replies** — `pnpm exec vitest run src/channels/dial-registration.test.ts`; red means the barrel import drifted, so re-run `/add-dial`.
 
