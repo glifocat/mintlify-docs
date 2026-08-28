@@ -5,11 +5,11 @@ keywords: ["skills", "catalog", "reference", "add-channel", "providers", "tools"
 tag: "UPDATED"
 ---
 
-{/* verified-against: main .claude/skills/ and container/skills/ listings + each skill's SKILL.md frontmatter @ 475ba766; channels .claude/skills/{add-slack,slack-a2a-rooms,slack-agent-flow,slack-multi-instance}/SKILL.md @ d69c9c5d; current main setup/channels/slack-auto-register.ts @ 001dfa02 */}
+{/* verified-against: main .claude/skills/ and container/skills/ listings + each skill's SKILL.md frontmatter @ 294ef2ae; channels .claude/skills/{add-slack,slack-a2a-rooms,slack-agent-flow,slack-multi-instance}/SKILL.md @ d69c9c5d; current main setup/channels/slack-auto-register.ts @ 001dfa02 */}
 
 NanoClaw ships two kinds of skills:
 
-- **Host-side workspace skills** (`.claude/skills/`) — invoked from your coding harness in your NanoClaw checkout. They install channels, providers, and tools, or operate and maintain your install. 49 skills total: 19 channel installs, 3 provider installs, 12 tool installs, and 15 operational skills.
+- **Host-side workspace skills** (`.claude/skills/`) — invoked from your coding harness in your NanoClaw checkout. They install channels, providers, and tools, or operate and maintain your install. 50 skills total: 20 channel installs, 3 provider installs, 12 tool installs, and 15 operational skills.
 - **Container skills** (`container/skills/`) — 5 skills mounted into every agent container at `/app/skills`. The agent loads them at runtime; you don't invoke them yourself.
 
 <Note>
@@ -34,6 +34,7 @@ Each skill wires up one messaging channel. See [Channels](/channels/overview) fo
 | `/add-imessage` | Adds the [iMessage](/channels/imessage) channel — local backend (this Mac's `chat.db`, macOS only) or hosted backend (a native iMessage line via [photon.codes](https://photon.codes)) |
 | `/add-linear` | Adds the [Linear](/channels/more-channels#linear) channel via Chat SDK — issue comment threads as conversations |
 | `/add-matrix` | Adds the [Matrix](/channels/more-channels#matrix) channel via Chat SDK — works with any homeserver |
+| `/add-mattermost` | Adds the [Mattermost](/channels/mattermost) bot channel via Chat SDK. Copies a vendored adapter rather than an npm package, offers to reuse a local server when one is running, and can create an evaluation server when none exists |
 | `/add-resend` | Adds the [Resend](/channels/more-channels#resend-email) email channel via Chat SDK |
 | `/add-signal` | Adds the [Signal](/channels/signal) channel via signal-cli TCP daemon — native adapter, no Chat SDK bridge |
 | `/add-slack` | Adds the base [Slack](/channels/slack) channel via Chat SDK — one bot, direct messages, and channel chat |
@@ -46,7 +47,7 @@ Each skill wires up one messaging channel. See [Channels](/channels/overview) fo
 
 ### Slack feature skills
 
-These skills live on the `channels` branch. They are not included in the 49-skill trunk count above.
+These skills live on the `channels` branch. They are not included in the 50-skill trunk count above.
 
 | Skill | What it does |
 | --- | --- |

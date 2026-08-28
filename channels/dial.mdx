@@ -5,7 +5,7 @@ description: "Give NanoClaw a real phone number via Dial — SMS and AI-handled 
 keywords: ["dial", "getdial", "phone number", "sms", "voice calls", "add-dial", "add-dial-number", "add-dial-tool", "pairing code", "10dlc", "dial cli", "native adapter"]
 ---
 
-{/* verified-against: .claude/skills/{add-dial,add-dial-tool}/SKILL.md, setup/pair-dial.ts, setup/auto.ts @ 475ba766; .claude/skills/add-dial-number/SKILL.md @ ee8d9905; channels branch src/channels/dial.ts + dial-pairing.ts @ a45fab71 */}
+{/* verified-against: .claude/skills/{add-dial,add-dial-number,add-dial-tool}/SKILL.md, .claude/skills/add-dial/apply-fixtures.json, setup/pair-dial.ts, setup/channels/initial-setup.ts, setup/lib/skill-driver.ts @ 294ef2ae; channels branch src/channels/dial.ts + dial-pairing.ts @ a45fab71 */}
 
 The Dial adapter gives your agent a **real phone number** through [Dial](https://getdial.ai): people text or call it, and the agent answers over SMS; the agent can also place outbound calls that Dial's AI voice agent handles. It's a **native adapter** — no Chat SDK bridge — and both directions go through the `dial` CLI: outbound SMS is `dial message --json`, inbound events arrive through the `dial listen` daemon, which runs a small handler script that spools each event into `data/dial/inbound/` for the adapter to pick up. No public URL, webhook, or open port.
 
@@ -39,7 +39,7 @@ Dial is offered in the first-run setup wizard (**Yes, connect Dial**), or add it
     The terminal shows a one-time **6-digit code** and a scannable QR (an `SMSTO:` link that opens Messages pre-filled). Text exactly those 6 digits to your Dial line. The live adapter matches the code, replies "Paired ✅", and records your number; the wizard — never an inbound SMS — then grants you the `owner` role (at most one owner per install) and wires the line to your first agent. The step waits 5 minutes; codes expire after 10.
   </Step>
   <Step title="Add phone superpowers (optional)">
-    The wizard offers to run `/add-dial-tool`, which puts the `dial` CLI inside the agents you choose so they can text and call from any channel. See [The Dial tool](#the-dial-tool-sms-and-calls-from-inside-the-sandbox) below. Saying no keeps the channel working without it.
+    The wizard offers to run `/add-dial-tool`, which puts the `dial` CLI inside your agents so they can text and call from any channel. `/add-dial` asks which agents may use it and hands the answer down, so you answer in your own terminal rather than into a nested step. On a first install there are no agent groups yet, so the question is skipped and the tool installs for every agent. Re-run `/add-dial-tool` any time to narrow that down. See [The Dial tool](#the-dial-tool-sms-and-calls-from-inside-the-sandbox) below. Saying no keeps the channel working without it.
   </Step>
 </Steps>
 
@@ -63,13 +63,14 @@ To wire more lines or move the line between agents later, run `/manage-channels`
 
 - Pins `@getdial/cli` (0.37.0) in `container/cli-tools.json` and rebuilds the image, and mounts a sandbox-aware `dial-cli` skill so the agent knows the CLI runs keyless in there.
 - Stores the account's API key in the [OneCLI vault](/operate/credentials) for `api.getdial.ai`, so requests from the container are authenticated at the gateway — the key never enters the sandbox.
-- Asks **which agents may use Dial** (`all`, `none`, or a list of `ag-…` ids) and enforces it with a per-agent OneCLI block rule. An agent you left out sees `403 blocked_by_policy`; a `401` means the vault secret needs refreshing. Agents created *after* the run have Dial until you re-run the skill, which is also how you change the list.
+- Asks **which agents may use Dial** and enforces the answer with a per-agent OneCLI block rule. Answer `all`, `none`, or a list of `ag-…` ids separated by commas with no spaces. If you run it from `/add-dial`, the parent asks this question instead and passes your answer down. An agent you left out sees `403 blocked_by_policy`; a `401` means the vault secret needs refreshing. Agents created *after* the run have Dial until you re-run the skill, which is also how you change the list.
+- Replaces the OneCLI secret on every run rather than updating it. `onecli secrets update` accepts a new value only on the command line, and the key must never sit there. The skill deletes the stale secret and creates a fresh one from a temporary file, then merges the new secret id into the chosen selective-mode agents further down, so re-onboarding and key rotation both work.
 
 <Warning>
 An agent with the tool can text and call **any** number and buy more numbers, billed to your Dial account. Grant it deliberately, and remember that on a `public` line every stranger who reaches that agent gets a turn with it.
 </Warning>
 
-After `/add-dial`, the skill also appends the wired line to the container skill so agents always pass `--from-number <your line>` — inside the sandbox there is no auth file, so the CLI has no default sender.
+When you install the tool, `/add-dial` also appends the wired line to the container skill so agents always pass `--from-number <your line>` — inside the sandbox there is no auth file, so the CLI has no default sender.
 
 ## Troubleshooting
 
@@ -79,6 +80,7 @@ After `/add-dial`, the skill also appends the wired line to the container skill 
 - **Texts to US numbers never arrive** — 10DLC registration is pending. The agent receives a delivery-failure notice per correspondent; register the number in the Dial dashboard.
 - **Replies come from the wrong number** (multi-number accounts) — the installed adapter predates multi-line routing. `/add-dial-number` detects this and refreshes `dial.ts` (with its user-agent helper) from the `channels` branch before continuing.
 - **A tool-enabled agent gets `403 blocked_by_policy`** — it wasn't chosen; re-run `/add-dial-tool`. `dial: command not found` inside a container means the image predates the manifest entry: `./container/build.sh`, then `ncl groups restart --id <group-id>`.
+- **`/add-dial-tool` ends with `Applied with gaps`, and every agent still runs the old image.** An earlier step in the run failed, so the closing group restart was skipped. That gate is deliberate. Fix the reported failure, then re-run the skill.
 - **Everything green but no replies** — `pnpm exec vitest run src/channels/dial-registration.test.ts`; red means the barrel import drifted, so re-run `/add-dial`.
 
 For service-level checks (logs, restarts, wiring queries), see [troubleshooting](/operate/troubleshooting).

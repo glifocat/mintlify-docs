@@ -4,7 +4,7 @@ description: "Two ways to add MCP tools to NanoClaw agents — install a tool sk
 keywords: ["tools", "mcp", "tavily", "web search", "gmail", "ollama", "atomic chat", "agent-browser", "web access", "add-mcp-server", "tool skills", "dial", "sms", "phone calls", "add-dial-tool"]
 ---
 
-{/* verified-against: .claude/skills/{add-tavily-tool,add-ollama-tool,add-atomic-chat-tool}/SKILL.md, container/skills/agent-browser/SKILL.md, container/cli-tools.json, src/db/container-configs.ts, src/container-config.ts, src/cli/resources/groups.ts, src/container-runner.ts @ 639577c3; .claude/skills/add-dial-tool/SKILL.md @ 475ba766 */}
+{/* verified-against: .claude/skills/{add-tavily-tool,add-ollama-tool,add-atomic-chat-tool}/SKILL.md, container/skills/agent-browser/SKILL.md, container/cli-tools.json, src/db/container-configs.ts, src/container-config.ts, src/cli/resources/groups.ts, src/container-runner.ts @ 639577c3; .claude/skills/{add-dial,add-dial-tool}/SKILL.md @ 294ef2ae */}
 
 Agents get tools two ways:
 
@@ -38,7 +38,7 @@ Don't confuse `/add-ollama-tool` with `/add-ollama-provider`. The tool skill kee
 
 ## Phone: SMS and voice calls with Dial
 
-`/add-dial-tool` gives the agents you choose a real phone number as a **CLI tool** rather than an MCP server. The pinned `@getdial/cli` lands in the agent image through `container/cli-tools.json`, a sandbox-aware `dial-cli` skill teaches the agent to text, place AI-handled voice calls, and wait for inbound codes, and the account key sits in the [OneCLI vault](/operate/credentials) for `api.getdial.ai` — injected at the gateway, never inside the container. The skill asks which agents may use Dial and blocks the rest with per-agent OneCLI rules (`403 blocked_by_policy`). It spends real money and reaches real people, so grant it deliberately. Details, and the separate `/add-dial` messaging channel, are on the [Dial channel page](/channels/dial#the-dial-tool-sms-and-calls-from-inside-the-sandbox).
+`/add-dial-tool` gives the agents you choose a real phone number as a **CLI tool** rather than an MCP server. The pinned `@getdial/cli` lands in the agent image through `container/cli-tools.json`, a sandbox-aware `dial-cli` skill teaches the agent to text, place AI-handled voice calls, and wait for inbound codes, and the account key sits in the [OneCLI vault](/operate/credentials) for `api.getdial.ai` — injected at the gateway, never inside the container. The skill asks which agents may use Dial and blocks the rest with per-agent OneCLI rules (`403 blocked_by_policy`); answer with `all`, `none`, or `ag-…` ids separated by commas with no spaces. If you run it from `/add-dial`, the parent asks that question and passes the answer down. Each run replaces the vault secret rather than updating it, so re-onboarding and key rotation work. It spends real money and reaches real people, so grant it deliberately. Details, and the separate `/add-dial` messaging channel, are on the [Dial channel page](/channels/dial#the-dial-tool-sms-and-calls-from-inside-the-sandbox).
 
 ## Web access
 
