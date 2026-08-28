@@ -4,7 +4,7 @@ description: "Hands-on tutorial: change an agent's personality through instructi
 keywords: ["customize", "instructions.prepend.md", "personality", "model", "effort", "ncl groups config update", "self-customize", "/customize"]
 ---
 
-{/* verified-against: src/claude-md-compose.ts, src/group-persona.ts, src/container-runner.ts, src/cli/resources/groups.ts, container/agent-runner/src/providers/types.ts, container/skills/self-customize/SKILL.md, .claude/skills/customize/SKILL.md @ 639577c3 */}
+{/* verified-against: src/cli/resources/groups.ts, container/agent-runner/src/providers/types.ts, container/skills/self-customize/SKILL.md, .claude/skills/customize/SKILL.md @ 639577c3; project document: src/project-doc-compose.ts, src/group-persona.ts, src/container-runner.ts @ 294ef2ae */}
 
 This tutorial customizes the Scout agent from [your first agent](/guides/first-agent) — any agent group works, just swap the folder and `--id`. An agent has three customization surfaces:
 
@@ -12,7 +12,7 @@ This tutorial customizes the Scout agent from [your first agent](/guides/first-a
 2. **Brain** — model, reasoning effort, and other [container config](/reference/container-config) fields, edited with `ncl`
 3. **Capabilities** — packages and MCP servers, which go through the approval flow covered in [self-modification](/extend/self-modification)
 
-One file you will **not** edit: `groups/<folder>/CLAUDE.md`. The host regenerates it on every container spawn from a shared base plus skill and MCP fragments, and mounts it read-only into the container. Anything you write there gets clobbered. `instructions.prepend.md` is the file that's yours (and the agent's); durable facts the agent accumulates over time live alongside it in the [`memory/` tree](/concepts/agent-memory).
+One file you will **not** edit: `groups/<folder>/CLAUDE.md`. The host regenerates it on every container spawn and re-mounts it read-only on top of the group dir. Every instruction source is read on the host and inlined into that one flat file, so anything you write there gets clobbered. `instructions.prepend.md` is the file that's yours (and the agent's); durable facts the agent accumulates over time live alongside it in the [`memory/` tree](/concepts/agent-memory).
 
 <Steps>
 <Step title="Personality, the conversational way">
@@ -96,13 +96,21 @@ cat groups/scout/CLAUDE.md
 
 ```text
 <!-- Composed at spawn - do not edit. Standing instructions: instructions.prepend.md. Memory: memory/. -->
-@./.claude-fragments/persona.md
-@./.claude-shared.md
-@./.claude-fragments/module-self-mod.md
+
+# Persona
+
+...
+
+# NanoClaw Runtime Contract
+
+...
+
+# NanoClaw Module: agents
+
 ...
 ```
 
-It's a header and imports. Your `instructions.prepend.md` is inlined as the `persona.md` fragment and imported **first**, so it sits at the top of the system prompt, ahead of the shared base and the per-skill fragments. Editing the composed `CLAUDE.md` is pointless because the host rebuilds it from those sources on every spawn.
+It's a header and full text. The composed document is one flat file, the composer emits no `@`-imports, and a test pins that they never come back. Your `instructions.prepend.md` is inlined verbatim as the first section, `# Persona`, so it opens the project memory the agent loads, ahead of the shared base (`container/CLAUDE.md`), the module manuals, the resident skill prose, and any instructions from MCP servers you added. The persona section is never dropped, even when the document hits its size cap. Editing the composed `CLAUDE.md` is pointless because the host rebuilds it from those sources on every spawn.
 
 </Step>
 </Steps>

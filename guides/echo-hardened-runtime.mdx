@@ -6,7 +6,7 @@ keywords: ["echo", "hardened runtime", "security", "sandbox", "container image",
 tag: "NEW"
 ---
 
-{/* verified-against: setup/auto.ts, setup/registry-login.ts, setup/registry-login.sh, setup/registry.ts, setup/lib/registry-state.ts, container/Dockerfile, container/pull.sh, container/build.sh, setup/verify.ts, docs/hardened-image.md, versions.json @ 639577c3 (main, #3150 merge). Auth screenshots are production captures (authenticate.nanoclaw.dev, 2026-07-29). */}
+{/* verified-against: setup/auto.ts, setup/registry-login.ts, setup/registry-login.sh, setup/registry.ts, setup/lib/registry-state.ts, container/Dockerfile, container/build.sh, docs/hardened-image.md @ 639577c3 (main, #3150 merge); pins, pull checks, sign-in verification, and the pin gate: versions.json, container/pull.sh, setup/registry-login.ts, setup/registry.ts, setup/lib/registry-state.ts, setup/set-env.ts, setup/channels/slack-auto.ts, .github/workflows/verify-agent-image.yml @ 294ef2ae. Auth screenshots are production captures (authenticate.nanoclaw.dev, 2026-07-29). */}
 
 <Note>
   The hardened runtime is free and opt-in. Your existing local-build setup keeps working exactly as it does today. Choosing the hardened runtime is additive, not a replacement.
@@ -70,7 +70,7 @@ Choose the hardened runtime while you set up NanoClaw for the first time.
     </Frame>
   </Step>
   <Step title="Sign in to NanoClaw">
-    The terminal prints a link and a short code, and your browser opens on its own — if it doesn't, open the link on any device. The code is valid for 5 minutes.
+    The terminal prints a link and a short code, and your browser opens on its own — if it doesn't, open the link on any device. The terminal tells you how long the code is good for, and it stops waiting when the code expires, at 15 minutes at the latest.
 
     <Frame caption="The terminal sign-in card: the link to open and the code the page will show back to you.">
       ![Terminal sign-in card printed by the wizard, with the authentication link and short code](/images/echo/hardened-runtime/signin-01-terminal-card.png)
@@ -95,7 +95,11 @@ Choose the hardened runtime while you set up NanoClaw for the first time.
     If authentication doesn't finish, setup says so and builds the sandbox locally instead — nothing breaks, and you can [opt in later](#already-running-nanoclaw).
   </Step>
   <Step title="Finish the install">
-    Let the installer finish. It pulls the image by digest, verifies it matches your checkout, and tags it as this install's sandbox image, so your agents are ready to run on it.
+    Let the installer finish. It pulls the image by its pinned digest, refuses it if the architecture or the agent-runner lock label is wrong, and tags it as this install's sandbox image, so your agents are ready to run on it.
+
+    <Warning>
+      The pull accepts a lockfile that does not match your checkout. Every published hardened image still carries the v2.2.0 agent-runner lockfile, so refusing the tag would block every new hardened install. The pull prints `Warning: agent-runner lock drift — tagging this image anyway.` and continues. Upstream marks this temporary. If an agent then dies on a missing module, build locally with `./container/build.sh build`.
+    </Warning>
   </Step>
 </Steps>
 
@@ -133,8 +137,45 @@ The status report shows:
 - **On this machine** — what is actually present locally
 - **Pinned** — the image reference this install tracks
 - **Signed in as** — the account, if any
+- **Perks**: the entitlements on the account, listed only when it has any
+- **Docker helper**: which registry hosts Docker asks NanoClaw for credentials on, or `not installed`
 
 Provenance also rides in the image itself: the `dev.nanoclaw.image-source` label reads `hardened` for the pulled image, `local` for a local build, and `derived` for a per-group image extended on top of the pulled one.
+
+## How a pin bump is gated
+
+A repin is not merged on trust. A CI workflow re-checks the new digest on every pull request that moves the pin, before the change can reach you.
+
+Four checks block the merge:
+
+1. The reference must be digest-pinned. A mutable tag fails.
+2. The image must be a multi-architecture index covering `linux/amd64` and `linux/arm64`.
+3. The `dev.nanoclaw.agent-runner-lock-sha256` label must equal the checkout's own agent-runner lockfile hash.
+4. The `dev.nanoclaw.image-source` label must read `hardened`.
+
+A manifest whose size moves by more than threefold in either direction raises a warning rather than blocking.
+
+One more check gates automation only: a keyless Sigstore signature is verified against the digest with `cosign verify`. An image with no signature does not fail the pull request. It only means auto-merge stays off and a human merges the repin.
+
+<Note>
+  No attestation or SBOM is checked, because the publisher attaches none. The workflow verifies the image's shape and, when present, its signature.
+</Note>
+
+## Sign-in verification
+
+Signing in stores a credential for the registry. Your install can re-check that credential against the account service.
+
+An account service it cannot reach keeps the stored sign-in and carries on, so an offline machine still pulls its image. The message names the reason:
+
+```text
+Couldn't reach the account service (<reason>); keeping the stored sign-in.
+```
+
+Unreachable is broader than offline. Any response that is not `200`, `401`, or `403` lands there, including a gateway error. A caller that would rather refuse than proceed unchecked passes `--require-verified`, which exits `2` instead of `0`. Nothing on the image path passes it today.
+
+<Note>
+  Signing in for Slack no longer decides your image source for you. That flow signs in through the same script, then puts the image question back: a deliberate local-build choice is restored, and an install that was never asked goes back to unasked. A plain `bash setup/registry-login.sh` still selects the hardened image.
+</Note>
 
 ## Troubleshooting and FAQ
 
