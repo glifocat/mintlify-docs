@@ -5,6 +5,16 @@ icon: "file-pen"
 rss: true
 ---
 
+<Update label="Drift sweep: v2.3.0, Mattermost, and the driver seam" description="2026-08-29" tags={["New", "Updated"]}>
+  The first half of the drift sweep opened on 2026-08-28 ([nanoclaw-docs#373](https://github.com/glifocat/nanoclaw-docs/pull/373)). Each page below was re-verified only where it changed, against `nanocoai/nanoclaw@294ef2ae` and `channels@4a263658`, so several pages now carry a segmented `verified-against` comment rather than one bumped SHA.
+
+  - **The [changelog](/changelog) covers v2.3.0.** The entry was reconstructed from the merge window between the two version bumps. It was checked against code rather than against the upstream CHANGELOG. It names five breaking changes: the container driver seam, the asynchronous central database, the agent mailbox seam, the Node 22 floor, and the Slack agents decision gate.
+  - **Mattermost gets its own page.** [Mattermost](/channels/mattermost) covers server discovery, the bot account, authenticated card callbacks, and the optional local evaluation server the skill can create. `/add-mattermost` copies a vendored adapter from the `channels` branch instead of installing an npm package, which is unusual for a Chat SDK channel. The [channels overview](/channels/overview) gains the row, the card, and the note that Mattermost takes chat over its own outbound WebSocket while card clicks come back on `/webhook/mattermost`.
+  - **[Architecture](/concepts/architecture) names the driver seam.** Each session is composed as a validated spec and realized by a driver. Containers now carry key-derived `ncl-` names, and the old readable name survives as the `nanoclaw-container-name` label. The page also corrects the delivery model: for a provider that streams mid-turn text, closed `<message>` blocks are the only content door on a chat turn, and the final result no longer delivers content. It also drops `claude-md-compose`, which no longer exists, because `src/project-doc-compose.ts` now writes one flat project document with no `@`-imports.
+  - **[Adapter interface](/reference/adapter-interface) catches up with the hook series.** The page adds the status-bearing `setTyping`, `setThreadTitle`, `setSuggestedPrompts`, and the `defaults` member. It also documents the hooks a channel module registers: membership, bridge inbound policy, session created, post delivery, tool extension, and wizard companions.
+  - **[Telegram](/channels/telegram) matches what setup does now.** The pairing code is 6 digits. `/connect_group` runs an owner-approval flow. The wizard offers a second bot through `TELEGRAM_BOT_TOKEN_<NAME>` and `TELEGRAM_INSTANCES`. The legacy Markdown sanitizer is gone because the adapter renders CommonMark to MarkdownV2 itself.
+</Update>
+
 <Update label="Dial channel: a real phone number for SMS and voice" description="2026-08-21" tags={["New", "Updated"]}>
   Dial landed on trunk ([nanoclaw#3050](https://github.com/nanocoai/nanoclaw/pull/3050), adapter on the `channels` branch via [nanoclaw#3041](https://github.com/nanocoai/nanoclaw/pull/3041)) — verified against `nanocoai/nanoclaw@475ba766` and `channels@a45fab71`.
 
