@@ -1,10 +1,10 @@
 ---
 title: "Container configuration"
 description: "Every per-group container config field — storage, defaults, spawn-time consumption, and when changes take effect."
-keywords: ["container config", "container_configs", "container.json", "provider", "model", "effort", "image_tag", "mcp_servers", "additional_mounts", "cli_scope", "skills", "packages", "timezone"]
+keywords: ["container config", "container_configs", "container.json", "provider", "model", "effort", "image_tag", "mcp_servers", "additional_mounts", "cli_scope", "skills", "packages", "timezone", "runtime_tier", "runtime tier", "isolation tier"]
 ---
 
-{/* verified-against: src/db/container-configs.ts, src/container-config.ts, src/container-runner.ts, src/cli/resources/{groups,tasks}.ts, src/cli/dispatch.ts, src/claude-md-compose.ts, src/modules/mount-security/index.ts, src/modules/scheduling/recurrence.ts, src/db/migrations/{014-container-configs,015-cli-scope}.ts, container/agent-runner/src/{config.ts,index.ts,db/messages-in.ts,providers/types.ts} @ 639577c3 */}
+{/* verified-against: src/db/container-configs.ts, src/container-config.ts, src/container-runner.ts, src/cli/resources/{groups,tasks}.ts, src/cli/dispatch.ts, src/modules/mount-security/index.ts, src/modules/scheduling/recurrence.ts, src/db/migrations/{014-container-configs,015-cli-scope}.ts, container/agent-runner/src/{config.ts,index.ts,db/messages-in.ts,providers/types.ts} @ 639577c3; runtime tier and MCP instructions: src/container-config.ts, src/container-runner.ts, src/types.ts, src/drivers/{types,docker-driver,index}.ts, src/db/container-configs.ts, src/cli/resources/groups.ts, src/db/migrations/{014-container-configs,020-container-config-timezone}.ts, src/project-doc-compose.ts @ 294ef2ae */}
 
 Each agent group has one row in the `container_configs` table in the central SQLite database — the source of truth for how that group's containers spawn. You change it with the [`ncl groups config` subcommands](/reference/ncl-cli#groups); the row is created automatically with defaults when the group is created.
 
@@ -30,11 +30,12 @@ Config edits write to the database only — a **running container keeps its old 
 | `max_messages_per_prompt` | integer | `NULL` (runner default: 10) | Agent runner message batching |
 | `cli_scope` | string | `'group'` | Host-side `ncl` dispatch (not in `container.json`) |
 | `skills` | JSON | `"all"` | Skill symlink sync before mounting |
-| `mcp_servers` | JSON | `{}` | Agent runner MCP setup + CLAUDE.md fragments |
+| `mcp_servers` | JSON | `{}` | Agent runner MCP setup + composed `CLAUDE.md` sections |
 | `packages_apt` | JSON | `[]` | Per-group image build (not spawn) |
 | `packages_npm` | JSON | `[]` | Per-group image build (not spawn) |
 | `additional_mounts` | JSON | `[]` | Mount validation + `-v` args |
 | `timezone` | string | `NULL` (falls back to the install global) | `container-runner.ts` `TZ` env; `resolveGroupTimezone` for scheduling |
+| `runtime_tier` | string | absent (not a trunk column; falls back to `container`) | Session spec composition; checked against the driver's isolation tiers |
 
 ### provider
 
@@ -95,7 +96,7 @@ External MCP servers merged with the built-in `nanoclaw` server at runner startu
 }
 ```
 
-`args` and `env` are optional and valid only on the stdio form (`type` defaults to `stdio`). Server names must be 1-64 chars of letters, digits, `_`, `-`. An `http` entry's `url` must be HTTPS — plain HTTP passes only for `localhost`, `127.0.0.1`, `[::1]`, and `host.docker.internal` — and URLs carrying credentials, fragments, or secret-looking query parameters are rejected. `instructions`, if present, is composed into the group's CLAUDE.md as an inline fragment at spawn — but neither `ncl groups config add-mcp-server` nor the agent's `add_mcp_server` tool accepts it as of v2.1.38; to set it, update the JSON column directly in the database. Manage the rest with `ncl groups config add-mcp-server` / `remove-mcp-server`.
+`args` and `env` are optional and valid only on the stdio form (`type` defaults to `stdio`). Server names must be 1-64 chars of letters, digits, `_`, `-`. An `http` entry's `url` must be HTTPS — plain HTTP passes only for `localhost`, `127.0.0.1`, `[::1]`, and `host.docker.internal` — and URLs carrying credentials, fragments, or secret-looking query parameters are rejected. `instructions`, if present, is inlined into the group's composed `CLAUDE.md` at spawn as a `# MCP Server: <name>` section — but neither `ncl groups config add-mcp-server` nor the agent's `add_mcp_server` tool accepts it as of v2.1.38; to set it, update the JSON column directly in the database. Manage the rest with `ncl groups config add-mcp-server` / `remove-mcp-server`.
 
 ### packages_apt and packages_npm
 
@@ -118,6 +119,36 @@ Extra host directories mounted into the container:
 An IANA timezone id (e.g. `Europe/Lisbon`) that overrides the install-global timezone for this group alone. Unset, or an invalid id, falls back to the global default rather than silently running in UTC. Set it with `ncl groups create --timezone <id>` or `ncl groups config update --timezone <id>`; pass `--timezone ""` on `config update` to clear it back to the install default.
 
 It reaches two places: the container's `TZ` env var (spawn-time only), and [scheduled-task](/guides/scheduled-tasks) recurrence, which resolves the group's timezone fresh from the database at every trigger check — so a change to this field changes when a group's schedules fire immediately, ahead of the container-level effects in [When changes take effect](#when-changes-take-effect) above.
+
+### runtime_tier
+
+The session isolation tier for this group's containers. Two values are valid: `container` and `vm`. An absent value falls back to `container`.
+
+<Note>
+  Trunk carries no `runtime_tier` column. No migration adds it, `ncl` cannot write it, `ncl groups config get` does not display it, and no environment variable sets it. On a stock install every group runs at `container`. The field exists for a deployment that registers a driver able to run a second tier. That deployment adds the column itself and writes the value straight to the database.
+</Note>
+
+The tier travels from one place only. `configFromDb` reads `container_configs.runtime_tier`, and spawn composition resolves `containerConfig.runtimeTier ?? 'container'` into the session spec. There is no session-level override, unlike `provider`.
+
+NanoClaw refuses to compose the group if the stored value is neither `container` nor `vm`:
+
+```text
+agent group "<name>" has invalid runtime_tier "<value>" — expected "container" or "vm"
+```
+
+The refusal is deliberate. Falling back to the default would quietly give the group a weaker boundary than the stored value asked for, so the group stays down until you fix the row.
+
+Every driver declares the tiers it can realize. The shipped Docker driver declares `container` only, and `validateSpec` rejects a spec asking for anything outside that list before any container is created:
+
+```text
+spec-invalid: runtimeTier 'vm' not in driver isolation tiers [container]
+```
+
+That failure is not retryable, and it is a refusal rather than a fallback. The Docker driver maps no flag from the tier, so `container` is the only tier trunk can run.
+
+A group with no stored value writes nothing into the generated `container.json`. Where the column exists, the file carries the value as `runtimeTier`, in camel case. That copy is informational: the database is still the source, and editing the file changes nothing.
+
+Driver selection itself is separate from the tier. `NANOCLAW_RUNTIME_DRIVER` picks the driver and defaults to `docker`.
 
 ## Per-group images and packages
 
