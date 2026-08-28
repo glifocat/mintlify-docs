@@ -1,10 +1,11 @@
 ---
 title: "Channel adapter interface"
 description: "The ChannelAdapter contract for building your own channel — lifecycle, delivery, registration, and the Chat SDK bridge."
-keywords: ["channel adapter", "ChannelAdapter", "adapter interface", "custom channel", "chat sdk bridge", "registerChannelAdapter", "initChannelAdapters", "supportsThreads", "deliver", "InboundMessage"]
+keywords: ["channel adapter", "ChannelAdapter", "adapter interface", "custom channel", "chat sdk bridge", "registerChannelAdapter", "initChannelAdapters", "supportsThreads", "deliver", "InboundMessage", "setThreadTitle", "membership hook", "post-delivery hook", "extendTool"]
+tag: "UPDATED"
 ---
 
-{/* verified-against: src/channels/adapter.ts, src/channels/channel-registry.ts, src/channels/chat-sdk-bridge.ts, src/channels/index.ts, src/webhook-server.ts @ 639577c3; channels branch src/channels/telegram.ts @ 6ee516ad */}
+{/* verified-against: src/webhook-server.ts @ 639577c3; src/channels/{adapter,channel-registry,chat-sdk-bridge,index}.ts, src/router.ts + src/delivery.ts hook seams, container/agent-runner/src/mcp-tools/server.ts, setup/channels/companions.ts @ 294ef2ae; channels branch src/channels/telegram.ts @ 6ee516ad */}
 
 A channel adapter bridges NanoClaw with a messaging platform. There are two ways to build one:
 
@@ -53,9 +54,31 @@ export interface ChannelAdapter {
   deliver(platformId: string, threadId: string | null, message: OutboundMessage): Promise<string | undefined>;
 
   // Optional
-  setTyping?(platformId: string, threadId: string | null): Promise<void>;
+  setTyping?(
+    platformId: string,
+    threadId: string | null,
+    status?: string,
+    statusKind?: 'auto' | 'agent',
+  ): Promise<void>;
   syncConversations?(): Promise<ConversationInfo[]>;
   resolveChannelName?(platformId: string): Promise<string | null>;
+
+  /**
+   * Set a human-readable title on a conversation thread. Platforms with a
+   * thread-title concept render this in the conversation list; the router
+   * fires it once when a brand-new per-thread DM session is created, titled
+   * after the first user message.
+   *
+   * Only adapters whose platform has a thread-title concept expose this —
+   * everyone else omits it and callers no-op via optional chaining
+   * (setThreadTitle in channel-registry.ts).
+   */
+  setThreadTitle?(platformId: string, threadId: string, title: string): Promise<void>;
+  setSuggestedPrompts?(
+    platformId: string,
+    prompts: Array<{ title: string; message: string }>,
+    title?: string,
+  ): Promise<void>;
 
   /**
    * Subscribe the bot to a thread so follow-up messages route via the
@@ -84,8 +107,21 @@ export interface ChannelAdapter {
    * Returning the same platform_id on repeated calls is expected.
    */
   openDM?(userHandle: string): Promise<string>;
+
+  /**
+   * Declared wiring-time defaults for this channel. Optional for backward
+   * compatibility with stale adapter copies; absent → core fallback
+   * (fallbackChannelDefaults(supportsThreads), see channel-registry.ts).
+   * May be computed from adapter-internal env at module load (e.g. WhatsApp
+   * shared-number mode), but is immutable for the process lifetime.
+   */
+  defaults?: ChannelDefaults;
 }
 ```
+
+<Note>
+The `setThreadTitle` doc comment above says "the router fires it once" — that comment is stale in source. The router only dispatches the session-created hook (below); the actual `setThreadTitle` caller is a channel-side module registered on that hook (Slack's onboarding module on the `channels` branch). On a trunk-only install nothing calls it.
+</Note>
 
 How the host calls each member:
 
@@ -98,7 +134,9 @@ How the host calls each member:
 | `teardown()` | Yes | Called on shutdown by `teardownChannelAdapters()`. Close connections; errors are logged, not fatal. |
 | `isConnected()` | Yes | Part of the contract, but not currently called by the host outside tests. The bridge always returns `true`; native adapters should still report real connection state. |
 | `deliver(platformId, threadId, message)` | Yes | Called by the delivery module for every outbound message in a wired group. `message.content` is parsed JSON from the session outbox (`messages_out`), `message.files` carries attachments. Return the platform message id so later edits and reactions can target it. |
-| `setTyping?` | No | Called by the typing module while an agent is working, and re-fired on an interval to keep platforms' short-lived typing indicators alive. |
+| `setTyping?` | No | Called by the typing module while an agent is working, and re-fired on an interval to keep platforms' short-lived typing indicators alive. The optional `status` text and `statusKind` (`'auto'` host-generated, `'agent'` agent-authored) let a platform render a working-status line; they are plumbed through the registry and delivery seams but nothing passes them yet. |
+| `setThreadTitle?` | No | Titles a conversation thread. Nothing on trunk calls it — a channel-side module fires it from the session-created hook (Slack's onboarding module titles brand-new per-thread DM sessions after the first user message); adapters without a thread-title concept omit it and callers no-op. |
+| `setSuggestedPrompts?` | No | Publishes tappable prompt suggestions (title + message pairs) on platforms that support them. |
 | `syncConversations?` | No | Returns discovered conversations (`platformId`, `name`, `isGroup`) for bulk import. |
 | `resolveChannelName?` | No | Resolves a platform id to a human-readable name on demand. |
 | `subscribe?` | No | See the doc comment — mention-sticky wirings call it when they first engage in a thread. |
@@ -138,10 +176,6 @@ export interface ChannelSetup {
 | `timestamp` | `string` | ISO timestamp. |
 | `isMention?` | `boolean` | Platform-confirmed bot mention. The bridge sets it from the SDK's mention/DM dispatch paths. Without it, the router never auto-creates a messaging group for the conversation and `mention`/`mention-sticky` wirings never engage — only `pattern` wirings fire on text. |
 | `isGroup?` | `boolean` | `true` for group/channel threads, `false` for DMs. |
-
-<Note>
-The doc comment on `InboundMessage.isMention` in `src/channels/adapter.ts` describes a router fallback that text-matches the agent group name — that comment is stale. No such fallback exists; `pattern` mode is the disambiguator (see `evaluateEngage` in `src/router.ts`).
-</Note>
 
 `InboundEvent` (used by `onInboundEvent`) adds an explicit `channelType` plus an optional `replyTo: DeliveryAddress` that redirects the agent's reply elsewhere — a router-layer concept for admin transports like the CLI. Regular chat adapters never set it.
 
@@ -236,6 +270,19 @@ registerChannelAdapter('telegram', {
 ```
 
 The rest of the file wraps the bridge with Telegram-specific extras — a `resolveChannelName` implementation against the Bot API, retry-wrapped setup, and a pairing interceptor around `onInbound`. None of that is required by the contract; the bridge alone is a working channel.
+
+## Hooks for channel modules
+
+A channel is often more than its adapter — the Slack agents feature, for example, ships host modules alongside the bridge. Rather than editing core, a channel-side module registers into these seams. The three runtime observation hooks (membership, session created, post-delivery) are fire-and-forget — a failing hook is logged and can never affect routing, delivery, or SDK dispatch. The other three are load-bearing by design: a throwing bridge inbound policy fails adapter setup, `extendTool` throws loudly on an unknown tool or a property collision, and a wizard pre-step's return value pre-binds the skill's inputs.
+
+| Hook | Registered via | Fires |
+|---|---|---|
+| Membership | `setMembershipHandler(channelType, fn)` (`src/channels/chat-sdk-bridge.ts`) | When a member joins a conversation a bridge instance is in (the SDK's `member_joined_channel`; `left` is reserved but the pinned chat core does not dispatch leave events). One handler per channel type — a second registration overwrites with a warning. |
+| Bridge inbound policy | `registerBridgeInboundPolicy(channelType, wrap)` (`src/channels/chat-sdk-bridge.ts`) | At bridge setup: the policy wraps the `ChannelSetup` the bridge hands the SDK, so a module can intercept or decorate every inbound path of that channel type without forking the bridge. |
+| Session created | `registerSessionCreatedHook(hook)` (`src/router.ts`) | Once per brand-new engaged session, with the session, messaging group, platform address, resolved thread id, session mode, and the triggering inbound message — the seam behind per-thread DM thread titles and retiring onboarding affordances. |
+| Post-delivery | `registerPostDeliveryHook(hook)` (`src/delivery.ts`) | After each successfully delivered user-facing message (non-system, non-agent, non-task_log), with a `firstDelivery` flag exactly one row per session carries — one-time follow-through on a session's first outbound message. |
+| Tool extension | `extendTool(name, extension)` (`container/agent-runner/src/mcp-tools/server.ts`) | At agent-runner import time: additively extends a built-in MCP tool's schema, description, and payload passthrough keys instead of editing the base tool's source. Two extensions of one tool merge. |
+| Wizard companions | `registerChannelPreStep(channel, step)` and `registerCompanionSkills(channel, skills)` (`setup/channels/companions.ts`) | During the setup wizard: a channel can run a pre-step before its `/add-<channel>` skill and have companion skills materialized alongside it (Slack's auto-provision path registers both). |
 
 ## Checklist for a new adapter
 
