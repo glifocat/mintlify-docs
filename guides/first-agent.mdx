@@ -4,7 +4,7 @@ description: "Hands-on tutorial: build an agent from parts with ncl — create t
 keywords: ["tutorial", "first agent", "ncl groups create", "wirings", "messaging group", "cli channel", "pnpm run chat", "instructions.prepend.md"]
 ---
 
-{/* verified-against: src/cli/resources/{groups,wirings,messaging-groups,sessions}.ts, src/cli/crud.ts, src/router.ts, src/channels/cli.ts, scripts/chat.ts, scripts/init-cli-agent.ts, src/group-init.ts, src/container-runner.ts, setup/auto.ts @ 639577c3; template behavior @ 20d61af */}
+{/* verified-against: src/cli/resources/{groups,wirings,messaging-groups,sessions}.ts, src/cli/crud.ts, src/router.ts, src/channels/cli.ts, scripts/chat.ts, scripts/init-cli-agent.ts, src/group-init.ts, src/container-runner.ts, setup/auto.ts @ 639577c3; template behavior @ 20d61af; folder reuse and runtime names: src/cli/resources/groups.ts, src/drivers/docker-driver.ts @ b76fcb3d */}
 
 If you followed the [quickstart](/quickstart), the setup wizard already built your first agent. This tutorial builds a **second** one by hand, so you see every part the wizard hides: an **agent group** (the identity), a **messaging group** (the chat), and a **wiring** (the routing rule connecting them). We'll use the [CLI channel](/channels/cli) — it ships on trunk and needs zero platform credentials.
 
@@ -34,7 +34,7 @@ ncl groups create --name "Scout" --folder scout
 }
 ```
 
-Now check the filesystem: `ls groups/` — the `scout/` folder is already there. Create does more than insert the DB row: it runs `initGroupFilesystem()` inline, so the folder and the container-config row exist before any message arrives. Re-running create with the same `--folder` is safe — it returns the existing row. What does *not* exist yet: the composed `CLAUDE.md` (generated at first container spawn), `instructions.prepend.md` (you create that file yourself when you give the agent standing instructions), and any session state. An agent that has never been messaged still costs nothing at runtime — no container runs for it.
+Now check the filesystem: `ls groups/` — the `scout/` folder is already there. Create does more than insert the DB row: it runs `initGroupFilesystem()` inline, so the folder and the container-config row exist before any message arrives. Re-running create with the same `--folder` returns the existing row. If the directory already exists but no database row owns it, creation is refused rather than adopting its files: choose another folder or move the old directory first. What does *not* exist yet: the composed `CLAUDE.md` (generated at first container spawn), `instructions.prepend.md` (you create that file yourself when you give the agent standing instructions), and any session state. An agent that has never been messaged still costs nothing at runtime — no container runs for it.
 
 </Step>
 <Step title="Find the CLI messaging group">
@@ -106,10 +106,11 @@ The session — the runtime unit mapping this (agent, chat) pair to a container 
 ncl sessions list --agent-group-id <agent-id>
 ```
 
-Look for `status` = `active` and `container_status` = `running`. And the container itself, named `nanoclaw-v2-<folder>-<timestamp>`:
+Look for `status` = `active` and `container_status` = `running`. Current Docker container names start with `ncl-` and derive from the install and session IDs. List NanoClaw containers by label:
 
 ```bash
-docker ps --filter name=nanoclaw-v2-scout
+docker ps --filter label=nanoclaw-install
+# For just this install: --filter label=nanoclaw-install=<slug>
 ```
 
 It stays warm for a while after the conversation until the host's sweep kills it — the runner never exits just for being idle — and the host respawns it on the next message. To force a fresh one (with an image rebuild, e.g. after adding packages):

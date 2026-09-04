@@ -3,10 +3,9 @@ title: "Get started with the Echo hardened runtime"
 sidebarTitle: "Hardened runtime"
 description: "Turn on the free, opt-in Echo hardened runtime for your NanoClaw agents."
 keywords: ["echo", "hardened runtime", "security", "sandbox", "container image", "vulnerabilities", "opt-in", "partnership", "pre-built image"]
-tag: "NEW"
 ---
 
-{/* verified-against: setup/auto.ts, setup/registry-login.ts, setup/registry-login.sh, setup/registry.ts, setup/lib/registry-state.ts, container/Dockerfile, container/build.sh, docs/hardened-image.md @ 639577c3 (main, #3150 merge); pins, pull checks, sign-in verification, and the pin gate: versions.json, container/pull.sh, setup/registry-login.ts, setup/registry.ts, setup/lib/registry-state.ts, setup/set-env.ts, setup/channels/slack-auto.ts, .github/workflows/verify-agent-image.yml @ 294ef2ae. Auth screenshots are production captures (authenticate.nanoclaw.dev, 2026-07-29). */}
+{/* verified-against: setup/auto.ts, setup/registry-login.ts, setup/registry-login.sh, setup/registry.ts, setup/lib/registry-state.ts, container/Dockerfile, container/build.sh, docs/hardened-image.md @ 639577c3 (main, #3150 merge); pins, pull checks, sign-in verification, and the pin gate: versions.json, container/pull.sh, setup/registry-login.ts, setup/registry.ts, setup/lib/registry-state.ts, setup/set-env.ts, setup/channels/slack-auto.ts, .github/workflows/verify-agent-image.yml @ 294ef2ae. Auth screenshots are production captures (authenticate.nanoclaw.dev, 2026-07-29); wizard default and pull checks: setup/auto.ts, container/pull.sh @ b76fcb3d */}
 
 <Note>
   The hardened runtime is free and opt-in. Your existing local-build setup keeps working exactly as it does today. Choosing the hardened runtime is additive, not a replacement.
@@ -14,7 +13,7 @@ tag: "NEW"
 
 ## What the hardened runtime is
 
-Every NanoClaw agent runs inside an isolated sandbox container. By default, your machine builds that sandbox image locally from a public base — a 3–10 minute build that you own keeping patched.
+Every NanoClaw agent runs inside an isolated sandbox container. You can build that image locally from a public base — a 3–10 minute build that you own keeping patched. For supported Claude installs, the fresh-install wizard recommends fetching the hardened image instead.
 
 The **Echo hardened runtime** replaces the local build with a pre-built, patched image. Through the NanoClaw and Echo partnership, Echo rebuilds the sandbox software from minimal components and keeps it patched on its own CVE cadence; NanoClaw delivers it from a gated registry, pinned by digest, so the bytes you run are exactly the bytes that were scanned. NanoClaw is the first open-source agent framework to offer its community a hardened agent environment.
 
@@ -95,7 +94,7 @@ Choose the hardened runtime while you set up NanoClaw for the first time.
     If authentication doesn't finish, setup says so and builds the sandbox locally instead — nothing breaks, and you can [opt in later](#already-running-nanoclaw).
   </Step>
   <Step title="Finish the install">
-    Let the installer finish. It pulls the image by its pinned digest, refuses it if the architecture or the agent-runner lock label is wrong, and tags it as this install's sandbox image, so your agents are ready to run on it.
+    Let the installer finish. It pulls the image by its pinned digest and checks the architecture and agent-runner lock label before tagging it as this install's sandbox image. Wrong architecture fails. A missing lock label fails unless you explicitly allow an unlabeled image; a mismatched label currently warns and continues, as described below.
 
     <Warning>
       The pull accepts a lockfile that does not match your checkout. Every published hardened image still carries the v2.2.0 agent-runner lockfile, so refusing the tag would block every new hardened install. The pull prints `Warning: agent-runner lock drift — tagging this image anyway.` and continues. Upstream marks this temporary. If an agent then dies on a missing module, build locally with `./container/build.sh build`.

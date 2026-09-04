@@ -5,9 +5,9 @@ icon: "trash"
 keywords: ["uninstall", "remove", "delete", "cleanup", "nanoclaw.sh --uninstall", "dry run", "install slug"]
 ---
 
-{/* verified-against: setup/uninstall/{flow,scan,plan,remove,onecli-agents}.ts, setup/lib/setup-config.ts, setup/auto.ts, uninstall.sh, nanoclaw.sh, src/install-slug.ts @ 639577c3 */}
+{/* verified-against: setup/uninstall/{flow,scan,plan,remove,onecli-agents}.ts, setup/lib/setup-config.ts, setup/auto.ts, uninstall.sh, nanoclaw.sh, src/install-slug.ts @ 639577c3; identity and orphan deletion: src/install-slug.ts, setup/uninstall/flow.ts, setup/uninstall/remove.ts, src/mailbox/sqlite/schema.ts @ b76fcb3d */}
 
-NanoClaw ships an interactive uninstaller that removes a single install — its service, containers, image, data, and the credential agents it registered. Everything NanoClaw creates is tagged with a per-checkout **install slug** (the first 8 hex characters of `sha1(projectRoot)`), so the uninstaller only ever touches the copy you run it from. Two NanoClaw checkouts on one host never remove each other's artifacts.
+NanoClaw ships an interactive uninstaller that removes a single install — its service, containers, image, data, and the credential agents it registered. Runtime artifacts are scoped by an **install slug**, defaulting to the first 8 hex characters of `sha1(projectRoot)`. `NANOCLAW_INSTALL_ID` overrides that default; each install needs a distinct ID to keep its runtime artifacts separate. Review the preview before removal, particularly if you assigned an ID explicitly.
 
 ## Run it
 
@@ -36,7 +36,7 @@ The uninstaller groups everything it finds into four confirmation groups. Each g
 | Group | Contains |
 |---|---|
 | **1) App & background service** | The background service (launchd/systemd), any running NanoClaw process, this install's Docker containers and image (matched by the install slug), and the `ncl` command symlink. |
-| **2) App data, logs & secrets** | The central database (`data/v2.db`, with message history), logs, build files (`dist/`, `node_modules/`), and your `.env` (API keys and tokens). Removing this erases stored conversations and saved credentials. |
+| **2) App data, logs & secrets** | Runtime data, including the central database and per-session message history, logs, build files (`dist/`, `node_modules/`), and the active `.env`. Removing this erases stored conversations; the `.env` is backed up first. |
 | **3) Agents' memory & files** | Notes and memory your agents created (`groups/`) and any migrated data (`store/`). Content you made — unrecoverable after deletion. |
 | **4) OneCLI credential agents** | The per-agent entries this copy registered in the OneCLI vault. |
 
@@ -47,8 +47,8 @@ Your `.env` is never deleted outright — it's copied to `.env.bak` first (a tim
 The uninstaller is deliberately narrow. It does **not** touch:
 
 - **The OneCLI app, your credentials, and the gateway** — the vault is a shared, out-of-band component, so removing one NanoClaw copy never tears it down.
-- **Other NanoClaw copies on the machine** — the install slug scopes every action to the current checkout.
-- **Anything it can't confidently attribute to this copy** — for example OneCLI agents from another checkout (it labels these "orphans"). These are listed as "left in place" rather than removed.
+- **Other install identities on the machine** — the install slug scopes runtime cleanup. Keep explicit `NANOCLAW_INSTALL_ID` values distinct.
+- **Unattributed OneCLI agents by default** — entries not linked to this copy are labeled "orphans". `--yes` keeps them. The interactive flow offers a separate, default-No **Delete them too?** prompt; accept it only for agents you intend to remove.
 
 A final summary prints what was left alone and any step that couldn't complete, with a manual command to finish the job.
 

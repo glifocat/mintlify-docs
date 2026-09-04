@@ -4,7 +4,7 @@ description: "Update NanoClaw and its skills with /update-nanoclaw and /update-s
 keywords: ["upgrade", "update", "update-nanoclaw", "update-skills", "migrate-nanoclaw", "upstream", "transaction", "cutover", "rollback"]
 ---
 
-{/* verified-against: scripts/update-nanoclaw.ts, scripts/update/transaction.ts, scripts/update/service.ts, scripts/update-skills.ts, scripts/upgrade-state.ts, src/upgrade-state.ts, src/index.ts, src/install-slug.ts, setup/service.ts, .claude/skills/update-nanoclaw/SKILL.md, .claude/skills/update-skills/SKILL.md, .claude/skills/migrate-nanoclaw/SKILL.md, docs/upgrade-recovery.md @ 294ef2ae */}
+{/* verified-against: scripts/update-nanoclaw.ts, scripts/update/transaction.ts, scripts/update/service.ts, scripts/update-skills.ts, scripts/upgrade-state.ts, src/upgrade-state.ts, src/index.ts, src/install-slug.ts, setup/service.ts, .claude/skills/update-nanoclaw/SKILL.md, .claude/skills/update-skills/SKILL.md, .claude/skills/migrate-nanoclaw/SKILL.md, docs/upgrade-recovery.md @ 294ef2ae; install identity override: src/install-slug.ts @ b76fcb3d */}
 
 Do not update with a raw `git pull`. NanoClaw records each sanctioned upgrade in `data/upgrade-state.json`, and the marker carries three values: the version, the commit, and the tree hash. A startup tripwire compares all three against the running code and refuses to boot when they disagree. A commit that leaves the version alone trips it too. The supported path is the `/update-nanoclaw` skill.
 
@@ -12,7 +12,7 @@ Do not update with a raw `git pull`. NanoClaw records each sanctioned upgrade in
 
 An update is a transaction, not a merge in place. The skill drives a controller (`scripts/update-nanoclaw.ts`) that stages the new code in a separate git worktree, builds and tests it there, and only then touches your live checkout. The controller writes its state to disk after every command, so an interrupted update resumes where it stopped instead of starting over.
 
-By default the transaction lives outside your project, at `<parent-of-project>/.nanoclaw-updates/<install-slug>/<id>`. The slug is derived from the project path, so two installs on one machine get separate transaction roots. Setting `NANOCLAW_UPDATE_DIR` replaces that whole path, slug included, so point two installs at one directory and they share a root.
+By default the transaction lives outside your project, at `<parent-of-project>/.nanoclaw-updates/<install-slug>/<id>`. The slug defaults to a hash of the project path. `NANOCLAW_INSTALL_ID` overrides it, so use a distinct ID for each install to keep transaction roots separate. Setting `NANOCLAW_UPDATE_DIR` replaces that whole path, slug included, so point two installs at one directory and they share a root.
 
 A transaction sits in one of seven phases: `conflict`, `prepared`, `validated`, `cutover`, `complete`, `rolled-back`, and `abandoned`. Only `complete` means the update landed.
 
