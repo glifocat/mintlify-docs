@@ -1,6 +1,5 @@
 ---
 title: "Signal"
-tag: "UPDATED"
 description: "Connect NanoClaw to Signal via a native signal-cli adapter — QR-code device linking, a local JSON-RPC daemon, and no bot API required."
 keywords: ["signal", "signal-cli", "add-signal", "linked devices", "qr code", "json-rpc", "daemon", "secondary device"]
 ---
@@ -32,7 +31,7 @@ Signal is offered in the first-run setup wizard, or add it later by running `/ad
     The wizard runs `signal-cli link` and renders the linking URL as a terminal QR. On your phone: **Signal → Settings → Linked Devices → Link New Device**, then scan. The link times out after 3 minutes — re-run setup for a fresh code. If an account is already linked, this step is skipped and the existing account reused.
   </Step>
   <Step title="Credentials and restart">
-    The wizard reads the linked phone number back, writes `SIGNAL_ACCOUNT` to `.env` (synced to `data/env/env`), and restarts the service so the adapter picks it up.
+    The wizard reads the linked phone number back, writes `SIGNAL_ACCOUNT` to `.env`, and restarts the service so the adapter picks it up.
   </Step>
   <Step title="Name the agent and get the welcome message">
     The wizard asks for your operator role and an agent name (default `Nano`), wires your Signal DM to your first agent group, and sends a welcome message.

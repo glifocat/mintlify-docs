@@ -1,7 +1,6 @@
 ---
 title: "WhatsApp"
 description: "Connect NanoClaw to your personal WhatsApp with the native Baileys adapter — QR or pairing-code login, shared or dedicated number."
-tag: "UPDATED"
 keywords: ["whatsapp", "baileys", "qr code", "pairing code", "add-whatsapp", "ASSISTANT_HAS_OWN_NUMBER", "linked devices"]
 ---
 
@@ -26,7 +25,7 @@ WhatsApp is offered in the first-run setup wizard, or add it later by running `/
 
 <Steps>
   <Step title="Choose your mode">
-    The skill starts with a number safety check: will the agent live on your personal number (shared mode — messages land in your "You" self-chat) or on a separate SIM it owns (dedicated mode)? Dedicated mode writes `ASSISTANT_HAS_OWN_NUMBER=true` to `.env` (and `data/env/env` for containers).
+    The skill starts with a number safety check: will the agent live on your personal number (shared mode — messages land in your "You" self-chat) or on a separate SIM it owns (dedicated mode)? Dedicated mode writes `ASSISTANT_HAS_OWN_NUMBER=true` to `.env`.
   </Step>
   <Step title="Adapter install">
     The skill copies `src/channels/whatsapp.ts` and the `whatsapp-formatting` container skill from the `channels` branch, wires the adapter into the channel barrel, and installs the pinned Baileys, `qrcode`, and `pino` packages.
