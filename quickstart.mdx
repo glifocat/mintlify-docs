@@ -1,115 +1,232 @@
 ---
 title: Quick start
-description: Get NanoClaw running in one command with the scripted installer.
+description: Install NanoClaw, meet your assistant, and try your first conversation — with guidance at each step.
 icon: "bolt"
 keywords: ["setup", "install", "getting started", "nanoclaw.sh", "setup wizard", "first agent", "things to try"]
+tag: "UPDATED"
 ---
 
-{/* verified-against: nanoclaw.sh, setup.sh, setup/auto.ts, setup/probe.sh, setup/install-node.sh, setup/channels/*.ts, setup/providers/registry.ts, scripts/init-first-agent.ts, .claude/skills/setup/SKILL.md, package.json, container/agent-runner/src/providers/claude.ts, container/agent-runner/src/mcp-tools/agents.ts, src/modules/agent-to-agent/create-agent.ts, src/session-manager.ts, src/claude-md-compose.ts, src/channels/cli.ts @ 639577c3; template behavior @ 20d61af; template reruns: setup/auto.ts, setup/templates.ts @ b76fcb3d */}
+{/* verified-against: setup sequence, exact prompt labels, fresh terminal agent creation, channel handoff, and final checks: setup/auto.ts, setup/channels/initial-setup.ts, setup/lib/bright-select.ts, scripts/chat.ts @ b76fcb3d; prerequisites and bootstrap: nanoclaw.sh, setup.sh @ b76fcb3d. Existing NanoClaw browser screenshots are reused from the hardened-runtime guide; they are reference captures, not a recording of this verification. */}
 
-About 15 minutes from a fresh machine to an assistant you can message — one command, a handful of prompts, and one thing you bring yourself: a credential for your AI provider (a Claude or Codex subscription, or an API key). The script installs everything else.
+By the end of this guide, you'll have an AI assistant running on your computer and answering your messages. You can start talking to it here, then connect a messaging app when you're ready.
 
-## Prerequisites
+You'll copy a few commands into **Terminal**, the app that lets you give your computer written instructions. We'll explain where to put them and what to expect. Allow extra time for downloads and signing in, especially on a new computer.
 
-- **macOS or Linux** (WSL works) with **4 GB+ RAM** — the installer warns below ~3.7 GB
-- **git** to clone the repository
-- A credential for the agent provider you pick at setup — by default **Claude** (a Pro/Max subscription, an OAuth token, or an Anthropic API key); pick **Codex** instead and it's a ChatGPT subscription or an OpenAI API key
+<Frame caption="An example of your first conversation. Your assistant's wording will vary.">
+  <div className="not-prose w-full space-y-4 p-4 sm:p-6">
+    <div className="ml-auto max-w-sm rounded-2xl bg-teal-100 px-5 py-3 text-slate-900">
+      <p className="mb-1 text-sm font-semibold">You</p>
+      <p>Hi! Give me three ideas for a relaxing weekend at home.</p>
+    </div>
+    <div className="mr-auto max-w-sm rounded-2xl border border-gray-200 bg-white px-5 py-3 text-slate-900">
+      <p className="mb-1 text-sm font-semibold">Your assistant</p>
+      <p>Try a movie afternoon, cook a new recipe, or spend an hour on a hobby. Would you like help planning one?</p>
+    </div>
+  </div>
+</Frame>
 
-Everything else — Homebrew on macOS, Node 22, pnpm, Docker, the OneCLI vault — is installed by the script if missing. Two caveats from the installer's pre-flight checks: don't run as root on Linux (it walks you through creating a user instead), and Google Cloud VMs are known not to work.
+## Before you start
 
-## The one-command flow
+Have these ready:
+
+- **A Mac or Linux computer with at least 4 GB of memory**, an internet connection, and permission to install software. Keep this computer on and connected when you want your assistant to respond.
+- **An AI account.** The walkthrough below uses a Claude Pro or Max subscription. Have its sign-in details ready. If you already use another supported option, see the alternatives below.
+- **Git**, the tool used to download NanoClaw. You'll check for it in the next step.
+
+NanoClaw installs the other software it needs. If you choose the recommended download during setup, you'll also sign in to a **NanoClaw account**. You can create that account when prompted; it is separate from your AI account.
+
+<AccordionGroup>
+  <Accordion title="Using Windows?">
+    First follow [Microsoft's WSL installation guide](https://learn.microsoft.com/en-us/windows/wsl/install). WSL lets you run Linux on Windows. Once it is ready, open your Linux app (for example, Ubuntu) and follow this guide there. Allow extra time for that preparation.
+  </Accordion>
+  <Accordion title="Using ChatGPT or an API key?" id="other-ai-accounts">
+    Setup also offers **Codex**, which connects through a ChatGPT subscription or an OpenAI API key. Choose **Build it here** at the sandbox step, then **Codex** at the AI service step. The prebuilt sandbox currently supports Claude.
+
+    If you use an Anthropic API key, choose **Claude**, then **Paste an Anthropic API key**. API keys use your provider's usage-based billing. See [AI providers](/extend/providers) for the other options.
+  </Accordion>
+  <Accordion title="Already installed NanoClaw, or using a server?">
+    This walkthrough starts with a new installation. For an existing copy, see [Installation](/installation); for a prebuilt assistant, see [Getting started with a template](/templates/getting-started). If you're moving from v1, follow the [migration guide](/migrate-from-v1) before setup.
+
+    On Linux, use your regular user account. The installer warns about running as root and about Google Cloud virtual machines. See [installation requirements](/installation#requirements) before choosing a server.
+  </Accordion>
+</AccordionGroup>
+
+## Set up your assistant
 
 <Steps>
-  <Step title="Clone and run">
+  <Step title="Open Terminal and check Git" id="open-terminal">
+    <Tabs>
+      <Tab title="Mac">
+        Press **Command + Space**, type **Terminal**, and press **Return**.
+      </Tab>
+      <Tab title="Linux or Windows with WSL">
+        On Linux, open **Terminal** from your applications. On Windows, open the Linux app you installed with WSL, such as **Ubuntu**.
+      </Tab>
+    </Tabs>
+
+    Copy the command below into that window. Press **Enter** to run it.
+
+    ```bash
+    git --version
+    ```
+
+    **You should see:** a line beginning with `git version`. The number after it can vary.
+
+    If your Mac offers to install developer tools, follow that prompt, then run the command again. If Git is missing, follow the [Git installation instructions](https://git-scm.com/install/) for your operating system before continuing.
+  </Step>
+
+  <Step title="Download NanoClaw and start setup" id="download-and-start">
+    Run each command below separately. Wait for one to finish before running the next.
+
+    Start in your home folder so you'll know where to find NanoClaw later:
+
+    ```bash
+    cd ~
+    ```
+
+    Download NanoClaw into a new folder called `nanoclaw`:
+
     ```bash
     git clone https://github.com/nanocoai/nanoclaw.git
+    ```
+
+    Tell Terminal to work in that folder:
+
+    ```bash
     cd nanoclaw
+    ```
+
+    Start the installer:
+
+    ```bash
     bash nanoclaw.sh
     ```
 
-    The script runs pre-flight checks (RAM, root user, Homebrew on macOS), installs the basics — Node 22, pnpm, and native modules — under a single spinner, then hands off to the interactive setup wizard (`pnpm run setup:auto`). If a step fails during the wizard, it offers AI-assisted recovery inline and resumes from the step that broke instead of starting over.
+    It checks your computer and installs supporting software. Follow any prompts it shows. On a new Mac, this can include installing Apple's developer tools and entering your computer password.
+
+    **You should see:** **How would you like to begin?** Choose **Standard setup**. Use the arrow keys to move through choices and **Enter** to select one.
+
+    When asked **How should we create your first agent?**, choose **Fresh agent**. An agent is your AI assistant; you can give it a job and preferences by chatting with it.
   </Step>
 
-  <Step title="Answer the wizard">
-    Press Enter on **Standard setup** (or pick **Advanced** to override defaults), then the wizard walks through:
+  <Step title="Prepare your assistant's workspace" id="prepare-workspace">
+    Setup calls this workspace a **sandbox**. It keeps the assistant's working files separate from the rest of your computer.
 
-    <Frame caption="The wizard right after the system check. The first-agent template prompt comes next, then the sandbox step — the long one (a large image fetch that typically takes a few minutes, or a 3–10 minute local build).">
-      <img src="/images/setup-wizard.png" alt="Terminal running the NanoClaw setup wizard: the NanoClaw splash art, Standard setup selected, the system check passed, and the sandbox build starting" />
+    At **Where should your assistant's sandbox image come from?**, choose **Fetch the hardened image, built by Echo**. This downloads the prepared software your assistant needs. If you plan to use Codex, choose **Build it here** instead, as described in [other AI accounts](#other-ai-accounts).
+
+    <Accordion title="Prefer to skip the NanoClaw account?">
+      Choose **Build it here** instead. Your computer prepares the software locally. This can take several minutes; leave Terminal open until it finishes. Then continue to the AI sign-in step below.
+    </Accordion>
+
+    For the download option, follow the NanoClaw sign-in link that opens in your browser. If no browser opens, open the link shown in Terminal.
+
+    <Frame caption="In your browser: sign in to NanoClaw, or choose Sign up to create an account.">
+      <img src="/images/echo/hardened-runtime/signin-02-sign-in.png" alt="NanoClaw sign-in page with email, Google, and GitHub options and a Sign up link" style={{ maxHeight: '420px', width: 'auto', maxWidth: '100%', margin: '0 auto' }} />
     </Frame>
 
-    1. **System check** — verifies your environment
-    2. **Your first agent** — start with a **Fresh agent** (the default — shape it by chatting), or stamp one from a [template](/templates/overview): prebuilt agents from the NanoClaw template library, or whatever is already in your local `templates/`. A library pick is copied locally, then stamped. On an existing install, the wizard instead offers to add or update a template agent, with **No template changes** selected by default. An in-place template update skips channel setup.
-    3. **Sandbox image** — choose where the agent sandbox image comes from. The recommended default fetches the pre-built [Echo hardened image](/guides/echo-hardened-runtime): a quick browser sign-in to NanoClaw, then a large download that typically takes a few minutes. Or pick **Build it here** — no account, 3–10 minutes on a fresh machine.
-    4. **OneCLI vault** — installs the credential vault, or offers to reuse an existing OneCLI instance. Your agent never sees your API keys; the vault injects them into approved requests as they leave the sandbox.
-    5. **Choose your agent runtime and connect** — Claude is the default: press Enter, then sign in with your Claude subscription (opens a browser), paste an OAuth token (`sk-ant-oat…`), or paste an API key (`sk-ant-api…`). Or pick **Codex** to install it inline and authenticate with a ChatGPT subscription or OpenAI API key — either way the credential lands in the vault, never the container
-    6. **Access rules** — writes the assistant's filesystem access rules (empty to start — the sandbox only sees what you explicitly share later)
-    7. **Background service** — starts NanoClaw under launchd (macOS) or a systemd user service (Linux)
-    8. **Your name** — what the assistant should call you
-    9. **First contact** — the wizard pings your assistant and waits for a reply. First startup takes 30–60 seconds while the sandbox warms up. You can pause here and chat from the terminal.
-    10. **Timezone** — auto-detected, confirmed with you
-    11. **Channel** — connect Telegram (recommended), Discord, WhatsApp, Dial (a real phone number), Signal, iMessage, Slack, or Microsoft Teams — or skip and use the terminal. Other channels install after setup with `/add-<name>` in Claude Code.
-    12. **Final check** — makes sure everything works together: credentials, service, and configured channels, flagging anything left to fix
+    If asked to confirm a code, check that it matches the code in your terminal. Confirm it, then return to Terminal.
+
+    <Frame caption="This screen finishes the NanoClaw sign-in. Return to Terminal to continue the installation.">
+      <img src="/images/echo/hardened-runtime/signin-04-success.png" alt="NanoClaw confirmation saying You are all set, your device is connected, and you may close the page" />
+    </Frame>
+
+    **You should see:** the download begin in Terminal. Leave it open while the software downloads. The time depends on your connection.
   </Step>
 
-  <Step title="Send your first message">
-    If you connected a channel, the wizard wires your first agent and the assistant DMs you a welcome — check your phone and say hi.
+  <Step title="Connect your AI account" id="connect-ai">
+    Setup first installs **OneCLI**, the vault that stores your AI sign-in securely.
 
-    If you skipped the channel step, chat from the terminal:
+    At **Which agent runtime should power your assistant?**, choose **Claude**. Then choose **Sign in with my Claude subscription** and follow the browser prompts.
+
+    Using Codex instead? Choose **Codex** and follow its sign-in prompts, as described in [other AI accounts](#other-ai-accounts).
+
+    This sign-in connects your AI account. It is separate from the NanoClaw sign-in for the download.
+
+    **You should see:** **Claude account connected.** Return to Terminal if you're still in the browser.
+
+    Let setup finish the access rules and background service. These start with no extra folders shared and let NanoClaw run in the background. Enter the name you'd like your assistant to call you when asked.
+  </Step>
+
+  <Step title="Have your first conversation" id="first-conversation">
+    Setup sends a test message to check your assistant can reply. The first response may take a little time while it starts.
+
+    At **What next?**, use the arrow keys to choose **Pause here and chat with your agent from the terminal**. This creates the terminal assistant you'll use in this guide.
+
+    Type a message such as:
+
+    > Hi! Give me three ideas for a relaxing weekend at home.
+
+    Press **Enter** to send it.
+
+    **You should see:** your assistant's reply beneath your message. You can send another message at the next prompt.
+
+    When you're ready to finish setup, leave the next message empty and press **Enter**. Follow the timezone prompt if one appears.
+  </Step>
+
+  <Step title="Finish setup, with messaging now or later" id="finish-setup">
+    At the channel question, choose **Skip for now** to keep using the terminal assistant you just created. A channel is a way to message an assistant, such as Telegram or Slack.
+
+    <Accordion title="Want to connect a messaging app now?">
+      Choose the app you use and follow its setup prompts. Each app has its own account or bot requirements. The [channel guides](/channels/overview) explain those screens.
+
+      Follow the final instructions for that app: some require you to send the first message. A messaging app can connect to a different assistant from the one you met in Terminal.
+    </Accordion>
+
+    **You should see:** **Everything's connected.** If setup reports a problem instead, use its recovery instructions before continuing.
+
+    To send another message later, run this from the same Terminal window, still in the `nanoclaw` folder:
 
     ```bash
-    pnpm run chat hi
+    pnpm run chat "Help me plan one of those weekend ideas."
     ```
 
-    Either way, you can watch what's happening live:
+    This sends one message and prints the reply. Run it again with different text for your next message.
 
-    ```bash
-    tail -f logs/nanoclaw.log
-    ```
+    If you open a new Terminal window later, run `cd ~/nanoclaw` first. If Terminal cannot find `pnpm`, see [command not found](#command-not-found) below.
   </Step>
 </Steps>
 
-## What just happened
-
-You now have a host service (launchd or systemd) running NanoClaw from this checkout. It routes messages between your channels and agents, where each agent runs in its own Docker container sandbox that wakes on incoming messages and sleeps when idle. Your Anthropic credential lives in the OneCLI vault — never inside the container. Agent workspaces live under `groups/`, runtime state under `data/`, and logs under `logs/`. See [Architecture](/concepts/architecture) for the full picture.
-
-Claude is the default agent provider that the wizard connects you to. You can switch a group to Codex, OpenCode, or a local Ollama model afterward — see [Agent providers](/extend/providers).
-
 ## Things to try first
 
-Send these to your new assistant as-is — each one exercises a different capability, and all of them work on a fresh install:
+Replace the text inside the quotes in the command above, or send a message in your connected app:
 
-1. **"What's the latest on `<a topic you follow>`?"** — agents search the web and fetch pages out of the box.
-2. **"Remind me in 10 minutes to stretch."** — the agent schedules a task that fires back into this same chat. Recurring works too: *"every weekday at 9, give me a weather summary."* See [Scheduled tasks](/guides/scheduled-tasks).
-3. **"Write a script that renames all my screenshots by date, and test it on some sample files."** — code runs inside the sandbox, and the agent's working files persist between conversations.
-4. **Send a file or photo with "what's this?"** — over a chat app, attachments land in the sandbox and the agent reads them from disk. (The terminal chat is text-only.)
-5. **"From now on call me `<name>`, and keep answers short."** — the agent can write its own persistent memory, so preferences survive restarts. See [Agent memory](/concepts/agent-memory).
-6. **"Create a helper agent named Scout that watches `<something>` and reports to me."** — your first agent can spawn companion agents, each with its own sandbox and memory. See [Multi-agent swarm](/guides/multi-agent-swarm).
+- **Plan something:** “Help me make a shopping list for a dinner for two.”
+- **Set a preference:** “Please keep your answers short and use bullet points.”
+- **Explore a topic:** “Find three beginner resources for learning to grow herbs.”
 
 <Note>
-Testing reminders from the **terminal chat**? A reminder that fires after you've disconnected is saved but won't pop up live — the terminal only shows replies while connected. Connect a real channel (Telegram, WhatsApp, …) and reminders arrive as normal notifications.
+  Keep the computer running NanoClaw on and connected to the internet. To receive reminders as notifications on your phone, [connect a messaging app](/channels/overview). Terminal chat only displays replies while its command is running.
 </Note>
 
-<Note>
-Coming from NanoClaw v1? Run `bash migrate-v2.sh` before setup — see the [migration guide](/migrate-from-v1).
-</Note>
+## If you get stuck
 
-<Note>
-Re-running `bash nanoclaw.sh` on a folder that already has an install lets you keep it and continue, or uninstall this copy and exit — see [Uninstall NanoClaw](/operate/uninstall).
-</Note>
+<AccordionGroup>
+  <Accordion title="Terminal says command not found" id="command-not-found">
+    If the missing command is `git`, return to [the Git check](#open-terminal).
+
+    If setup finished but Terminal cannot find `pnpm`, open a new Terminal window so it can pick up the newly installed tools. Run `cd ~/nanoclaw`, then retry your message command. On Windows, reopen your Linux app.
+
+    If that does not help, or setup did not finish, follow the error shown by setup or use the [troubleshooting guide](/operate/troubleshooting).
+  </Accordion>
+  <Accordion title="A nanoclaw folder already exists">
+    Don't delete it to repeat the download. It may contain an existing assistant. See [Installation](/installation) to continue from your existing copy.
+  </Accordion>
+  <Accordion title="Setup stopped or sign-in did not finish">
+    Follow the recovery prompt in Terminal. If you need to restart setup, run `bash nanoclaw.sh` again from the same `nanoclaw` folder. If asked what to do with the existing installation, choose **Keep it & continue setup**.
+
+    Still stuck? Ask in [Discord](https://discord.gg/VDdww8qS42) with the step name and error message. Leave out passwords, keys, and sign-in codes.
+  </Accordion>
+</AccordionGroup>
 
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="Add more channels" icon="tower-broadcast" href="/channels/overview">
-    Connect Telegram, Discord, WhatsApp, Slack, and more — during setup or any time after.
+  <Card title="Message from your favorite app" icon="comments" href="/channels/overview">
+    Connect a messaging app so you can reach an assistant from your phone.
   </Card>
-  <Card title="The ncl CLI" icon="terminal" href="/operate/ncl-cli">
-    Inspect agents, groups, and sessions from the command line.
-  </Card>
-  <Card title="Customize an agent" icon="wand-magic-sparkles" href="/guides/customize-an-agent">
-    Edit instructions, mounts, and behavior for your first agent.
-  </Card>
-  <Card title="Troubleshooting" icon="life-ring" href="/operate/troubleshooting">
-    Setup logs live in `logs/setup.log`; runtime issues start at `logs/nanoclaw.log`.
+  <Card title="Give your assistant a job" icon="wand-magic-sparkles" href="/guides/customize-an-agent">
+    Set its preferences and standing instructions.
   </Card>
 </CardGroup>
+
+For technical details about what was installed and where its files live, see [Installation](/installation).
