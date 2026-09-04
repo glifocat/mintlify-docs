@@ -8,7 +8,7 @@ keywords: ["imessage", "add-imessage", "photon", "photon.codes", "spectrum-ts", 
 
 NanoClaw connects to Apple's Messages network through a single `imessage` channel with two pluggable backends. You pick one at install time (or force it with `IMESSAGE_BACKEND=local|hosted`); only one runs per install.
 
-- **Local** — the Chat SDK bridge over `chat-adapter-imessage` (0.1.1, pinned), reading **this Mac's** signed-in iMessage account (`chat.db`) directly. macOS only, and the Node binary needs **Full Disk Access**. No third-party service — your messages never leave your machine — but NanoClaw must run on the Mac that's signed in.
+- **Local** — the Chat SDK bridge over `chat-adapter-imessage` (0.1.1, pinned), reading **this Mac's** signed-in iMessage account (`chat.db`) directly. macOS only, and the Node binary needs **Full Disk Access**. It reads Messages on this Mac without a hosted iMessage relay, so NanoClaw must run on the Mac that's signed in. Your configured model provider still processes the messages sent to the agent.
 - **Hosted** — a native adapter connecting through [Photon](https://photon.codes), a managed service that owns the iMessage line, delivery, and abuse prevention. The `spectrum-ts` SDK (11.0.0, pinned) holds a long-lived gRPC stream to Photon in-process on the host — no Mac relay, no webhook, no public URL. Works on any OS, and Photon offers a free tier to start with.
 
 | | Local | Hosted (via photon.codes) |
