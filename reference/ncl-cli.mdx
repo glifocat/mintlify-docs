@@ -1,11 +1,12 @@
 ---
 title: "ncl CLI reference"
 description: "Every ncl resource, verb, flag, enum, and default — extracted from the v2 CLI registry."
-tag: "UPDATED"
 keywords: ["ncl", "cli", "reference", "commands", "flags", "groups", "wirings", "sessions", "roles", "members", "destinations", "approvals", "cli_scope"]
 ---
 
 {/* verified-against: src/cli/dispatch.ts, src/cli/crud.ts, src/cli/client.ts, src/cli/format.ts, src/cli/transport-errors.ts, src/cli/registry.ts, src/cli/frame.ts, src/cli/commands/help.ts, src/cli/resources/{approvals,destinations,dropped-messages,groups,members,messaging-groups,policies,roles,sessions,tasks,user-dms,users,wirings}.ts, src/channels/channel-defaults.ts, src/modules/cross-session-context/{index,history}.ts, bin/ncl @ dce271c6; template behavior @ 20d61af */}
+
+{/* verified-against (scoped correction): src/cli/resources/{tasks,groups}.ts, src/modules/permissions/user-dm.ts, src/channels/chat-sdk-bridge.ts @ b76fcb3d */}
 
 Exhaustive reference for the `ncl` admin CLI. For a task-oriented walkthrough, see [The ncl admin CLI](/operate/ncl-cli).
 
@@ -83,13 +84,13 @@ Agent groups — logical agent identities with their own workspace folder, histo
 | --- | --- | --- | --- |
 | list | `ncl groups list` | open | |
 | get | `ncl groups get --id <id>` | open | |
-| create | `ncl groups create --folder <folder> [--name <name>] [--template <ref>] [--timezone <iana-id>] [--id <id>] [--new] [--yes]` | approval | **Without `--template`:** `--folder` required and immutable, `--name` defaults to the folder, idempotent on `--folder` (creating an existing folder returns the existing row), and new ids are prefixed `ag-<uuid>`. **With `--template <ref>`:** stamps from a local [template](/templates/overview) under `templates/`. Combining it with `--folder` is **rejected** — a bare group *is* its folder, a templated group *is* its plugin. The display name is `--name`, else the manifest's `agentName`, else the template ref's leaf folder; the group folder derives from that name, with a random `-XXXXXXXX` suffix on collision. Always creates a new agent, except when updating one this template already made: a group can only be targeted if its workspace holds that plugin's manifest, so a hand-built group or one stamped from another template is rejected. Convergent rather than folder-idempotent: if a group already carries that plugin, the command returns an in-place [update plan](/templates/updating) instead of creating anything — `--yes` applies it, `--id` picks the target when several groups carry it, and `--new` forces a fresh stamp. `--name` and `--timezone` apply only when a group is created; both are ignored on an in-place update. Reader notices come back as `templateReport` on a create, and as `report` on an update. |
+| create | `ncl groups create --folder <folder> [--name <name>] [--timezone <iana-id>]` or `ncl groups create --template <ref> [--name <name>] [--timezone <iana-id>] [--id <id>] [--new] [--yes]` | approval | **Without `--template`:** `--folder` required and immutable, `--name` defaults to the folder, idempotent on `--folder` (creating an existing folder returns the existing row), and new ids are prefixed `ag-<uuid>`. **With `--template <ref>`:** stamps from a local [template](/templates/overview) under `templates/`. Combining it with `--folder` is **rejected** — a bare group *is* its folder, a templated group *is* its plugin. The display name is `--name`, else the manifest's `agentName`, else the template ref's leaf folder; the group folder derives from that name, with a random `-XXXXXXXX` suffix on collision. Always creates a new agent, except when updating one this template already made: a group can only be targeted if its workspace holds that plugin's manifest, so a hand-built group or one stamped from another template is rejected. Convergent rather than folder-idempotent: if a group already carries that plugin, the command returns an in-place [update plan](/templates/updating) instead of creating anything — `--yes` applies it, `--id` picks the target when several groups carry it, and `--new` forces a fresh stamp. `--name` and `--timezone` apply only when a group is created; both are ignored on an in-place update. Reader notices come back as `templateReport` on a create, and as `report` on an update. |
 | update | `ncl groups update --id <id> --name <name>` | approval | `name` is the only updatable column. |
 | delete | `ncl groups delete --id <id>` | approval | Custom cascading handler (not the generic single-table delete): removes sessions, destinations, approvals, role grants, memberships, and wirings in one FK-ordered transaction. Does **not** kill running containers or clean up `groups/<folder>/` and `data/v2-sessions/<id>/` on disk. |
 | restart | `ncl groups restart --id <id> [--rebuild] [--message <text>]` | approval | Host caller: restarts all running containers in the group. Agent caller: `--id` auto-filled, only the calling session restarts. `--rebuild` rebuilds the image first (required after package changes). `--message` queues an on-wake instruction so the fresh container starts and acts on it; without it the container stays stopped until the next user message. |
 | config get | `ncl groups config get --id <id>` | open | Shows `agent_group_id`, `provider`, `model`, `effort`, `image_tag`, `assistant_name`, `max_messages_per_prompt`, `skills`, `mcp_servers`, `packages_apt`, `packages_npm`, `additional_mounts`, `cli_scope`, `timezone`, `updated_at`. |
 | config update | `ncl groups config update --id <id> [--provider] [--model] [--effort] [--image-tag] [--assistant-name] [--max-messages-per-prompt] [--cli-scope <disabled\|group\|global>] [--timezone <iana-id>]` | approval | At least one flag required. Most changes take effect after `ncl groups restart`; `--timezone` grounds task scheduling immediately (empty string clears it back to the install default). |
-| config add-mcp-server | `ncl groups config add-mcp-server --id <id> --name <server> --command <cmd> [--args <json-array>] [--env <json-object>]` or `--url <url>` | approval | Exactly one of `--command`/`--url`. Server name: 1-64 chars of `[A-Za-z0-9_-]`. `--url` is a remote Streamable HTTP endpoint — HTTPS required (plain HTTP only for localhost / `host.docker.internal`), and URLs with embedded credentials, fragments, or secret-looking query params are rejected. Restart required to take effect. |
+| config add-mcp-server | `ncl groups config add-mcp-server --id <id> --name <server> --command <cmd> [--args <json-array>] [--env <json-object>]` or `--url <url> [--headers <json-object>]` | approval | Exactly one of `--command`/`--url`. Server name: 1-64 chars of `[A-Za-z0-9_-]`. `--url` is a remote Streamable HTTP endpoint — HTTPS required (plain HTTP only for localhost / `host.docker.internal`), and URLs with embedded credentials, fragments, or secret-looking query params are rejected. Restart required to take effect. |
 | config remove-mcp-server | `ncl groups config remove-mcp-server --id <id> --name <server>` | approval | Restart required to take effect. |
 | config add-package | `ncl groups config add-package --id <id> --apt <pkg> \| --npm <pkg>` | approval | At least one of `--apt`/`--npm`. Requires `ncl groups restart --rebuild`. |
 | config remove-package | `ncl groups config remove-package --id <id> --apt <pkg> \| --npm <pkg>` | approval | Requires `ncl groups restart --rebuild`. |
@@ -130,7 +131,7 @@ One chat or channel on one platform. Identity is the unique `(channel_type, plat
 | `--unknown-sender-policy` | enum | Updatable, default declared by the adapter for DM or group context (`strict` for undeclared adapters). `strict` drops silently; `request_approval` sends an approval card to an admin; `decline_notify` politely declines an unknown DM sender and sends an owner or admin a one-line FYI; `public` allows anyone. On group chats, `decline_notify` behaves as `strict` to avoid a public reply. |
 | `--denied-at` | string | Updatable. Set when the owner denies registering the channel; router drops all messages silently while set. Cleared by any explicit wiring mutation. |
 
-`detached_at` is read-only state maintained by channel membership hooks. It records when NanoClaw's bot left a conversation. The row, wiring, destinations, and history remain intact; outbound delivery is refused until the bot rejoins and the hook clears the marker.
+`detached_at` is read-only state maintained by channel membership hooks. It records when NanoClaw's bot left a conversation, when the channel integration reports that departure. Not every adapter/SDK dispatches leave events. The row, wiring, destinations, and history remain intact; outbound delivery is refused until the bot rejoins and the hook clears the marker.
 
 ## policies
 
@@ -170,7 +171,7 @@ Columns: `id`, `agent_group_id`, `messaging_group_id` (null for agent-shared ses
 
 ## tasks
 
-Scheduled tasks — the CLI home for what used to be the agent's `schedule_task` MCP tools. Each task is a **series**: the live `pending`/`paused` row is the next run, and completed rows are its run history. Tasks are created from the host or by an agent inside its own task session, and each runs in an isolated per-task session that the host garbage-collects once the series is spent. Ids are `t-<hex>`, or `<slug>-<hex>` when you pass `--name`.
+Scheduled tasks — the CLI home for what used to be the agent's `schedule_task` MCP tools. Each task is a **series**: the live `pending`/`paused` row is the next run, and completed rows are its run history. Tasks are created from the host or by an agent inside its own task session, and each runs in an isolated per-task session that the host closes once the series is spent (history remains until explicit deletion). Ids are `t-<hex>`, or `<slug>-<hex>` when you pass `--name`.
 
 | Operation | Invocation | Access |
 | --- | --- | --- |
@@ -186,9 +187,9 @@ Scheduled tasks — the CLI home for what used to be the agent's `schedule_task`
 
 | Flag | Notes |
 | --- | --- |
-| `--prompt` | Required on create. The prompt the agent wakes to. |
-| `--process-after` | First/next run time — ISO 8601, offset, or naive-local in the instance timezone. Required for one-shots; with `--recurrence` the first run is derived from the cron grid. |
-| `--recurrence` | Cron expression, evaluated in the instance timezone. On `update`, `"null"`/`"none"` clears it (back to one-shot). Recurrences over 4 fires/day are refused unless the task has a `--script` gate or you pass `--dangerously-override-recurrence-limit`. |
+| `--prompt` | Required on create. Must be nonblank when supplied on create or update; omit on update to retain the current prompt. |
+| `--process-after` | First/next run time — ISO 8601, offset, or naive-local in the group timezone (falling back to the install timezone). Required for one-shots; with `--recurrence` the first run is derived from the cron grid. |
+| `--recurrence` | Cron expression, evaluated in the group timezone (falling back to the install timezone). On `update`, `"null"`/`"none"` clears it (back to one-shot). Recurrences over 4 fires/day are refused unless the task has a `--script` gate or you pass `--dangerously-override-recurrence-limit`. |
 | `--name` | Short label folded into a readable series id (`<slug>-<hex>`). |
 | `--script` | Pre-task gate bash script — runs first; the agent only wakes if the script's last stdout line is JSON with `"wakeAgent": true`. |
 | `--group` | Agent group id (host callers). Auto-filled to the caller's own group inside a container. |
@@ -197,9 +198,11 @@ Scheduled tasks — the CLI home for what used to be the agent's `schedule_task`
 
 `run` fires a task now without changing its schedule (a safe test that neither consumes a one-shot nor advances a recurring series — unlike `update --process-after now`). `append-log` adds a note to a task's run log (`tasks/<id>.md`); every run already auto-logs its final text, so it's for additive mid-run notes only.
 
+`delete` refuses a running task session. For an isolated task it removes the session mailbox, history, attachments, heartbeat, session directory and row, and run log. For legacy tasks in a shared session it removes only the series rows and run log.
+
 ## user-dms
 
-DM route cache mapping `(user, channel_type)` to the messaging group used for cold DMs (approvals, pairing). Populated lazily; list-only.
+DM route cache mapping `(user, channel_type)` to the messaging group used for cold DMs (approvals, pairing). Populated lazily for the default adapter instance; named instances resolve their own routes without using this cache. List-only.
 
 | Operation | Invocation | Access |
 | --- | --- | --- |

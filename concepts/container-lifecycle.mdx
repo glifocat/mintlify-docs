@@ -2,24 +2,26 @@
 title: "Container lifecycle"
 description: "The full container story: how the agent image is built, what gets assembled at every spawn, how wakes are deduplicated, and what kills a container."
 keywords: ["container", "lifecycle", "docker", "spawn", "wake", "mounts", "image", "tini", "orphan cleanup", "install slug", "egress lockdown", "kill"]
+tag: "UPDATED"
 ---
 
 {/* verified-against: src/container-runner.ts, src/container-runtime.ts, src/egress-lockdown.ts, src/host-sweep.ts, src/install-slug.ts, setup/container.ts, container/Dockerfile, container/pull.sh @ 4446b5bd (main) */}
+{/* verified-against (scoped correction) — driver lifecycle, adoption, claims, mounts and heartbeat fallback: src/{container-runner,session-manager,reconcile-session,index}.ts, src/drivers/{index,docker-driver}.ts, container/pull.sh @ b76fcb3d */}
 
 Every active session gets exactly one Docker container, spawned on demand and killed when it goes quiet. The container is deliberately disposable: all state lives in mounted host directories, so a kill loses nothing but an in-flight provider call — and the [host sweep](/concepts/architecture#what-runs-when) retries that.
 
-Docker is the only supported runtime. All runtime-specific logic lives in a single file (`src/container-runtime.ts`, with the binary hardcoded to `docker`), so a future runtime swap means changing one file — but today there is no Apple Container, no micro-VM, no alternative backend.
+Docker is the runtime shipped with NanoClaw. The host composes a `SessionSpec` and hands it to the selected `SessionDriver`; Docker-specific creation, supervision, and teardown live in `src/drivers/docker-driver.ts`. `NANOCLAW_RUNTIME_DRIVER` selects a registered driver, and an unknown value aborts startup. This seam does not itself install an alternative runtime.
 
 ## The image
 
-Every install runs from one base image, tagged `nanoclaw-agent-v2-<slug>:latest`, where the slug is the first 8 hex characters of `sha1(projectRoot)` — two NanoClaw checkouts on one host get distinct images and never clobber each other. The setup wizard's default is to **pull** the pinned hardened build of that image; picking **Build it here** builds the same image locally from `container/Dockerfile` (see [Installation](/installation)). What's inside:
+Every install runs from one base image, tagged `nanoclaw-agent-v2-<slug>:latest`, where the slug defaults to the first 8 hex characters of `sha1(projectRoot)`. `NANOCLAW_INSTALL_ID` overrides it; use distinct IDs for separate installs. The setup wizard's default is to **pull** the pinned hardened build of that image; picking **Build it here** builds the same image locally from `container/Dockerfile` (see [Installation](/installation)). What's inside:
 
 - **`node:22-slim`** base with **Bun** as the agent-runner's runtime — TypeScript runs directly, no compile step
 - **`tini`** as the image's default entrypoint — it only applies to a bare `docker run`, since production spawns override the entrypoint and pass `--init` instead, putting Docker's own init at PID 1 (see the spawn section below)
 - **Chromium** plus its library stack for browser automation (`agent-browser` drives it; CJK fonts are an opt-in `INSTALL_CJK_FONTS=true` build arg)
 - **Pinned global CLIs** via pnpm — `@anthropic-ai/claude-code` and `agent-browser`, each pinned to an exact version. The versions live in `container/cli-tools.json`; `install-cli-tools.sh` reads that manifest and runs `pnpm install -g` for each entry, so a skill adds a CLI by appending to the manifest instead of editing the Dockerfile — that's how `/add-vercel` adds the Vercel CLI, which is no longer baked into every image
 
-The pull is the wizard default whenever the checkout ships an image pin and the provider is claude; setup builds locally instead when you choose to, when the provider isn't claude, or when the pin or its login script is missing or sign-in doesn't complete — see [Get started with the Echo hardened runtime](/guides/echo-hardened-runtime). `container/pull.sh` fetches the pinned reference by digest, refuses to retag if the pulled image's architecture doesn't match the host, and refuses to retag if its `dev.nanoclaw.agent-runner-lock-sha256` label doesn't match this checkout's `container/agent-runner/bun.lock` — so a mismatched image never lands under the local tag. Either way, the image carries two provenance labels: `dev.nanoclaw.image-source` reads `hardened` for a pulled image, `local` for one built here, or `derived` for a per-group image built on top of either (see below); `dev.nanoclaw.agent-runner-lock-sha256` is the lockfile hash `pull.sh` checks against.
+The pull is the wizard default whenever the checkout ships an image pin and the provider is claude; setup builds locally instead when you choose to, when the provider isn't claude, or when the pin or its login script is missing or sign-in doesn't complete — see [Get started with the Echo hardened runtime](/guides/echo-hardened-runtime). `container/pull.sh` fetches the pinned reference by digest and rejects a wrong architecture. A missing lockfile label also fails unless explicitly allowed; a label that differs from this checkout's lockfile currently warns and continues retagging. See the hardened-runtime guide for that temporary mismatch allowance. Either way, the image carries two provenance labels: `dev.nanoclaw.image-source` reads `hardened` for a pulled image, `local` for one built here, or `derived` for a per-group image built on top of either (see below); `dev.nanoclaw.agent-runner-lock-sha256` is the lockfile hash `pull.sh` checks against.
 
 The agent-runner source is **never baked in** — the host bind-mounts it read-only at `/app/src` on every spawn, so source changes never require a rebuild. Rebuilds are only for the Dockerfile itself, CLI version bumps, or agent-runner dependency changes — `package.json` and `bun.lock` are copied in and `bun install`ed at build time.
 
@@ -33,7 +35,7 @@ stateDiagram-v2
     [*] --> Idle: setup builds base image
     Idle --> Spawning: wakeContainer — inbound message,<br/>due task, or restart
     Spawning --> Idle: vault unreachable — abort,<br/>message stays pending
-    Spawning --> Running: docker run --rm
+    Spawning --> Running: docker create + start --attach
     Running --> Exited: agent-runner exits /<br/>docker stop
     Running --> Killed: sweep kill — ceiling<br/>or claim-stuck
     Killed --> Idle: processing rows reset<br/>with backoff
@@ -44,16 +46,17 @@ stateDiagram-v2
 
 ### Wake — deduplicated, never throws
 
-`wakeContainer(session)` fires when the router writes an inbound message, when the host sweep finds due work (scheduled tasks, retries) with no container running, or on an explicit `ncl groups restart`. Two layers prevent duplicates against the same session directory:
+`wakeContainer(session)` fires when the router writes an inbound message, when the host sweep finds due work (scheduled tasks, retries) with no container running, or on an explicit `ncl groups restart`. Three layers prevent duplicates against the same session directory:
 
 1. An **`activeContainers` map** keyed by session ID — if a container is already running, wake is a no-op.
 2. An **in-flight promise map** — a second wake arriving while the first spawn is still mid-setup (vault wiring, mount assembly) joins the existing promise instead of spawning a racy double.
+3. A **durable session claim** — a claim held by another live host process blocks spawning or adoption, so two hosts cannot own the same run.
 
 Wake never throws. A transient spawn failure — most commonly the OneCLI vault being unreachable — returns `false`, the inbound row stays pending, and the next sweep tick retries.
 
 ### Spawn — the world rebuilt every time
 
-Before `docker run`, the runner reassembles everything the agent sees: it refreshes the session's destination map and reply routing, materializes `container.json` from the database, syncs skill symlinks to match the config, composes the group's `CLAUDE.md` from base + fragments (details in [Architecture](/concepts/architecture#composed-at-spawn)), and deletes any stale heartbeat file from a previous container so the sweep gives the new one fresh grace.
+Before the driver creates the container, the runner reassembles everything the agent sees: it refreshes the session's destination map and reply routing, materializes `container.json` from the database, syncs skill symlinks to match the config, and composes the group's project document with instruction sources inlined (details in [Architecture](/concepts/architecture#composed-at-spawn)). A stale heartbeat from the previous container is removed so the new run gets fresh grace.
 
 The exact mounts, from `buildMounts` in `src/container-runner.ts`:
 
@@ -63,33 +66,33 @@ The exact mounts, from `buildMounts` in `src/container-runner.ts`:
 | `groups/<folder>/` | `/workspace/agent` | RW — working files, `instructions.prepend.md`, `memory/` |
 | `groups/<folder>/container.json` | `/workspace/agent/container.json` | RO, nested over the RW group dir |
 | `groups/<folder>/CLAUDE.md` (composed) | `/workspace/agent/CLAUDE.md` | RO, nested — regenerated each spawn |
-| `groups/<folder>/.claude-fragments/` | `/workspace/agent/.claude-fragments` | RO, nested |
-| `container/CLAUDE.md` | `/app/CLAUDE.md` | RO — shared base instructions |
+| `data/v2-sessions/<group>/.context/<session>.json` | `/app/.nanoclaw-session.json` | RO — host-owned mailbox context |
+| `groups/<folder>/plugins/` | `/workspace/agent/plugins` | RO — stamped plugin code; `plugin-data/` stays writable through the group mount |
 | `data/v2-sessions/<group>/.claude-shared/` | `/home/node/.claude` | RW — Claude state, settings, skill symlinks |
 | `container/agent-runner/src/` | `/app/src` | RO — agent-runner source |
 | `container/skills/` | `/app/skills` | RO — shared skills |
 | `additional_mounts` entries | `/workspace/extra/<name>` | Per config, allowlist-validated |
 
-Providers can contribute extra mounts and env vars (for example OpenCode's XDG directories); these are appended last. The nested read-only mounts matter: the group dir is read-write, but `container.json`, the composed `CLAUDE.md`, and the fragments are re-mounted read-only on top, so the agent can read its config and instructions but not rewrite them. The writable per-group state is `instructions.prepend.md` and the `memory/` tree.
+The project document and provider-state rows above describe the default Claude surfaces; a provider such as Codex can supply its own. Providers can also contribute extra mounts and env vars, such as OpenCode's XDG directories. Shared base instructions are read on the host and inlined into the composed document, so `/app/CLAUDE.md` and `.claude-fragments` are no longer separate read-only mounts. The group dir stays writable, with nested read-only mounts protecting `container.json`, the composed document, and stamped plugin code. Standing instructions, memory, working files, and plugin data remain writable.
 
-The `docker run` invocation itself: `--rm` (self-removing), a name of `nanoclaw-v2-<folder>-<timestamp>`, the install label `nanoclaw-install=<slug>`, and `TZ` as the only env var NanoClaw always sets — everything else the runner needs comes from `container.json`. Two optional resource caps ride alongside: if `CONTAINER_CPU_LIMIT` or `CONTAINER_MEMORY_LIMIT` is set, the runner adds `--cpus` / `--memory` (opt-in — unset leaves CPU and memory unbounded, today's default; see [Hardening](/operate/hardening#cap-container-resources)). A fixed hardening set is not optional and has no per-group or per-install override: `--shm-size=1g` (Docker's 64 MB `/dev/shm` default silently short-writes under a headless browser), `--cap-drop=ALL`, `--security-opt no-new-privileges`, `--init`, and `--pids-limit 2048` as a fork-bomb backstop — the PID cap is on by default and only `CONTAINER_PIDS_LIMIT=0` removes it (see [Always-on container hardening](/operate/hardening#always-on-container-hardening)). The OneCLI Agent Vault then injects `HTTPS_PROXY` and certificates so the agent's API calls get credentials in transit; if the vault can't be wired, the spawn aborts rather than running credential-less. When the host user isn't uid 0 or 1000, the container runs `--user <hostUid>:<hostGid>` so mounted files keep sane ownership, with `HOME=/home/node` set alongside. The image is the group's `image_tag` if set, otherwise the base — and the image's tini entrypoint is **overridden**: the runner passes `--entrypoint bash` with `-c 'exec bun run /app/src/index.ts'`, so bash `exec`s into Bun. `--init` is what keeps that safe: Docker's own init runs as **PID 1** and Bun is its child, so the process that receives signals has a handler for them.
+The Docker driver uses `docker create --rm`, then `docker start --attach`. The container has a deterministic `ncl-…` name derived from its install and session identity; the old `nanoclaw-v2-<folder>-<timestamp>` name survives as the `nanoclaw-container-name` label. The spec carries install/session labels, `TZ`, mailbox configuration, and provider/gateway environment contributions; the runner also reads the materialized `container.json`. Two optional resource caps ride alongside: if `CONTAINER_CPU_LIMIT` or `CONTAINER_MEMORY_LIMIT` is set, the runner adds `--cpus` / `--memory` (opt-in — unset leaves CPU and memory unbounded, today's default; see [Hardening](/operate/hardening#cap-container-resources)). A fixed hardening set is not optional and has no per-group or per-install override: `--shm-size=1g` (Docker's 64 MB `/dev/shm` default silently short-writes under a headless browser), `--cap-drop=ALL`, `--security-opt no-new-privileges`, and `--init`. A separate, configurable PID cap defaults to 2048 as a fork-bomb backstop; zero, blank, negative, or invalid `CONTAINER_PIDS_LIMIT` values omit it (see [Always-on container hardening](/operate/hardening#always-on-container-hardening)). The OneCLI Agent Vault then injects `HTTPS_PROXY` and certificates so the agent's API calls get credentials in transit; if the vault can't be wired, the spawn aborts rather than running credential-less. When the host user isn't uid 0 or 1000, the container runs `--user <hostUid>:<hostGid>` so mounted files keep sane ownership. The spec sets `HOME=/home/node` for every non-root host uid, including 1000. The image is the group's `image_tag` if set, otherwise the base — and the image's tini entrypoint is **overridden**: the runner passes `--entrypoint bash` with `-c 'exec bun run /app/src/index.ts'`, so bash `exec`s into Bun. `--init` is what keeps that safe: Docker's own init runs as **PID 1** and Bun is its child, so the process that receives signals has a handler for them.
 
 When egress lockdown is enabled (`NANOCLAW_EGRESS_LOCKDOWN=true`), the container joins a Docker `--internal` network with the vault gateway as the only reachable hop — no internet route exists, and the agent runs non-root without `NET_ADMIN`, so it can't undo it. If lockdown is on but can't be established, the spawn fails rather than running with open egress. Setup in [Hardening](/operate/hardening#lock-down-network-egress).
 
 ### Running
 
-`docker-init` runs as PID 1 and Bun runs the agent-runner as its child (the spawn's entrypoint override bypasses the image's tini, and `--init` puts Docker's init in its place); the runner polls `inbound.db` and touches `/workspace/.heartbeat` on every provider event — the host's only liveness signal. Container stderr is streamed into the host log at debug level; stdout is unused, since all IO is database rows. There is deliberately **no wall-clock idle timeout** on the host side.
+`docker-init` runs as PID 1 and Bun runs the agent-runner as its child (the spawn's entrypoint override bypasses the image's tini, and `--init` puts Docker's init in its place); the runner polls `inbound.db` and touches `/workspace/.heartbeat` on every provider event — a provider-progress signal; runtime supervision also tracks container status and exit events. Container stderr is streamed into the host log at debug level; stdout is unused, since all IO is database rows. There is deliberately **no wall-clock idle timeout** on the host side.
 
 ### Death
 
 The host sweep kills a running container under exactly two conditions — both heartbeat-driven and documented with the rest of the sweep in [Architecture](/concepts/architecture#what-runs-when):
 
-- **Absolute ceiling** — no heartbeat for longer than max(30 minutes, the container's declared Bash timeout).
+- **Absolute ceiling** — no heartbeat for longer than max(30 minutes, the container's declared Bash timeout). If the runner has never written a heartbeat, the ceiling uses the tracked spawn or adoption time instead.
 - **Claim-stuck** — a message was claimed and the container showed no heartbeat for over max(60 seconds, declared Bash timeout) since the claim.
 
-A kill is `docker stop -t 1` — SIGTERM delivered to `docker-init` as PID 1, which forwards it to Bun, with one second to finalize DB writes before Docker escalates to SIGKILL — and a host-side SIGKILL as fallback if the stop command itself fails. The `--init` flag is what makes the graceful path work: Linux discards default-action signals sent to PID 1, so with Bun itself at PID 1 and no signal handler, SIGTERM would be ignored and every stop would end in SIGKILL after the full grace period. On any exit — clean or killed — the close handler removes the session from the active map, marks the container stopped, and logs `Container exited` with the exit code. Orphaned `processing` rows are reset to pending with exponential backoff; after 5 tries a message is marked failed.
+A kill is `docker stop -t 1` — SIGTERM delivered to `docker-init` as PID 1, which forwards it to Bun, with one second to finalize DB writes before Docker escalates to SIGKILL. If the stop command fails, the driver kills its attach process to unblock supervision and attempts `docker rm --force` cleanup. The `--init` flag is what makes the graceful path work: Linux discards default-action signals sent to PID 1, so with Bun itself at PID 1 and no signal handler, SIGTERM would be ignored and every stop would end in SIGKILL after the full grace period. On any exit — clean or killed — the close handler removes the session from the active map, marks the container stopped, and logs `Container exited` with the exit code. Orphaned `processing` rows are reset to pending with exponential backoff; after 5 tries a message is marked failed.
 
-At host startup, `cleanupOrphans` stops any containers left over from a previous run — filtered by the `nanoclaw-install=<slug>` label, so a second NanoClaw install on the same machine can never reap this install's containers, nor vice versa.
+At host startup, `adoptRunningSessions` reconciles containers belonging to this install. A still-running container with an active session is adopted after acquiring its durable claim; true orphans are stopped. A failed claim write leaves a running container untouched for retry, and a claim owned by another live host prevents adoption. Runtime identity includes the install slug; separate installs need distinct IDs.
 
 ## What the boundary holds
 

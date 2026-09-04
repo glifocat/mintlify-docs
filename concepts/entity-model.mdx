@@ -5,6 +5,7 @@ keywords: ["entity model", "agent groups", "messaging groups", "wirings", "messa
 ---
 
 {/* verified-against: src/db/schema.ts, src/db/migrations/{010-engage-modes,011-pending-sender-approvals,012-channel-registration,016-messaging-group-instance,019-wiring-threads}.ts, src/types.ts, src/router.ts, src/channels/channel-defaults.ts, src/session-manager.ts, src/modules/permissions/{index.ts,access.ts}, src/command-gate.ts @ 639577c3 */}
+{/* verified-against (scoped correction) — adapter sender/session defaults and thread-policy validation: src/router.ts, src/channels/{channel-defaults,channel-registry}.ts, src/cli/resources/wirings.ts @ b76fcb3d */}
 
 Everything NanoClaw does reduces to five entities in `data/v2.db`: **agent groups** (where agents run), **messaging groups** (where people talk), **wirings** (the edge connecting them, which holds all the behavior), **users** (who is allowed to do what), and **sessions** (the conversation state in between). This page is the mental model; for column-level detail see the [database schema](/reference/db-schema).
 
@@ -40,7 +41,7 @@ An agent group is a workspace: a folder under `groups/<name>/` with its own work
 
 A messaging group is one chat or channel on one platform, identified by `(channel_type, platform_id, instance)` — a Discord channel, a WhatsApp group, a DM. The `instance` names the adapter that owns the chat, so running several adapters of one platform (say three Slack apps in one workspace) keeps their chats distinct; it defaults to the channel type, so single-instance installs effectively key on `(channel_type, platform_id)` as before. It carries an `unknown_sender_policy` (`strict` / `request_approval` / `decline_notify` / `public`) and can be denied (`denied_at`), after which messages from it drop silently. Channel membership hooks can also mark it detached (`detached_at`) when the bot leaves; the wiring and history survive, but delivery stops until the bot rejoins.
 
-You don't pre-register these. When a mention or DM arrives on a chat NanoClaw has never seen, the router auto-creates the row with `unknown_sender_policy = 'request_approval'` — and if no agent is wired to it, escalates to an approver (group admins first, then global admins, then owners) with an approve/deny card before any agent responds. Plain chatter in unwired channels is ignored entirely.
+You don't pre-register these. When a mention or DM arrives on a chat NanoClaw has never seen, the router auto-creates the row using the receiving adapter's declared DM or group sender policy (`request_approval` for undeclared adapters) — and if no agent is wired to it, escalates to an approver (group admins first, then global admins, then owners) with an approve/deny card before any agent responds. Plain chatter in unwired channels is ignored entirely.
 
 ## Wirings — where the behavior lives
 
@@ -72,7 +73,9 @@ When a message doesn't engage a wiring, `drop` skips it silently. `accumulate` s
 
 ### `threads` — honoring platform threads
 
-A per-wiring override on whether inbound thread ids are honored for this wiring. `NULL` (the default) inherits the channel adapter's declared default for the context (DM versus group); `1` forces thread honoring on, `0` forces it off. It's hard-ANDed with the adapter's raw capability at router fanout: it can disable threads on a thread-capable platform, but never invent them on one that has none. Setting `threads = 0` also lifts the per-thread forcing described below.
+Unless explicitly overridden, new wirings inherit the adapter's declared `sessionMode`; a declared `per-thread` default also stamps `threads = 1`. An undeclared adapter falls back to `shared` with `threads = NULL`.
+
+The `threads` field is a per-wiring override on whether inbound thread ids are honored for this wiring. `NULL` inherits the channel adapter's declared default for the context (DM versus group); `1` forces thread honoring on, `0` forces it off. It's hard-ANDed with the adapter's raw capability at router fanout: it can disable threads on a thread-capable platform, but never invent them on one that has none. Setting `threads = 0` also lifts the per-thread forcing described below.
 
 ## Sessions — the conversation state
 
@@ -81,7 +84,9 @@ A session is one conversation between an agent group and a messaging group (opti
 1. **Thread-capable adapters force `per-thread` in group chats.** On Discord, Slack, or Teams channels, every thread gets its own session even if the wiring says `shared` — `agent-shared` overrides this (a cross-channel directive the adapter knows nothing about), and so does a per-wiring `threads = 0`. DMs are exempt: whether a DM's sub-threads collapse into one conversation or stay separate follows the channel's declared DM thread default and any per-wiring `threads` override, not `session_mode`.
 2. **Thread-less adapters collapse `per-thread` to `shared`.** WhatsApp, Telegram, and iMessage have no thread IDs — the router nulls the thread before routing, and a `per-thread` lookup with no thread is identical to `shared`.
 
-What you set versus what you actually get:
+Creating a wiring, or updating its `session_mode` or `threads`, rejects `per-thread` with explicit `threads = 0` or an inherited threads-off policy on a declared adapter. Undeclared adapters retain their legacy leniency when `threads` is unset. On a thread-capable channel whose context defaults to threads off, pair `--session-mode per-thread` with `--threads true`; that flag cannot invent thread support on a thread-less adapter. Older rows may still contain combinations that collapse at routing time, and unrelated updates to those rows remain allowed.
+
+How the router resolves an existing wiring:
 
 | Wiring `session_mode` | Threaded adapter, group chat | Threaded adapter, DM | Thread-less adapter |
 |---|---|---|---|

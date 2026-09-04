@@ -1,11 +1,13 @@
 ---
 title: "Agent providers"
-description: "Swap the agent brain per group — Claude Code by default, OpenCode or Codex via provider skills, or a local Ollama model with no provider code at all."
-tag: "UPDATED"
+description: "Swap the agent brain per group — Claude Code by default, OpenCode or Codex via provider skills, with notes on the legacy Ollama workflow."
 keywords: ["providers", "agent provider", "claude", "opencode", "codex", "ollama", "local models", "agent_provider", "model", "effort", "provider selection", "switch provider", "migrate-memory"]
+tag: "UPDATED"
 ---
 
 {/* verified-against: container/agent-runner/src/providers/{types,factory,claude,provider-registry}.ts, container/agent-runner/src/{config,index,poll-loop}.ts, container/agent-runner/src/memory/scaffold.ts, src/container-config.ts, src/providers/{claude,provider-container-registry}.ts, src/provider-surfaces.test.ts, src/cli/resources/{groups,sessions}.ts, .claude/skills/{add-opencode,add-ollama-provider,add-codex,migrate-memory}/SKILL.md, .claude/skills/add-codex/REMOVE.md, src/group-init.ts, src/group-skills.ts, setup/auto.ts, setup/providers/registry.ts, setup/provider-auth.ts, setup/lib/container-build.ts, docs/ollama.md, docs/provider-migration.md, container/cli-tools.json, container/build.sh @ trunk 639577c3; opencode.ts, codex.ts, codex-app-server.ts, codex-agents-md.ts, codex-host-contribution.test.ts, exchange-archive.ts, setup/providers/codex.ts @ providers branch 9cfea509; project document and mailbox seam: src/project-doc-compose.ts, src/group-persona.ts, src/container-runner.ts, src/mailbox/{types,index,compose}.ts, container/agent-runner/src/mailbox/{types,index,compose}.ts, container/agent-runner/src/modules/index.ts, container/agent-runner/src/providers/index.ts, src/providers/index.ts, src/modules/index.ts, container/agent-runner/src/providers/types.ts, container/agent-runner/src/poll-loop.ts @ trunk 294ef2ae; src/providers/codex-agents-md.ts, container/agent-runner/src/providers/codex.ts @ providers branch f503f23c */}
+{/* verified-against (scoped correction) — OpenCode workspace, instructions, effort and empty-resume recovery: container/agent-runner/src/providers/opencode.ts @ providers branch f503f23c */}
+{/* verified-against (scoped correction) — session history, OpenCode manifest installation, legacy Ollama configuration and Claude fast mode: src/cli/resources/sessions.ts, .claude/skills/{add-opencode,add-ollama-provider}/SKILL.md, src/{config,container-config}.ts, container/agent-runner/src/{config,providers/claude}.ts @ b76fcb3d */}
 
 A **provider** is the agent CLI that runs inside a group's container — the thing that actually plans, calls tools, and writes replies. By default that's Claude Code via the Claude Agent SDK. The provider is pluggable: the agent runner selects an implementation from an open registry at startup, and the trunk ships only `claude` (plus a `mock` provider for tests).
 
@@ -21,13 +23,15 @@ At spawn time the host resolves the provider name with a fixed precedence ([`src
 2. `container_configs.provider` — the group's [container config](/reference/container-config#provider)
 3. `'claude'`
 
-The result is lowercased. The host then asks its provider registry whether that provider contributes extra mounts or env vars (OpenCode's XDG dirs and `OPENCODE_*` passthrough; Codex's per-group `~/.codex` state dir and its own `AGENTS.md` surfaces). `mock` contributes nothing, and `claude` contributes only when setup has wired a custom Anthropic-compatible endpoint — `ANTHROPIC_BASE_URL` from `.env` plus a placeholder auth token for the vault gateway to overwrite. Inside the container, the runner reads `provider` from `container.json` — materialized fresh from the database at every spawn — and instantiates it from the in-container registry, passing the group's `model` and `effort` through unchanged.
+The result is lowercased. The host then asks its provider registry whether that provider contributes extra mounts or env vars (OpenCode's XDG dirs and `OPENCODE_*` passthrough; Codex's per-group `~/.codex` state dir and its own `AGENTS.md` surfaces). `mock` contributes nothing, and `claude` contributes only when setup has wired a custom Anthropic-compatible endpoint — `ANTHROPIC_BASE_URL` from `.env` plus a placeholder auth token for the vault gateway to overwrite. Inside the container, the runner reads `provider` from `container.json` — materialized fresh from the database at every spawn — and instantiates it from the in-container registry, passing the resolved model and effort through to the provider.
 
-Every code path that creates a session on trunk writes `agent_provider = null`, and `ncl sessions` is read-only (`list`/`get`) — so the per-session override exists in the resolver, but nothing ships that sets it. In practice you switch providers per group.
+Every code path that creates a session on trunk writes `agent_provider = null`, and `ncl sessions` is read-only (`list`/`get`/`history`) — so the per-session override exists in the resolver, but nothing ships that sets it. In practice you switch providers per group.
 
 ## Claude (default)
 
-The Claude provider wraps the Claude Agent SDK. Its `model` accepts an alias (`sonnet`, `opus`, `haiku`) or a full model ID, and `effort` is one of `low`, `medium`, `high`, `xhigh`, `max` — both optional, both falling back to the SDK default. It's also the most fully integrated provider in-tree: native slash-command handling, mid-turn input streaming, and transcript rotation that archives oversized session histories before a cold resume can wedge the container.
+The Claude provider wraps the Claude Agent SDK. Its `model` accepts an alias (`sonnet`, `opus`, `haiku`) or a full model ID, and `effort` is one of `low`, `medium`, `high`, `xhigh`, `max` — both optional. An unset group model inherits `NANOCLAW_DEFAULT_MODEL`, then the SDK default; unset effort uses the SDK default. It's also the most fully integrated provider in-tree: native slash-command handling, mid-turn input streaming, and transcript rotation that archives oversized session histories before a cold resume can wedge the container.
+
+Set `NANOCLAW_FAST_MODE=true` in the host environment or `.env` to opt into the Claude SDK's faster, higher-priced serving tier. NanoClaw passes it as `settings.fastMode`; it is not a per-group model or effort value.
 
 To point it at any Anthropic-compatible endpoint, set `ANTHROPIC_BASE_URL` in `.env` — the real token stays in the vault and is injected on the wire. See [Credentials](/operate/credentials#anthropic-credentials).
 
@@ -36,13 +40,13 @@ To point it at any Anthropic-compatible endpoint, set `ANTHROPIC_BASE_URL` in `.
 The three provider skills split into two mechanisms:
 
 - **Real provider implementations** — OpenCode and Codex are TypeScript providers that live on the `providers` [registry branch](/extend/overview#how-a-code-carrying-skill-installs). `/add-opencode` and `/add-codex` copy the files in, wire them into the host and container barrels, and rebuild the image.
-- **No provider code at all** — Ollama speaks the Anthropic API natively (`/v1/messages`), so `/add-ollama-provider` keeps the Claude provider and just redirects it: env overrides plus a model setting.
+- **Legacy local-model workflow** — `/add-ollama-provider` redirects the Claude provider, but its source/config edits need reconciliation with the current runtime; see the limitations below.
 
 ### OpenCode (`/add-opencode`)
 
-Copies `opencode.ts` (host and container sides) from the `providers` branch, appends one import line to each provider barrel, adds `@opencode-ai/sdk` to the agent runner, installs the `opencode-ai` CLI in the Dockerfile, and copies registration/Dockerfile guard tests so the wiring stays verified. The provider keeps a shared `opencode serve` runtime — spawned once, reused across queries, and torn down on abort or when the config changes — and routes models through OpenCode's own config: OpenRouter, DeepSeek, OpenAI, Google, Anthropic, OpenCode Zen.
+Copies `opencode.ts` (host and container sides) from the `providers` branch, appends one import line to each provider barrel, adds `@opencode-ai/sdk` to the agent runner, adds the `opencode-ai` CLI to `container/cli-tools.json`, and copies registration tests plus a CLI/SDK pin guard so the wiring stays verified. The provider keeps a shared `opencode serve` runtime — spawned once, reused across queries, and torn down on abort or when the config changes — and routes models through OpenCode's own config: OpenRouter, DeepSeek, OpenAI, Google, Anthropic, OpenCode Zen.
 
-Configure via host `.env`: `OPENCODE_PROVIDER`, `OPENCODE_MODEL` (in `provider/model` form), optional `OPENCODE_SMALL_MODEL`, and `ANTHROPIC_BASE_URL` pointed at the upstream provider's API base for non-Anthropic providers. Three more optional vars shape the main model's declaration: `OPENCODE_MODEL_CONTEXT_LIMIT` (context window; invalid values are logged and ignored), `OPENCODE_MODEL_OUTPUT_LIMIT` (applied only alongside a valid context limit), and `OPENCODE_MODEL_INPUT_MODALITIES` (comma-separated subset of `text,audio,image,video,pdf`). They apply to the main model only — the small model never inherits them. API keys go in the [OneCLI vault](/operate/credentials) with a matching host pattern — never in `.env`. SDK and CLI versions are pinned together at 1.4.17; `latest` silently breaks session IDs.
+Configure via host `.env`: `OPENCODE_PROVIDER`, `OPENCODE_MODEL` (in `provider/model` form), optional `OPENCODE_SMALL_MODEL`, and `ANTHROPIC_BASE_URL` pointed at the upstream provider's API base for non-Anthropic providers. Three more optional vars shape the main model's declaration: `OPENCODE_MODEL_CONTEXT_LIMIT` (context window; invalid values are logged and ignored), `OPENCODE_MODEL_OUTPUT_LIMIT` (applied only alongside a valid context limit), and `OPENCODE_MODEL_INPUT_MODALITIES` (comma-separated subset of `text,audio,image,video,pdf`). They apply to the main model only — the small model never inherits them. API keys go in the [OneCLI vault](/operate/credentials) with a matching host pattern — never in `.env`. SDK and CLI versions are pinned together at 1.4.17; mismatched versions can build cleanly and fail at runtime. The server runs in `/workspace/agent` and explicitly loads the composed `CLAUDE.md` (plus the legacy `CLAUDE.local.md` if present). Group `effort` is forwarded as `reasoningEffort` for the main model. If a resumed session finishes without any assistant work, the provider retries once with a fresh session and the same opening prompt.
 
 ### Codex (`/add-codex`)
 
@@ -54,7 +58,7 @@ Codex owns its agent surfaces (`providesAgentSurfaces`), so the host skips the d
 - **`.agents/skills`** — Codex-native skill links synced to the group's selected skills, plus any template skills mirrored in as real directories (templates stamp them on the Claude plane in `.claude-shared/skills`, which Codex never reads). The `.agents` dir is mounted read-only twice — at `/workspace/agent/.agents` and `/home/node/.agents` — because Codex only scans a workspace-level `.agents/skills` when the workspace is a git repo (the agent workspace isn't one); the `$HOME`-level mount is what makes the skills discoverable.
 - **`~/.codex`** — a per-group private state dir (`.codex-shared`), persistent across sessions so thread metadata and `config.toml` survive respawns.
 
-**Auth is vault-only**, the same invariant as every other provider: the credential — a ChatGPT subscription token or an OpenAI API key — lives in the [OneCLI vault](/operate/credentials) under an `api.openai.com` / `chatgpt.com` host pattern, and the gateway injects it on the wire while the container sees only an `onecli-managed` stub `auth.json`. Nothing goes in `.env`, and the host strips `OPENAI_API_KEY` from the Codex process. Run the walk-through with `pnpm exec tsx setup/index.ts --step provider-auth codex` (ChatGPT browser/device login or API key) — the same path the [setup picker](#choosing-a-provider-during-setup) uses. Model and effort come from the group's [container config](/reference/container-config) (`ncl groups config update --model/--effort`), never env.
+**Auth is vault-only**, the same invariant as every other provider: the credential — a ChatGPT subscription token or an OpenAI API key — lives in the [OneCLI vault](/operate/credentials) under an `api.openai.com` / `chatgpt.com` host pattern, and the gateway injects it on the wire while the container sees only an `onecli-managed` stub `auth.json`. Nothing goes in `.env`, and the host strips `OPENAI_API_KEY` from the Codex process. Run the walk-through with `pnpm exec tsx setup/index.ts --step provider-auth codex` (ChatGPT browser/device login or API key) — the same path the [setup picker](#choosing-a-provider-during-setup) uses. Model and effort come from the resolved [container config](/reference/container-config). Explicit group settings use `ncl groups config update --model/--effort`; an unset group model can inherit `NANOCLAW_DEFAULT_MODEL`.
 
 <Note>
 On a pinned [hardened-runtime](/guides/echo-hardened-runtime) install, adding Codex works without leaving the pre-built image: its CLI lands via `container/cli-tools.json`, and the rebuild applies that manifest as an overlay layer on top of the pulled image rather than starting a build from scratch. Adding OpenCode instead edits `container/agent-runner/bun.lock` (the pinned `@opencode-ai/sdk` dependency) — the agent runner's own dependencies are baked into the base layer, so the lockfile guard refuses to overlay a changed lockfile and the rebuild drops to a local build (`./container/build.sh build`) instead.
@@ -62,27 +66,15 @@ On a pinned [hardened-runtime](/guides/echo-hardened-runtime) install, adding Co
 
 ### Ollama (`/add-ollama-provider`)
 
-No files copied, no rebuild of provider code. The skill first checks that `ContainerConfig` supports the `env` and `blockedHosts` fields (patching `src/container-config.ts` and `src/container-runner.ts` if not), then writes the group's container config:
+The skill remains in the repository, but its instructions target an older configuration path: they patch `readContainerConfig` and Docker argument assembly, then edit a generated group `container.json`. Current NanoClaw materializes that file from database-backed configuration and realizes a validated session spec through a driver. Those legacy edits are not a supported drop-in switch on current main.
 
-```json
-{
-  "env": {
-    "ANTHROPIC_BASE_URL": "http://host.docker.internal:11434",
-    "ANTHROPIC_API_KEY": "ollama",
-    "NO_PROXY": "host.docker.internal",
-    "no_proxy": "host.docker.internal"
-  },
-  "blockedHosts": ["api.anthropic.com"]
-}
-```
-
-`ANTHROPIC_BASE_URL` redirects the SDK to Ollama, the placeholder key satisfies it (Ollama ignores it), `NO_PROXY` bypasses the OneCLI credential gateway for the host hostname, and `blockedHosts` resolves `api.anthropic.com` to `0.0.0.0` so config drift can't silently bill your account. The model is set in the group's shared `settings.json` (`data/v2-sessions/<group-id>/.claude-shared/settings.json`) — Claude Code reads its model from there, not from env. Pick models that handle tool calls reliably; the upstream notes recommend Gemma 4 or Qwen 3 Coder over small 3B models.
+Before using this skill, its integration needs to be ported and tested against the current config and admission paths. Do not treat direct edits to generated `container.json` as persistent configuration. Local-model tools such as [Atomic Chat and Ollama](/extend/tools) are a separate option: they give an existing agent a model to call rather than replacing its provider.
 
 ## What changes on a non-Claude provider
 
 Verified against the provider sources on the `providers` branch:
 
-- **Slash commands aren't native.** OpenCode and Codex declare `supportsNativeSlashCommands = false`, so the poll loop formats slash commands as ordinary chat text instead of executing them.
+- **Slash commands aren't native.** OpenCode and Codex declare `supportsNativeSlashCommands = false`, so provider-native commands are formatted as ordinary chat text. `/clear` is handled by the shared poll loop before provider selection: it resets the current provider continuation, not workspace files, memory, or stored history.
 - **No mid-turn input.** Both queue follow-up messages and drain them between turns; the Claude provider streams them into the live turn.
 - **A different project document, not a different composer.** Codex composes `AGENTS.md` rather than `CLAUDE.md`, from `container/AGENTS.md` rather than `container/CLAUDE.md`, with two extra blocks and a 32 KiB cap instead of 4 MiB. The composition itself is the shared trunk one, and the composer emits no `@`-imports for any provider.
 - **No transcript rotation.** Only the Claude provider implements `maybeRotateContinuation` — the guard against unresumable, oversized session transcripts.
@@ -113,7 +105,7 @@ That gap is visible on Codex today. Its native client renders a generated image 
 
 ## Choosing a provider during setup
 
-[Setup](/quickstart) asks which agent runtime should power your assistant. Claude is the default — press Enter and the standard Claude auth runs. **Codex** is offered as an inline install: pick it and setup runs its installer, rebuilds the image, and walks its vault-only auth (a ChatGPT subscription or an OpenAI API key). OpenCode and Ollama aren't in the picker; add them after setup with their `/add-*` skills.
+[Setup](/quickstart) asks which agent runtime should power your assistant. Claude is the default — press Enter and the standard Claude auth runs. **Codex** is offered as an inline install: pick it and setup runs its installer, rebuilds the image, and walks its vault-only auth (a ChatGPT subscription or an OpenAI API key). OpenCode is installed after setup with `/add-opencode`; the legacy Ollama workflow has the limitations described above.
 
 Setup also asks, earlier and separately, where the sandbox image itself comes from — see the [Echo hardened runtime](/guides/echo-hardened-runtime). That question is scoped to Claude: it's only offered when the planned provider is Claude, and picking any other provider builds the sandbox locally instead.
 
@@ -128,7 +120,7 @@ ncl groups config update --id <group-id> --provider opencode --model deepseek/de
 ncl groups restart --id <group-id>
 ```
 
-Config changes are saved immediately but only take effect on the next container spawn — the restart forces it. Switching back is `--provider claude` (or clearing the field; the fallback is `claude` either way). To back the code out entirely, OpenCode and Codex each ship a `REMOVE.md`; Ollama needs no removal — its SKILL.md's "Reverting to Claude" steps are just deleting the `env` and `blockedHosts` keys from the container config and the `model` setting from the shared settings file.
+Config changes are saved immediately but only take effect on the next container spawn — the restart forces it. Switching back is `--provider claude` (or clearing the field; the fallback is `claude` either way). To back the code out entirely, OpenCode and Codex each ship a `REMOVE.md`; reverting a legacy Ollama customization requires reviewing the actual source and configuration changes it applied.
 
 ### What carries across a switch
 
