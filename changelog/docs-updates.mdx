@@ -5,6 +5,16 @@ icon: "file-pen"
 rss: true
 ---
 
+<Update label="Upstream drift: setup, sessions, channels, and references" description="2026-09-05" tags={["Updated", "Fixed"]}>
+  Corrected current behavior against upstream `main` at `b76fcb3d`, with channel payload checks at `6d5c1d08` and provider payload checks at `f503f23c`. Narrow corrections retain older verification stamps for untouched claims.
+
+  - **Setup and operations:** existing-install template choices, model fallback and fast mode, Docker inspection commands, image checks, credential admission, and scheduled-task cleanup now match the implementation.
+  - **Session boundaries and recovery:** the guides distinguish separate provider conversations from confidentiality. Agents can retrieve another session's history within their own group. Lifecycle guidance describes driver-backed startup, adoption, durable claims, and event-driven reconciliation.
+  - **Channels:** Teams follows the CLI provisioning flow; Slack describes managed installation, mention-triggered shared rooms, and the limits of membership events. WhatsApp Cloud uses its actual webhook path.
+  - **References and extensions:** link-only cards, richer conversation metadata, default-instance DM caching, plugin-owned MCP servers, and skill refresh are aligned with source. Reserved wake-signal storage is clearly distinguished from active runtime coordination.
+  - **Release scope:** new main-branch behavior is listed under [Unreleased](/changelog), without inventing a numbered release.
+</Update>
+
 <Update label="Drift sweep: v2.3.0, Mattermost, and the driver seam" description="2026-08-29" tags={["New", "Updated"]}>
   The first half of the drift sweep opened on 2026-08-28 ([nanoclaw-docs#373](https://github.com/glifocat/nanoclaw-docs/pull/373)). Each page below was re-verified only where it changed, against `nanocoai/nanoclaw@294ef2ae` and `channels@4a263658`, so several pages now carry a segmented `verified-against` comment rather than one bumped SHA.
 
