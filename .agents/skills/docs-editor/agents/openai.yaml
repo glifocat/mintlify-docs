@@ -1,0 +1,4 @@
+interface:
+  display_name: "NanoClaw docs editor"
+  short_description: "Apply the NanoClaw documentation style guide"
+  default_prompt: "Use $docs-editor to audit or rewrite the requested NanoClaw page for its intended audience, preserving verified behavior."

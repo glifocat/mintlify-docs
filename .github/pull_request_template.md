@@ -1,15 +1,21 @@
-## What does this change?
+## Reader and outcome
 
-<!-- Briefly describe what you changed and why -->
+<!-- Who is this for, what should they accomplish, and what changes for them? For a small correction, one sentence is enough. -->
 
-## Pages affected
+## Pages and evidence
 
-<!-- List the pages added or modified -->
--
+<!-- List affected pages, source revisions for changed behavior, and relevant review records. For new/reused visuals, record provenance or missing captures. -->
 
-## Checklist
+## Validation
 
-- [ ] Previewed locally with `mint dev`
-- [ ] Added new pages to `docs.json` navigation (if applicable)
-- [ ] Links and cross-references work
-- [ ] Follows the [writing guidelines](../CONTRIBUTING.md#writing-guidelines)
+<!-- State commands/results and actual browser, installation, or reader-test scope. Mark inapplicable items N/A with a brief reason; do not claim tests you did not run. -->
+
+- [ ] Applied the [style guide](../docs/editorial/style-guide.md) and appropriate page pattern to the changed content
+- [ ] Preserved exact labels, commands, meaningful alternatives, and required consequences
+- [ ] Verified changed behavior against source; scoped verification stamps accurately
+- [ ] `mint validate` passed
+- [ ] `mint broken-links` passed when links, anchors, or navigation changed
+- [ ] Previewed visual/structural changes at desktop and narrow widths; attached evidence
+- [ ] Visuals are readable, accessible, and accurately labeled; missing captures are disclosed
+- [ ] Updated navigation/redirects for added or moved public pages where applicable
+- [ ] Recorded review findings and remaining gaps; distinguished source review from installation and reader testing

@@ -1,30 +1,29 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## Project Overview
 
 Mintlify-powered documentation site for **NanoClaw** — a lightweight, secure AI assistant that runs Claude agents in isolated Docker containers with multi-messenger support. The main NanoClaw repo is at https://github.com/nanocoai/nanoclaw; this repo is the docs site deployed to https://docs.nanoclaw.dev (the root https://nanoclaw.dev is the separate marketing site — absolute links to it from docs navigation will 404; use relative hrefs).
 
 **GitHub:** `glifocat/nanoclaw-docs` (not `nanocoai` — that's the upstream NanoClaw source repo)
 
+## Editorial standard
+
+For documentation edits, read [the style guide](docs/editorial/style-guide.md) and choose the relevant [page pattern](docs/editorial/page-patterns.md). The [docs-editor skill](.agents/skills/docs-editor/SKILL.md) supplies the reusable audit/rewrite workflow. Apply it to the requested scope; do not force the quickstart's audience or layout onto reference pages.
+
+The style guide owns editorial policy. This file owns repository-specific source, drift, and implementation guidance. `AGENTS.md` also directs agents here before larger edits; do not edit its managed deployment as part of an editorial change.
+
 ## Mintlify CLI
 
 Install: `npm i -g mint` (one-time). No authentication required — runs locally.
 
 ```bash
-mint dev                        # Local preview at http://localhost:3000
-mint validate                   # Validate build (strict mode, exits on warnings/errors)
-mint broken-links               # Check for broken links across the site
-mint rename <from> <to>         # Rename a file and update all internal link references
-mint openapi-check <filename>   # Validate an OpenAPI spec file
-mint a11y                       # Check for accessibility issues
-mint upgrade                    # Migrate mint.json to docs.json (current format)
-mint migrate-mdx                # Migrate MDX OpenAPI pages to x-mint extensions
-mint scrape                     # Scrape documentation from external sites
-mint new [directory]            # Create a new Mintlify documentation site
-mint update                     # Update the CLI to the latest version
+mint dev           # local preview
+mint validate      # required content/config build check
+mint broken-links  # required for link/navigation changes
+mint a11y          # content accessibility check
 ```
+
+For other CLI operations and component guidance, read the [Mintlify skill](.agents/skills/mintlify/SKILL.md).
 
 Deployment is automatic after merge to `main` (via Mintlify GitHub app).
 
@@ -79,15 +78,7 @@ Compare the output against the paths cited in each page's `verified-against` com
 
 All content is `.mdx` (Markdown + JSX components). Navigation and site config live in `docs.json`.
 
-**Content directories:**
-- `channels/` — Channel setup: overview, whatsapp, telegram, discord, slack, signal, imessage, teams, cli, more-channels (10 pages)
-- `operate/` — Configuration, ncl CLI, credentials, hardening, upgrading, troubleshooting (6 pages)
-- `guides/` — Agent-building tutorials: first agent, customization, scheduled tasks, multi-agent swarm (4 pages)
-- `extend/` — Skills overview, tools, providers, self-modification, writing skills (5 pages)
-- `concepts/` — Architecture, entity model, isolation levels, container lifecycle, security, contributing (6 pages)
-- `reference/` — ncl CLI, environment variables, container config, skills catalog, adapter interface, MCP tools, DB schema (7 pages)
-- `changelog/` — Product releases (`index.mdx`) and docs updates (`docs-updates.mdx`)
-- Root: `introduction.mdx`, `quickstart.mdx`, `installation.mdx`, `migrate-from-v1.mdx`
+The current directory map is in [CONTRIBUTING.md](CONTRIBUTING.md#project-structure); `docs.json` is the navigation source of truth. Editorial guidance under `docs/editorial/` is excluded from the portal by `.mintignore`.
 
 Old paths (`features/`, `integrations/`, `advanced/`, `api/`) are gone — `docs.json` carries redirects for all of them.
 
@@ -180,13 +171,7 @@ Two changelogs to maintain — update both after any docs work session:
 - **Upstream CHANGELOG is sparse** — often skips 10+ versions. Reconstruct by mapping commits between version bumps: `gh api 'repos/nanocoai/nanoclaw/commits?per_page=100' --jq '.[] | "\(.sha[0:7]) \(.commit.message | split("\n")[0])"'` and tracing features between "bump to X" commits.
 - **Pre-release CHANGELOG headers**: Upstream CHANGELOG may have headers for unreleased versions (package.json not yet bumped). Don't add changelog entries for versions that aren't in `package.json` yet.
 
-## Upstream PRs
-
-To PR changes to `nanocoai/nanoclaw` from Ethan's fork (`glifocat/nanoclaw-glifocat`):
-- Work in `/Users/ethanmunoz/Projects/clients/qwibit/nanoclaw-glifocat`
-- Remote `upstream` = `nanocoai/nanoclaw` (the remote URL may still read `qwibitai/nanoclaw` — GitHub redirects after the org move), `origin` = `glifocat/nanoclaw-glifocat`
-- Branch from `upstream/main`, push to `origin`, PR with `--repo nanocoai/nanoclaw --head glifocat:<branch>`
-- The fork may be on a different branch (e.g., `feat/dashboard-api`) — stash before switching
+For product PRs, follow the upstream repository's contributor instructions. Verify the checkout and remote identity before publishing; do not assume a machine-specific path from this docs repository.
 
 ## Diagrams
 
@@ -209,27 +194,6 @@ The original Mermaid source is kept in an MDX comment directly above each embed.
 
 Source of truth: `repo-tokens/badge.svg` in upstream (auto-generated) — the ONLY valid source. Never cite a number from prose, memory, or an automated PR; read the badge first. Last seen: 199k at 2afbd182 (v2.1.21). Update pages that cite the count (e.g., `introduction.mdx`) if the badge value changes significantly.
 
-## Writing Standards
+## Writing standards
 
-- Second-person voice ("you"), active voice, direct language
-- Sentence case for headings ("Getting started", not "Getting Started")
-- One idea per sentence, lead with the goal
-- All code blocks must have language tags
-- All images must have descriptive alt text
-- No marketing language, filler phrases, or emoji
-- Include code examples and link to related pages
-- Always preview locally with `mint dev` before submitting PRs
-
-STE-inspired habits for procedural text (steps, warnings, troubleshooting),
-borrowed from ASD-STE100 without aiming for full compliance:
-
-- One instruction per sentence. A step that says two things is two steps.
-- One term per concept across a page and its neighbors. If the wizard
-  "stamps" an agent, no page calls the same action "provisioning".
-- Alternatives go in a numbered or bulleted list, not a comma chain with "or".
-- Write comparisons out: "Node 20 or higher", not "Node 20+".
-- A short conditional beats a parenthetical: "If uv is available, ..." rather
-  than "(when uv is available)".
-
-These bind hardest on troubleshooting pages and quoted error messages, where
-readers are stressed and often reading in a second language.
+Use the [style guide](docs/editorial/style-guide.md), including its terminology, page patterns, visual provenance, and review rules. Preserve exact source strings in code and UI labels; explain them in prose for the intended audience. The [quickstart example](docs/editorial/quickstart-example.md) records the pilot's decisions and verification limits.
