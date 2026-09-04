@@ -2,10 +2,11 @@
 title: "Getting started with a template"
 description: "Go from a fresh machine to a working prebuilt agent — an SDR, a competitor analyst, a data analyst, or a journalist — in about 15 minutes, start to finish."
 keywords: ["getting started", "template", "prebuilt agent", "nanoclaw.sh", "sales/sdr", "first agent", "setup wizard", "stamp a template"]
-tag: "NEW"
 ---
 
 {/* verified-against: nanoclaw.sh, setup/{auto,templates}.ts, src/templates/{create-agent,local-dir}.ts, src/cli/resources/{groups,tasks}.ts @ 20d61af; nanocoai/nanoclaw-templates @ 601071b */}
+
+{/* verified-against (scoped correction): setup/channels/initial-setup.ts @ b76fcb3d */}
 
 A **template** is a prebuilt agent. Instead of describing what you want an assistant to do and shaping it over days, you pick one that already knows a job — outbound sales, competitor research, data analysis — and it arrives configured: standing instructions, tools, skills, and recurring routines.
 
@@ -75,7 +76,7 @@ Nothing here is template-specific, and the defaults are good:
 4. **Access rules** — starts empty. The sandbox only sees what you share later.
 5. **Background service** — NanoClaw starts under launchd or systemd.
 6. **Your name**, a **first contact** check, then **timezone**.
-7. **Channel** — connect Telegram (recommended), Discord, WhatsApp, Signal, iMessage, Slack, or Teams. Or skip and use the terminal.
+7. **Channel** — choose Slack, Mattermost, Teams, Telegram, Discord, WhatsApp, Dial, Signal, iMessage, or another channel. Or skip and use the terminal.
 
 Your template is stamped into a working agent, and if you connected a channel it gets wired to it.
 

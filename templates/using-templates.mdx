@@ -2,10 +2,12 @@
 title: "Using a template"
 description: "Stamp an agent from a template during install or anytime with ncl, then wire it to a channel, connect credentials, and activate its recurring tasks."
 keywords: ["ncl groups create --template", "stamp agent", "template ref", "NANOCLAW_TEMPLATES_DIR", "NANOCLAW_TEMPLATE_PATH", "templateReport", "paused tasks"]
-tag: "NEW"
+tag: "UPDATED"
 ---
 
 {/* verified-against: src/templates/{create-agent,local-dir,parse}.ts, src/cli/resources/{groups,tasks}.ts @ 20d61af; setup/{templates,auto}.ts, docs/templates.md @ 20d61af */}
+
+{/* verified-against (scoped correction): setup/{auto,templates}.ts, src/cli/resources/groups.ts @ b76fcb3d */}
 
 There are two ways to stamp an agent from a [template](/templates/overview): during installation, or anytime with `ncl`.
 
@@ -30,10 +32,10 @@ Setup then stamps the agent through the same `ncl groups create --template` comm
 The provider you pick during setup stays separate from the template.
 
 <Note>
-Installs that already have a channel-wired agent don't see the picker. On such an install, stamp a template with the CLI below or by passing an explicit template path.
+Existing installs see **"Would you like to add or update an agent from a template?"**, with **No template changes** selected by default. You can also use the CLI below or pass an explicit template path.
 </Note>
 
-**If setup failed partway through**, your pick is remembered in `.env`, so a rerun asks early whether to continue with the same template. If the agent was already stamped, a second prompt later in the same run asks whether to update it in place — declining leaves the existing agent untouched. See [Updating a stamped agent](/templates/updating) for what that update covers.
+**If setup failed partway through**, the unfinished selection stays in `.env` for retry. When the template already has agents, setup offers to connect an unwired agent, update a selected agent in place, create another agent with a distinct name, or cancel. Updates preserve the provider and skip channel setup; declining the update cancels that operation. Completed create, connect, or update operations clear the saved selection. See [Updating a stamped agent](/templates/updating) for what an update covers.
 
 ### Presetting a template
 
@@ -55,7 +57,7 @@ ncl groups create --template <category>/<template> --name "My Agent"
 This creates the agent group and stamps every surface the template carries. It does **not** wire the agent to a channel — run `/manage-channels` (or `ncl wirings create`) afterward, exactly as for a [hand-built group](/guides/first-agent).
 
 <Note>
-**This always creates a new agent.** A template can't be applied to an agent that already exists — see [templates create new agents only](/templates/overview#templates-create-new-agents-only). The one exception is pulling a newer version of the *same* template into the agent it created, which is [restamping](/templates/updating).
+With no existing carrier of the template, this creates an agent. If one agent already carries it, the command returns an update plan; if several do, select one with `--id`. Pass `--new` to create another agent. A template cannot be adopted onto an unrelated existing agent; updating a carrier of the same template is [restamping](/templates/updating).
 </Note>
 
 `--name` is optional. Without it the display name falls back to the template's own `agentName`, then to the template folder name. `--timezone <iana-id>` sets the group timezone, which is what template task schedules fire in.
