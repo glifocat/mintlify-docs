@@ -1,13 +1,12 @@
 ---
-tag: "UPDATED"
 title: "The ncl admin CLI"
 description: "Administer a running NanoClaw host from the terminal — inspect and modify groups, wirings, users, sessions, and approvals over the ncl Unix socket."
 keywords: ["ncl", "cli", "admin", "unix socket", "cli_scope", "groups", "wirings", "sessions", "approvals"]
 ---
 
-{/* verified-against: src/cli/client.ts, src/cli/dispatch.ts, src/cli/socket-server.ts, src/cli/crud.ts, src/cli/format.ts, src/cli/transport-errors.ts, src/cli/commands/help.ts, src/cli/resources/{approvals,destinations,dropped-messages,groups,members,messaging-groups,policies,roles,sessions,tasks,user-dms,users,wirings}.ts, src/db/container-configs.ts, bin/ncl, setup/service.ts @ 639577c3; template behavior @ 20d61af */}
+{/* verified-against: src/cli/client.ts, src/cli/dispatch.ts, src/cli/socket-server.ts, src/cli/crud.ts, src/cli/format.ts, src/cli/transport-errors.ts, src/cli/commands/help.ts, src/cli/resources/{approvals,destinations,dropped-messages,groups,members,messaging-groups,policies,roles,sessions,tasks,user-dms,users,wirings}.ts, src/db/container-configs.ts, bin/ncl, setup/service.ts @ 639577c3; template behavior @ 20d61af; mailbox scope and MCP edits: src/cli/resources/tasks.ts, src/cli/resources/sessions.ts, src/cli/resources/groups.ts, src/container-config.ts @ b76fcb3d */}
 
-`ncl` is the admin CLI for a running NanoClaw host. It sends one request frame over a Unix socket at `data/ncl.sock` and prints the response — every command reads or mutates the host's central database live, no restart needed. The socket is `chmod 0600`, so only the user that started the host can connect.
+`ncl` is the admin CLI for a running NanoClaw host. It sends one request frame over a Unix socket at `data/ncl.sock` and prints the response — commands inspect and manage the running host's state, including central configuration and per-session mailboxes. The socket is `chmod 0600`, so only the user that started the host can connect.
 
 Don't confuse it with the [CLI channel](/channels/cli), which is a chat adapter for talking *to an agent* from the terminal — `ncl` is for operating the host itself.
 
@@ -85,7 +84,7 @@ ncl groups config add-package --id <group-id> --apt ffmpeg
 ncl groups config add-mount --id <group-id> --host ~/projects/site --container /workspace/extra/site --ro
 ```
 
-`config update` accepts `--provider`, `--model`, `--effort`, `--image-tag`, `--assistant-name`, `--max-messages-per-prompt`, `--cli-scope`, and `--timezone`. `add-mcp-server` also takes `--url` in place of `--command`/`--args` for a remote Streamable HTTP server. `config add-mount` and `remove-mount` are operator-only — they run from the host socket, never from inside a container — and mounts still pass the [allowlist check](/operate/hardening#gate-additional-mounts) at spawn.
+`config update` accepts `--provider`, `--model`, `--effort`, `--image-tag`, `--assistant-name`, `--max-messages-per-prompt`, `--cli-scope`, and `--timezone`. `add-mcp-server` also takes `--url` in place of `--command`/`--args` for a remote Streamable HTTP server, with optional `--headers` as a JSON object. Plugin-owned MCP servers cannot be replaced or removed through these config commands: edit the plugin and [restamp it](/templates/updating) instead. `config add-mount` and `remove-mount` are operator-only — they run from the host socket, never from inside a container — and mounts still pass the [allowlist check](/operate/hardening#gate-additional-mounts) at spawn.
 
 ### messaging-groups and wirings
 

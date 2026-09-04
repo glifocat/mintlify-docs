@@ -4,7 +4,7 @@ description: "Hands-on tutorial: change an agent's personality through instructi
 keywords: ["customize", "instructions.prepend.md", "personality", "model", "effort", "ncl groups config update", "self-customize", "/customize"]
 ---
 
-{/* verified-against: src/cli/resources/groups.ts, container/agent-runner/src/providers/types.ts, container/skills/self-customize/SKILL.md, .claude/skills/customize/SKILL.md @ 639577c3; project document: src/project-doc-compose.ts, src/group-persona.ts, src/container-runner.ts @ 294ef2ae */}
+{/* verified-against: src/cli/resources/groups.ts, container/agent-runner/src/providers/types.ts, container/skills/self-customize/SKILL.md, .claude/skills/customize/SKILL.md @ 639577c3; project document: src/project-doc-compose.ts, src/group-persona.ts, src/container-runner.ts @ 294ef2ae; model fallback: src/config.ts, src/container-config.ts @ b76fcb3d */}
 
 This tutorial customizes the Scout agent from [your first agent](/guides/first-agent) — any agent group works, just swap the folder and `--id`. An agent has three customization surfaces:
 
@@ -68,7 +68,7 @@ Model and reasoning effort live in the agent group's container config, not in an
 ncl groups config update --id <agent-id> --model sonnet --effort low
 ```
 
-- `--model` takes an alias (`sonnet`, `opus`, `haiku`) or a full model ID. Unset means the SDK default.
+- `--model` takes an alias (`sonnet`, `opus`, `haiku`) or a full model ID. When the group has no model, `NANOCLAW_DEFAULT_MODEL` supplies the install default; if that is also unset, the provider SDK chooses.
 - `--effort` is one of `low`, `medium`, `high`, `xhigh`, `max`.
 
 Config values are read at every spawn, so a running container keeps its old config — the change applies to the next container automatically. To force it now:

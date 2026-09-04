@@ -4,7 +4,7 @@ description: "Hands-on tutorial: have an agent spawn a helper with create_agent,
 keywords: ["multi-agent", "create_agent", "agent-to-agent", "agent destinations", "send_message", "sub-agents", "approval", "ncl destinations"]
 ---
 
-{/* verified-against: src/modules/agent-to-agent/{create-agent,agent-route,write-destinations,index,message-gate}.ts, src/modules/agent-to-agent/db/{agent-destinations,agent-message-policies}.ts, src/modules/approvals/primitive.ts, container/agent-runner/src/mcp-tools/agents.ts + agents.instructions.md, container/agent-runner/src/destinations.ts, src/cli/resources/{destinations,groups,policies,wirings}.ts, src/group-init.ts, src/db/messaging-groups.ts @ 639577c3 */}
+{/* verified-against: src/modules/agent-to-agent/{create-agent,agent-route,write-destinations,index,message-gate}.ts, src/modules/agent-to-agent/db/{agent-destinations,agent-message-policies}.ts, src/modules/approvals/primitive.ts, container/agent-runner/src/mcp-tools/agents.ts + agents.instructions.md, container/agent-runner/src/destinations.ts, src/cli/resources/{destinations,groups,policies,wirings}.ts, src/group-init.ts, src/db/messaging-groups.ts @ 639577c3; runtime names, creation notification, sibling context and folder reuse: src/drivers/docker-driver.ts, src/modules/agent-to-agent/create-agent.ts, src/modules/cross-session-context/index.ts, src/modules/cross-session-context/fan.ts, src/cli/resources/groups.ts @ b76fcb3d */}
 
 The [introduction](/introduction) promises real teams: a worker per task, a manager that tracks what's in flight, a supervisor that pings you. This tutorial builds the smallest working version — one agent spawning and delegating to another — then scales the same three primitives into that trio. It continues from [your first agent](/guides/first-agent); you'll reuse Scout to see the approval gate.
 
@@ -49,7 +49,7 @@ The agent calls the `create_agent` MCP tool with a `name` and that role as `inst
 1. Inserts an `agent_groups` row. The folder is the normalized name (`researcher`), with a numeric suffix if taken.
 2. Scaffolds `groups/researcher/` and seeds the **`instructions` text into the new agent's `instructions.prepend.md`** — its standing instructions, composed into the top of the child's `CLAUDE.md` at spawn (the same on every provider now). That's the agent's persistent role and personality, editable later like any agent's. A default `container_configs` row comes with it, and the child inherits its creator's provider.
 3. Inserts **two destination rows**: the creator gets `researcher` → new agent, and the new agent gets `parent` → creator. The edge is bidirectional from birth, so replies need no extra wiring.
-4. Projects the new destination into the parent's running container immediately, then notifies it: `Agent "researcher" created. You can now message it with <message to="researcher">...</message>.`
+4. Projects the new destination into the parent's running container immediately, then notifies it that researcher was created and can now receive `send_message` calls.
 
 No container starts yet — like any agent, researcher's container spawns on its first message.
 
@@ -114,7 +114,7 @@ Two finishing touches:
   ```
 
   Now the supervisor can message you unprompted — and use `ask_user_question` to put actual buttons under a decision. (Edge case: the destination is only auto-created when the agent-to-agent module is installed — but without that module the delivery ACL is skipped too.)
-- **One conversation per task**: wire a worker to a thread-capable channel (Discord, Slack) with `--session-mode per-thread` and every thread gets its own session — each task runs in a clean context instead of one ever-growing conversation. On server channels this is [forced anyway](/concepts/entity-model); the flag matters for DMs.
+- **One conversation per task**: wire a worker to a thread-capable channel (Discord, Slack) with `--session-mode per-thread --threads true` and every thread gets its own provider conversation. Sibling sessions in the same conversation can still receive non-triggering background context through cross-session echoes. On server channels this is [forced anyway](/concepts/entity-model); the flag matters for DMs.
 
 </Step>
 <Step title="Observe the topology">
@@ -125,7 +125,7 @@ Everything is rows, so the whole team is inspectable:
 ncl groups list                                      # all agent identities
 ncl destinations list --agent-group-id <manager-id>  # who the manager may talk to, and as what
 ncl sessions list --agent-group-id <worker-id>       # live conversations and container status
-docker ps --filter name=nanoclaw-v2                  # the containers themselves
+docker ps --filter label=nanoclaw-install            # the containers themselves
 ```
 
 The destinations list reads as the manager's address book: `parent`, `worker-1`, `worker-2`, plus any channel it's wired to.
@@ -162,7 +162,7 @@ Return to free flow with `ncl policies remove --from <source-agent-id> --to <tar
 ncl groups delete --id <agent-id>
 ```
 
-This cascades through the central DB in one transaction: sessions, destination rows in **both directions** (its own and every edge pointing at it), pending approvals, wirings, memberships, and the container config. It does **not** kill a running container or delete `groups/<folder>/` and `data/v2-sessions/<group-id>/` — stop the container and remove those by hand if you want the workspace gone.
+This cascades through the central DB in one transaction: sessions, destination rows in **both directions** (its own and every edge pointing at it), pending approvals, wirings, memberships, and the container config. It does **not** kill a running container or delete `groups/<folder>/` and `data/v2-sessions/<group-id>/` — stop the container and remove those by hand if you want the workspace gone. A later bare create refuses to reuse a leftover group folder without an owning database row, so move it or choose a different folder name.
 
 ## Next steps
 

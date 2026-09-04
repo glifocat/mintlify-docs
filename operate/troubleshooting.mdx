@@ -4,7 +4,7 @@ description: "Diagnose NanoClaw v2 failures: host startup stops, container spawn
 keywords: ["troubleshooting", "debugging", "dropped messages", "container spawn", "upgrade tripwire", "host sweep", "LOG_LEVEL"]
 ---
 
-{/* verified-against: .claude/skills/debug/SKILL.md, src/container-runtime.ts, src/container-runner.ts, src/host-sweep.ts, src/upgrade-state.ts, src/log.ts, src/cli/resources/dropped-messages.ts, src/cli/resources/sessions.ts, src/egress-lockdown.ts, src/modules/mount-security/index.ts, src/webhook-server.ts, src/circuit-breaker.ts, setup/service.ts @ 4e83a0a0; template behavior @ 20d61af */}
+{/* verified-against: .claude/skills/debug/SKILL.md, src/container-runtime.ts, src/container-runner.ts, src/host-sweep.ts, src/upgrade-state.ts, src/log.ts, src/cli/resources/dropped-messages.ts, src/cli/resources/sessions.ts, src/egress-lockdown.ts, src/modules/mount-security/index.ts, src/webhook-server.ts, src/circuit-breaker.ts, setup/service.ts @ 4e83a0a0; template behavior @ 20d61af; driver diagnostics and reconciliation: src/container-runner.ts, src/drivers/docker-driver.ts, src/host-sweep.ts, src/reconcile-session.ts, src/cli/resources/groups.ts, src/db/coordination.ts @ b76fcb3d */}
 
 ## Start here
 
@@ -17,7 +17,7 @@ tail -f logs/nanoclaw.log          # full routing chain: inbound, spawn/exit, de
 tail -n 50 logs/nanoclaw.error.log # delivery failures, crash-loop backoff, warnings
 ```
 
-Set `LOG_LEVEL=debug` (see [Configuration](/operate/configuration#applying-changes)) to also see resolved mount configurations and streamed container stderr tagged with `container=<group folder>`. Containers run with `--rm`, so the host log is the only place container output survives.
+Set `LOG_LEVEL=debug` (see [Configuration](/operate/configuration#applying-changes)) to also see resolved mount configurations and streamed container stderr tagged with the container name. Containers run with `--rm`, so the host log is the only place container output survives.
 
 Then get the system state from the [ncl CLI](/operate/ncl-cli):
 
@@ -72,8 +72,8 @@ Trace the message through the pipeline, in order:
   <Step title="Did a container spawn?">
     ```bash
     ncl sessions list                      # container_status should be "running"
-    grep 'Spawning container' logs/nanoclaw.log | tail -5
-    docker ps --format '{{.Names}} {{.Status}}' | grep nanoclaw
+    grep 'Spawning session' logs/nanoclaw.log | tail -5
+    docker ps --filter label=nanoclaw-install --format '{{.Names}} {{.Status}}'
     ```
     `stopped` is normal between messages — the sweep restarts the container when due messages arrive. If nothing spawns at all, see [Container won't spawn](#container-wont-spawn) below.
   </Step>
@@ -93,7 +93,7 @@ The first two of these abort the spawn; a rejected mount only degrades it (the c
 ## Replies are slow
 
 - **Cold start**: the first reply after a container spawn takes 30–60 seconds while the sandbox warms up. Setup tells you this during its ping test; it's normal.
-- **Scheduled or retried messages wait for the sweep**: the host sweep runs every 60 seconds, so a due message for a stopped container can sit up to a minute before the wake fires (`Waking container for due messages` in the log).
+- **Scheduled or retried messages wait for reconciliation**: a periodic resync checks active sessions roughly once a minute, and message writes or container-exit events can trigger earlier checks. Queue work and container cold starts add latency; one minute is not a strict upper bound. Look for `Waking container for due messages` in the log.
 - **Retries back off**: a message reset after a crash retries with exponential backoff (5s, 10s, 20s, ...). After five tries you'll see `Message marked as failed after max retries` — that message is dead; resend it.
 
 ## Container killed mid-task
@@ -126,14 +126,9 @@ ncl approvals list --status pending
 
 The full approval flow — who gets the card, expiry, what happens after a host restart — is in [Credentials](/operate/credentials#approving-credential-use).
 
-## Resetting a session
+## Recovering a misbehaving session
 
-To wipe a misbehaving session's conversation state, remove its folder — the host re-provisions both session DBs on the next message:
-
-```bash
-ncl sessions list                              # find the session and its agent group
-rm -rf data/v2-sessions/<group>/<session>/
-```
+Start with `/debug` in Claude Code and identify the session with `ncl sessions list`. Do not delete a session directory while its host or container is using it: a running container may still hold the mounted databases, and the host also tracks durable runtime state. Back up the install before any destructive recovery. Restarting a group with `ncl groups restart --id <group-id>` replaces its running containers while preserving conversation data.
 
 ## Template agent replies 401 or 403
 

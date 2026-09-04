@@ -2,9 +2,10 @@
 title: "Configuration"
 description: "Configure a NanoClaw install — environment variables in .env and the service environment, plus per-group container config in the database."
 keywords: ["configuration", "environment variables", ".env", "container config", "ASSISTANT_NAME", "LOG_LEVEL", "container_configs"]
+tag: "UPDATED"
 ---
 
-{/* verified-against: src/config.ts, src/env.ts, src/log.ts, src/webhook-server.ts, src/egress-lockdown.ts, src/host-sweep.ts, src/providers/claude.ts, src/container-config.ts, src/db/container-configs.ts, setup/set-env.ts, setup/service.ts, setup/container.ts, container/pull.sh @ 639577c3 */}
+{/* verified-against: src/config.ts, src/env.ts, src/log.ts, src/webhook-server.ts, src/egress-lockdown.ts, src/host-sweep.ts, src/providers/claude.ts, src/container-config.ts, src/db/container-configs.ts, setup/set-env.ts, setup/service.ts, setup/container.ts, container/pull.sh @ 639577c3; instance model and runtime settings: src/config.ts, src/container-config.ts, src/drivers/index.ts, src/gateway-providers/index.ts, container/agent-runner/src/providers/claude.ts @ b76fcb3d */}
 
 NanoClaw has two configuration layers:
 
@@ -16,7 +17,7 @@ NanoClaw has two configuration layers:
 Variables come from two sources, and the distinction matters:
 
 - A **small set is read from `.env`** at the project root by NanoClaw's own parser. These work with a plain "edit `.env`, restart" flow. Values are not loaded into `process.env`, so secrets don't leak to child processes; a value already in the process environment takes precedence.
-- **Everything else is read from `process.env` only.** The launchd plist, systemd unit, and nohup wrapper that setup generates set just `PATH` and `HOME` — they do **not** source `.env`. Putting these variables in `.env` has no effect; you have to set them in the service environment (see [Applying changes](#applying-changes)).
+- **The process-only settings listed below are read from `process.env` only.** The launchd plist, systemd unit, and nohup wrapper that setup generates set just `PATH` and `HOME` — they do **not** source `.env`. Putting these variables in `.env` has no effect; you have to set them in the service environment (see [Applying changes](#applying-changes)).
 
 ### Read from .env
 
@@ -25,27 +26,24 @@ Variables come from two sources, and the distinction matters:
 | `ASSISTANT_NAME` | `Andy` | The assistant's name. Also sets the default trigger, `@<name>`. |
 | `ASSISTANT_HAS_OWN_NUMBER` | `false` | Set `true` when the assistant runs on its own WhatsApp number instead of yours. |
 | `DEFAULT_AGENT_PROVIDER` | `claude` | Provider stamped on **new** agent groups at creation. Existing groups are never touched, and the per-group `provider` config still wins. |
+| `NANOCLAW_DEFAULT_MODEL` | provider SDK default | Model used at the next spawn for groups without their own model. Unlike the provider default, this is not stamped at group creation. |
+| `NANOCLAW_FAST_MODE` | `false` | Enables the faster, higher-priced serving tier for the Claude provider. Only `1` or `true` enables it, case-insensitively. |
+| `NANOCLAW_RUNTIME_DRIVER` | `docker` | Selects an installed session driver. Docker is the only driver shipped here; an unregistered value fails. |
+| `NANOCLAW_GATEWAY_PROVIDER` | `onecli` | Selects an installed credential-gateway provider. An unregistered value fails. |
+| `NANOCLAW_SESSION_MATERIAL_ROOT` | `data/session-materials` | Host directory admitted for session identity material. |
 | `ONECLI_URL` | — | URL of the OneCLI Agent Vault. |
 | `ONECLI_API_KEY` | — | API key for the vault. See [Credentials](/operate/credentials). |
 | `TZ` | system timezone, else `UTC` | IANA timezone for scheduled tasks and message timestamps. Invalid values are skipped, not errored. |
-| `CONTAINER_CPU_LIMIT` | _unset_ (unbounded) | Opt-in CPU cap per container, passed to `docker run --cpus` (e.g. `2`). Can be set in `.env` or the process environment. |
-| `CONTAINER_MEMORY_LIMIT` | _unset_ (unbounded) | Opt-in memory cap per container, passed to `docker run --memory` (e.g. `8g`). Hard cap only on a swapless host. Can be set in `.env` or the process environment. |
+| `CONTAINER_CPU_LIMIT` | _unset_ (unbounded) | Opt-in CPU cap per container, passed to `docker create --cpus` (e.g. `2`). Can be set in `.env` or the process environment. |
+| `CONTAINER_MEMORY_LIMIT` | _unset_ (unbounded) | Opt-in memory cap per container, passed to `docker create --memory` (e.g. `8g`). Hard cap only on a swapless host. Can be set in `.env` or the process environment. |
 | `NANOCLAW_EGRESS_LOCKDOWN` | `false` | Set `true` to force all agent traffic through the OneCLI gateway on an internal Docker network. Fails fast if the gateway isn't running. Can be set in `.env` or the process environment. See [Hardening](/operate/hardening). |
 | `NANOCLAW_EGRESS_NETWORK` | `nanoclaw-egress` | Name of the locked-down Docker network. Can be set in `.env` or the process environment. |
 | `ONECLI_GATEWAY_CONTAINER` | `onecli` | Name of the gateway container attached as the only egress hop. Can be set in `.env` or the process environment. |
 | `ANTHROPIC_BASE_URL` | — | Custom Anthropic-compatible endpoint for the Claude provider. Only active when setup has configured a custom endpoint; the real auth token stays on the host and is injected by the OneCLI proxy. |
 
-Some channels run in containers and can't see the host's `.env`. For those, setup mirrors `.env` to `data/env/env`, which is mounted into the channel container. Keep the two in sync — the `set-env` setup step handles both:
+### Host and setup settings
 
-```bash
-pnpm exec tsx setup/index.ts --step set-env -- --key ASSISTANT_NAME --value "Jarvis" --sync-container
-```
-
-You can also edit `.env` by hand and copy it yourself: `cp .env data/env/env`.
-
-### Process environment only
-
-These are read from `process.env` at startup. Set them in the service definition or export them in your shell before `pnpm run dev` — `.env` won't work.
+Host-only settings need the service environment or an exported value in your dev shell. Setup also reads `NANOCLAW_HARDENED_IMAGE` and `NANOCLAW_AGENT_IMAGE_REF` from `.env`, with the process environment taking precedence.
 
 **Containers**
 
@@ -83,7 +81,7 @@ Fields per group:
 | `provider` | Which agent CLI runs in the container (e.g. Claude Code, OpenCode). New groups start with the `DEFAULT_AGENT_PROVIDER` value. |
 | `model`, `effort` | Model and reasoning effort passed to the provider. |
 | `assistant_name` | Per-group assistant name override. |
-| `max_messages_per_prompt` | Per-group override of the install-wide batching limit. |
+| `max_messages_per_prompt` | Maximum inbound messages supplied in one provider turn for this group. |
 | `image_tag` | Custom container image for this group. |
 | `cli_scope` | What the group's agent can do via the internal CLI: `disabled`, `group` (own group only, the default), or `global`. |
 | `skills` | Skill list for the group, or `all`. |
@@ -95,7 +93,7 @@ To change a group's config, ask the agent in that group, or use [`ncl`](/operate
 
 ## Applying changes
 
-**`.env`-read variables**: edit `.env`, sync the container copy if any channel runs in a container (`cp .env data/env/env`), then restart the service:
+**`.env`-read variables**: edit `.env`, then restart the service:
 
 ```bash
 # macOS
@@ -104,6 +102,8 @@ launchctl kickstart -k gui/$(id -u)/com.nanoclaw-v2-<slug>
 # Linux
 systemctl --user restart nanoclaw-v2-<slug>
 ```
+
+A host restart can adopt containers that are already running. After changing `NANOCLAW_DEFAULT_MODEL`, `NANOCLAW_FAST_MODE`, or another spawn-time setting, also run `ncl groups restart --id <group-id>` for each affected group to apply it.
 
 **Process-environment variables**: add them to the service definition, then reload it.
 
