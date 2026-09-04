@@ -1,6 +1,6 @@
 <svg viewBox="0 0 1320 816" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="nanoclaw-lifecycle-title nanoclaw-lifecycle-desc" font-family="Inter, ui-sans-serif, system-ui, sans-serif">
   <title id="nanoclaw-lifecycle-title">Container lifecycle: the container is disposable, the session state is not</title>
-  <desc id="nanoclaw-lifecycle-desc">State machine for one session's Docker container. Setup builds the base image, then the session sits Idle until wakeContainer fires on an inbound message, a due task, or a restart, moving it to Spawning. Spawning either aborts back to Idle when the vault is unreachable, leaving the message pending, or reaches Running through docker run with the remove flag. Running ends either as Exited, when the runner self-exits on a crash or a corrupt database, or as Killed by the host sweep on the idle ceiling or a claim-stuck message; a kill returns to Idle with processing rows reset with backoff, up to five tries. Below the cycle, a persistent band shows the session state held in mounted host directories, which outlives every state above, so a kill loses only the in-flight provider call.</desc>
+  <desc id="nanoclaw-lifecycle-desc">State machine for one session's Docker container. Setup builds the base image, then the session sits Idle until wakeContainer fires on an inbound message, a due task, or a restart, moving it to Spawning. Spawning either aborts back to Idle when the vault is unreachable, leaving the message pending, or reaches Running through docker create with the remove flag, followed by docker start --attach. Running ends either as Exited, when the runner self-exits on a crash or a corrupt database, or as Killed by the host sweep on the idle ceiling or a claim-stuck message; a kill returns to Idle with processing rows reset with backoff, up to five tries. Below the cycle, a persistent band shows the session state held in mounted host directories, which outlives every state above, so a kill loses only the in-flight provider call.</desc>
 
   <defs>
     <marker id="nl-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
@@ -35,7 +35,7 @@
   <path d="M 560,240 V 272 Q 560,280 552,280 H 256 Q 248,280 248,272 V 240" fill="none" stroke="#8A8178" stroke-width="1" stroke-opacity="0.85" stroke-dasharray="4,3" marker-end="url(#nl-arrow-abort)"/>
   <!-- Idle -> Spawning : wake -->
   <path d="M 320,216 H 512" fill="none" stroke="#5C5349" stroke-width="1.2" marker-end="url(#nl-arrow)"/>
-  <!-- Spawning -> Running : docker run -->
+  <!-- Spawning to Running: Docker create then attached start -->
   <path d="M 736,216 H 928" fill="none" stroke="#5C5349" stroke-width="1.2" marker-end="url(#nl-arrow)"/>
   <!-- Running -> Exited -->
   <path d="M 976,240 V 288 Q 976,296 968,296 H 632 Q 624,296 624,304 V 352" fill="none" stroke="#5C5349" stroke-width="1.2" marker-end="url(#nl-arrow)"/>

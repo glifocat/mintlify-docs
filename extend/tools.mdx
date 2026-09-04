@@ -5,6 +5,7 @@ keywords: ["tools", "mcp", "tavily", "web search", "gmail", "ollama", "atomic ch
 ---
 
 {/* verified-against: .claude/skills/{add-tavily-tool,add-ollama-tool,add-atomic-chat-tool}/SKILL.md, container/skills/agent-browser/SKILL.md, container/cli-tools.json, src/db/container-configs.ts, src/container-config.ts, src/cli/resources/groups.ts, src/container-runner.ts @ 639577c3; .claude/skills/{add-dial,add-dial-tool}/SKILL.md @ 294ef2ae */}
+{/* verified-against (scoped correction) — HTTP headers, plugin-owned MCP servers and local document conversion: src/cli/resources/groups.ts, .claude/skills/add-anydoc/SKILL.md @ b76fcb3d */}
 
 Agents get tools two ways:
 
@@ -40,6 +41,10 @@ Don't confuse `/add-ollama-tool` with `/add-ollama-provider`. The tool skill kee
 
 `/add-dial-tool` gives the agents you choose a real phone number as a **CLI tool** rather than an MCP server. The pinned `@getdial/cli` lands in the agent image through `container/cli-tools.json`, a sandbox-aware `dial-cli` skill teaches the agent to text, place AI-handled voice calls, and wait for inbound codes, and the account key sits in the [OneCLI vault](/operate/credentials) for `api.getdial.ai` — injected at the gateway, never inside the container. The skill asks which agents may use Dial and blocks the rest with per-agent OneCLI rules (`403 blocked_by_policy`); answer with `all`, `none`, or `ag-…` ids separated by commas with no spaces. If you run it from `/add-dial`, the parent asks that question and passes the answer down. Each run replaces the vault secret rather than updating it, so re-onboarding and key rotation work. It spends real money and reaches real people, so grant it deliberately. Details, and the separate `/add-dial` messaging channel, are on the [Dial channel page](/channels/dial#the-dial-tool-sms-and-calls-from-inside-the-sandbox).
 
+## Local document conversion
+
+`/add-anydoc` installs the pinned Firecrawl AnyDoc CLI and a `convert-documents-to-markdown` container skill. Agents can convert Word, PowerPoint, Excel, OpenDocument, RTF, EPUB, CSV, and text-based PDF attachments locally into Markdown. It adds no MCP server, credential, or hosted parser; the original attachment pipeline stays unchanged.
+
 ## Web access
 
 Every agent can already browse the web. The `agent-browser` container skill ships in `container/skills/`, which is mounted read-only into every container — and the container config's `skills` field defaults to `"all"`, so it's available without any setup.
@@ -69,9 +74,9 @@ Remote Streamable HTTP servers work too — pass `--url` instead of `--command`:
 ncl groups config add-mcp-server --id <group-id> --name docs --url https://example.com/mcp
 ```
 
-The URL must be HTTPS; plain HTTP passes only for `localhost`, `127.0.0.1`, `[::1]`, and `host.docker.internal`. URLs that embed credentials are rejected — connect the service through OneCLI instead.
+The URL must be HTTPS; plain HTTP passes only for `localhost`, `127.0.0.1`, `[::1]`, and `host.docker.internal`. URLs that embed credentials are rejected — connect the service through OneCLI instead. Remote servers also accept `--headers` as a JSON object for non-secret headers; keep real credentials in the vault.
 
-Run from inside an agent's container, `ncl` write commands are approval-gated; from a host operator shell they execute immediately. Remove with `ncl groups config remove-mcp-server --id <group-id> --name github`. The optional `instructions` field (composed into the group's CLAUDE.md) can't be set through `ncl` as of v2.1.4 — see [Container config](/reference/container-config#mcp_servers).
+Run from inside an agent's container, `ncl` write commands are approval-gated; from a host operator shell they execute immediately. Remove user-added servers with `ncl groups config remove-mcp-server --id <group-id> --name github`. Plugin-owned servers cannot be edited or removed through these commands: update the plugin and re-stamp it instead. The optional `instructions` field (composed into the group's CLAUDE.md) can't be set through `ncl` as of v2.1.4 — see [Container config](/reference/container-config#mcp_servers).
 
 If your server needs a credential, don't put a raw key in `--env` — connect the service in the OneCLI vault and let the gateway inject it in flight. See [Credentials](/operate/credentials).
 
@@ -79,7 +84,7 @@ If your server needs a credential, don't put a raw key in `--env` — connect th
 
 <CardGroup cols={2}>
   <Card title="Skills catalog" icon="list" href="/reference/skills-catalog#tool-installs">
-    All ten tool-install skills, including dashboard, memory, and Vercel
+    Tool-install skills, including document conversion, dashboard, memory, and Vercel
   </Card>
   <Card title="Agent MCP tools" icon="screwdriver-wrench" href="/reference/mcp-tools">
     The built-in nanoclaw server every agent already has

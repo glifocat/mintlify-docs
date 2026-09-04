@@ -5,6 +5,7 @@ keywords: ["security", "threat model", "prompt injection", "container isolation"
 ---
 
 {/* verified-against: src/container-runner.ts, src/egress-lockdown.ts, src/inbox-safety.ts, src/session-manager.ts, src/modules/mount-security/index.ts, src/command-gate.ts, src/modules/permissions/{index.ts,access.ts,channel-approval.ts,sender-approval.ts}, src/modules/approvals/{index.ts,primitive.ts,onecli-approvals.ts,reason-capture.ts,finalize.ts,response-handler.ts}, src/modules/agent-to-agent/{message-gate.ts,agent-route.ts,db/agent-message-policies.ts}, src/modules/self-mod/index.ts, container/Dockerfile, pnpm-workspace.yaml, docs/SECURITY.md @ 639577c3 */}
+{/* verified-against (scoped correction) — group-scoped history, plugin mounts, sender defaults and build-script allowlist: src/cli/resources/sessions.ts, src/modules/cross-session-context/history.ts, src/container-runner.ts, src/channels/{channel-defaults,channel-registry}.ts, src/router.ts, pnpm-workspace.yaml @ b76fcb3d */}
 
 NanoClaw connects an AI agent with real tools — a shell, a filesystem, network access — to chat platforms where anyone can type. Every inbound message is untrusted input fed straight into the model's context, and no model reliably distinguishes "instructions from my operator" from "instructions an attacker pasted into the group chat." So the design assumption is blunt: **prompt injection eventually succeeds, and the agent acts as if the attacker wrote its instructions.**
 
@@ -25,9 +26,9 @@ flowchart TD
 
 ## Container isolation — the blast radius is one agent group
 
-A compromised agent is a compromised *container*, and every active session gets its own. The container runs as the unprivileged `node` user (or your host uid/gid), and `--rm` so nothing persists past exit. Every spawn also carries the same hardening flags, unconditionally and with no per-group override: `--cap-drop=ALL` and `--security-opt no-new-privileges` (depth against a root-in-container path — under the normal user mapping the capability sets are already empty), `--init` so signals actually reach the runner instead of being discarded at PID 1, and a `--pids-limit` fork-bomb backstop. The image itself strips the setuid-root bit from every binary Debian ships (`mount`, `su`, `passwd`, and friends), none of which an unprivileged agent needs. Its filesystem view is exactly the [mount table](/concepts/container-lifecycle#spawn--the-world-rebuilt-every-time): the session folder, the group workspace, and read-only shared code. No host home directory, no `.ssh`, no Docker socket. Its own `container.json` and composed `CLAUDE.md` are re-mounted read-only on top of the writable workspace, so the agent can read its configuration but not rewrite it to grant itself more.
+A compromised agent is a compromised *container*, and every active session gets its own. The container runs as the unprivileged `node` user (or your host uid/gid), and `--rm` removes the container after exit; mounted group and session state persists. Every spawn also carries the same hardening flags, unconditionally and with no per-group override: `--cap-drop=ALL` and `--security-opt no-new-privileges` (depth against a root-in-container path — under the normal user mapping the capability sets are already empty), `--init` so signals actually reach the runner instead of being discarded at PID 1, plus a configurable `--pids-limit` fork-bomb backstop that defaults to 2048. The image itself strips the setuid-root bit from every binary Debian ships (`mount`, `su`, `passwd`, and friends), none of which an unprivileged agent needs. Its filesystem view is exactly the [mount table](/concepts/container-lifecycle#spawn--the-world-rebuilt-every-time): the session folder, the group workspace, and read-only shared code. No host home directory, no `.ssh`, no Docker socket. Its own `container.json` and composed project document are re-mounted read-only on top of the writable workspace, so the agent can read its configuration but not rewrite it to grant itself more. Stamped plugin code under `plugins/` is also mounted read-only; runtime writes belong in the separate `plugin-data/` tree, which remains writable through the group mount.
 
-One boundary the container does *not* draw: every session of an agent group mounts the same group workspace read-write, so what a compromised session reaches is the **group's** files and `memory/` tree, not just its own conversation's. Session databases stay separate — chat histories don't leak between sessions — but the honest unit of blast radius is the agent group, which is why different trust domains belong in [separate agent groups](/concepts/isolation-levels).
+One boundary the container does *not* draw: every session of an agent group mounts the same group workspace read-write, so what a compromised session reaches is the **group's** files and `memory/` tree, not just its own conversation's. Session databases and provider continuations stay separate, but an agent can retrieve other sessions' transcripts within its group through `ncl sessions history`. That command rejects cross-group reads. The honest unit of blast radius is therefore the agent group, which is why different trust domains belong in [separate agent groups](/concepts/isolation-levels).
 
 The container is also disposable by design — the host kills it on a stale heartbeat and rebuilds the entire environment at next spawn, so a compromised process doesn't outlive its session. See [Container lifecycle](/concepts/container-lifecycle).
 
@@ -37,7 +38,7 @@ Files flow *into* the container too — channel attachments and files forwarded 
 
 The single most valuable thing to exfiltrate from an agent is an API key, so the invariant is that there are none: secrets live in the OneCLI Agent Vault on the host, and the vault's gateway injects them into outbound HTTPS requests in transit. Where a tool insists on finding a credential file locally, it gets a stub whose secret value is the placeholder `onecli-managed`. A compromised agent can dump its environment, its filesystem, and `/proc` and find nothing worth stealing — it can *use* the credentials its group was granted (the gateway injects them per request), but it can never *extract* them to use elsewhere. If the vault is unreachable, the spawn aborts rather than falling back to raw keys.
 
-Setup, per-group secret grants, and the explicit `.env` opt-out are in [Credentials](/operate/credentials).
+Setup, per-group secret grants, and the credential admission rules are in [Credentials](/operate/credentials).
 
 ## Egress lockdown — closing the exfiltration path
 
@@ -56,7 +57,7 @@ Rules and tooling in [Hardening](/operate/hardening#gate-additional-mounts).
 Every layer above limits what a compromised agent can do; this one limits who gets to attempt the compromise. Prompt injection needs a delivery channel, and the cheapest one is just *messaging the bot*. Three gates stand in the way:
 
 - **Channel registration** — a mention or DM in a chat NanoClaw has never seen doesn't reach any agent. It escalates to a human (group admins, then global admins, then owners) with an approve/deny card; denied chats drop silently forever.
-- **Sender policies** — each known chat carries an `unknown_sender_policy`: `strict` silently drops strangers, `request_approval` asks an admin before admitting them, `decline_notify` politely declines unknown DM senders and sends an owner or admin a one-line FYI, and `public` lets anyone in. On group chats, `decline_notify` falls back to a silent drop. Auto-created chats default to `request_approval`.
+- **Sender policies** — each known chat carries an `unknown_sender_policy`: `strict` silently drops strangers, `request_approval` asks an admin before admitting them, `decline_notify` politely declines unknown DM senders and sends an owner or admin a one-line FYI, and `public` lets anyone in. On group chats, `decline_notify` falls back to a silent drop. Auto-created chats use the receiving adapter's declared DM or group policy; undeclared adapters fall back to `request_approval`.
 - **Per-wiring scope** — `sender_scope: known` requires owner, admin, or group membership even in a `public` chat. Crucially, messages refused here are never even accumulated as context, so a rejected sender can't smuggle instructions into the agent's next batch.
 
 Configuration in [Hardening](/operate/hardening#restrict-who-can-talk-to-your-agents); how senders, roles, and wirings fit together in the [entity model](/concepts/entity-model).
@@ -83,7 +84,7 @@ Platform slash-commands are classified on the host before any container sees the
 
 ## Supply chain
 
-The host process itself is in the trusted zone, so its dependencies matter: pnpm is configured with a three-day `minimumReleaseAge` (freshly published package versions won't resolve, which defeats most compromised-maintainer attacks) and an `onlyBuiltDependencies` allowlist so only four vetted native packages may run install scripts.
+The host process itself is in the trusted zone, so its dependencies matter: pnpm is configured with a three-day `minimumReleaseAge` (newly published package versions wait before they can be installed) and an `onlyBuiltDependencies` allowlist limiting install scripts to `esbuild`, `protobufjs`, and `sharp`.
 
 ## What this model doesn't defend
 

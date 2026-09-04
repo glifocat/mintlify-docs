@@ -2,10 +2,9 @@
 title: "Channel adapter interface"
 description: "The ChannelAdapter contract for building your own channel — lifecycle, delivery, registration, and the Chat SDK bridge."
 keywords: ["channel adapter", "ChannelAdapter", "adapter interface", "custom channel", "chat sdk bridge", "registerChannelAdapter", "initChannelAdapters", "supportsThreads", "deliver", "InboundMessage", "setThreadTitle", "membership hook", "post-delivery hook", "extendTool"]
-tag: "UPDATED"
 ---
 
-{/* verified-against: src/webhook-server.ts @ 639577c3; src/channels/{adapter,channel-registry,chat-sdk-bridge,index}.ts, src/router.ts + src/delivery.ts hook seams, container/agent-runner/src/mcp-tools/server.ts, setup/channels/companions.ts @ 294ef2ae; channels branch src/channels/telegram.ts @ 6ee516ad */}
+{/* verified-against: src/webhook-server.ts @ 639577c3; src/channels/{adapter,channel-registry,chat-sdk-bridge,index}.ts, src/router.ts + src/delivery.ts hook seams, container/agent-runner/src/mcp-tools/server.ts, setup/channels/companions.ts @ 294ef2ae; channels branch src/channels/telegram.ts @ 6ee516ad; raw-text recovery and conversation metadata: src/channels/adapter.ts, src/channels/chat-sdk-bridge.ts @ b76fcb3d */}
 
 A channel adapter bridges NanoClaw with a messaging platform. There are two ways to build one:
 
@@ -16,7 +15,7 @@ Either way, adapters live in `src/channels/` on the `channels` branch and are in
 
 ## The contract
 
-The full interface, from `src/channels/adapter.ts`:
+Selected members of `src/channels/adapter.ts` (see the source for the complete contract):
 
 ```ts
 /** The v2 channel adapter contract. */
@@ -37,7 +36,7 @@ export interface ChannelAdapter {
    * Whether this adapter models conversations as threads.
    *
    * true  — adapter's platform uses threads as the primary conversation unit
-   *         (Discord, Slack, Linear, GitHub). One thread = one session; the
+   *         (Discord, Slack, Linear, GitHub). Thread/session policy is resolved per wiring; the
    *         agent replies into the originating thread.
    * false — adapter's platform treats the channel itself as the conversation
    *         (Telegram, WhatsApp, iMessage). Thread ids are stripped at the
@@ -61,6 +60,7 @@ export interface ChannelAdapter {
     statusKind?: 'auto' | 'agent',
   ): Promise<void>;
   syncConversations?(): Promise<ConversationInfo[]>;
+  resolveConversation?(platformId: string): Promise<ResolvedConversation | null>;
   resolveChannelName?(platformId: string): Promise<string | null>;
 
   /**
@@ -129,7 +129,7 @@ How the host calls each member:
 |---|---|---|
 | `name` / `channelType` | Yes | `name` labels logs; `channelType` is the semantic platform key — user ids, formatting, and `messaging_groups.channel_type`. The bridge sets both to the Chat SDK adapter's name. |
 | `instance?` | No | Names this adapter instance so N adapters of one platform (e.g. three Slack apps in one workspace) can coexist. The host keys the active-adapter map by `instance ?? channelType`, stamps it on inbound events and `messaging_groups.instance`, and routes replies and typing back through the instance a message arrived on. Omit it and the instance defaults to `channelType` — single-instance installs are byte-for-byte unchanged. Must be unique across active adapters and URL-safe (`[A-Za-z0-9._-]`). |
-| `supportsThreads` | Yes | `true`: one thread = one session, replies go to the originating thread. `false`: the router strips thread ids and the channel itself is the conversation. This shapes [session identity](/concepts/entity-model). |
+| `supportsThreads` | Yes | `true`: the platform supports threads; effective thread handling and session identity depend on the wiring and context. `false`: thread handling cannot be enabled, and the router strips thread ids. This shapes [session identity](/concepts/entity-model). |
 | `setup(config)` | Yes | Called once at startup by `initChannelAdapters()`. Connect to the platform here and hold on to `config` — its callbacks are how you hand messages to the host. |
 | `teardown()` | Yes | Called on shutdown by `teardownChannelAdapters()`. Close connections; errors are logged, not fatal. |
 | `isConnected()` | Yes | Part of the contract, but not currently called by the host outside tests. The bridge always returns `true`; native adapters should still report real connection state. |
@@ -138,7 +138,8 @@ How the host calls each member:
 | `setThreadTitle?` | No | Titles a conversation thread. Nothing on trunk calls it: a channel-side module fires it from the session-created hook (Slack's onboarding module titles brand-new per-thread DM sessions after the first user message); adapters without a thread-title concept omit it and callers no-op. |
 | `setSuggestedPrompts?` | No | Publishes tappable prompt suggestions (title + message pairs) on platforms that support them. |
 | `syncConversations?` | No | Returns discovered conversations (`platformId`, `name`, `isGroup`) for bulk import. |
-| `resolveChannelName?` | No | Resolves a platform id to a human-readable name on demand. |
+| `resolveConversation?` | No | Resolves conversation type and human-readable metadata for host UI, including group-DM-aware approval rendering. Returns `null` if unavailable. |
+| `resolveChannelName?` | No | Legacy name-only fallback for adapters without richer conversation metadata. |
 | `subscribe?` | No | See the doc comment — mention-sticky wirings call it when they first engage in a thread. |
 | `openDM?` | No | See the doc comment — only needed when the user id and the DM channel id differ. |
 
@@ -236,9 +237,10 @@ These feed the wiring defaults an operator gets when they don't pass explicit `-
 `createChatSdkBridge(config)` from `src/channels/chat-sdk-bridge.ts` wraps a Chat SDK `Adapter` into a complete `ChannelAdapter`. What it handles for you:
 
 - **Inbound dispatch** — wires all four SDK paths (subscribed threads, new mentions, DMs, plain messages) into `onInbound`, with the platform-confirmed `isMention` flag set correctly for each.
-- **Webhook or gateway registration** — gateway-capable adapters (Discord) get a supervised gateway listener with exponential backoff; everything else is registered on the shared webhook server at `/webhook/{routingPath}` (port `WEBHOOK_PORT`, default 3000). The routing path defaults to the adapter name, so single-instance routes are unchanged; a second instance of the same platform passes an `instance` and registers on `/webhook/{instance}` with its own signing secret and Chat SDK state namespace. Modules can also claim a raw `/webhook/{path}` for non–Chat SDK webhooks via `registerWebhookHandler()` — raw routes take priority over adapter routes.
+- **Webhook or gateway registration** — gateway-capable adapters (Discord) get a supervised gateway listener with exponential backoff; non-gateway adapters are registered on the shared webhook server unless their runtime mode is `polling` at `/webhook/{routingPath}` (port `WEBHOOK_PORT`, default 3000). The routing path defaults to the adapter name, so single-instance routes are unchanged; a second instance of the same platform passes an `instance` and registers on `/webhook/{instance}` with its own signing secret and Chat SDK state namespace. Modules can also claim a raw `/webhook/{path}` for non–Chat SDK webhooks via `registerWebhookHandler()` — raw routes take priority over adapter routes.
 - **Chunking** — set `maxTextLength` and outbound text longer than the platform limit is split on paragraph → line → word (space) → hard-character boundaries into multiple messages. Files ride on the first chunk, and the first chunk's id is returned so edits and reactions still target the head of the reply. Without it, platforms like Discord (2000) and Telegram (4096) truncate silently.
 - **Reply context** — pass `extractReplyContext` to pull quoted-reply text and sender out of the platform's raw message.
+- **Raw-text recovery** — pass `extractRawText(raw)` to recover readable text that the SDK adapter leaves only in `message.raw`. Non-empty recovered text is appended to the serialized message body with a blank-line separator before the raw payload is discarded. Without an extractor, the body is unchanged.
 - **Attachments** — inbound attachments are downloaded and base64-embedded before serialization; outbound `message.files` are posted as uploads.
 - **Cards and actions** — `ask_user_question` renders as a card with buttons; clicks are decoded and dispatched to `onAction`, and the card is edited to show the selected answer.
 - **Typing, subscribe, openDM** — `setTyping` maps to the SDK's typing indicator, `subscribe` to the SDK state adapter, and `openDM` is exposed when the underlying adapter implements it.
@@ -264,7 +266,6 @@ registerChannelAdapter('telegram', {
       concurrency: 'concurrent',
       extractReplyContext,
       supportsThreads: false,
-      transformOutboundText: sanitizeTelegramLegacyMarkdown,
       maxTextLength: 4000,
     });
 ```

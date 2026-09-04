@@ -5,6 +5,7 @@ keywords: ["self-modification", "install_packages", "add_mcp_server", "memory", 
 ---
 
 {/* verified-against: src/modules/self-mod/{index,request,apply}.ts, src/modules/approvals/primitive.ts, container/agent-runner/src/mcp-tools/self-mod.ts, container/agent-runner/src/mcp-tools/self-mod.instructions.md, container/agent-runner/src/memory/scaffold.ts, container/skills/self-customize/SKILL.md, src/container-runner.ts, src/claude-md-compose.ts, src/group-persona.ts @ 639577c3 */}
+{/* verified-against (scoped correction) — plugin ownership and cwd limits, immutable plugin content: src/modules/self-mod/{request,apply}.ts, src/container-runner.ts @ b76fcb3d */}
 
 Agents can change their own environment — but every change that touches the container goes through you. The self-mod module exposes exactly two operations, `install_packages` and `add_mcp_server`, and **both are always approval-gated**: the agent submits a request, an admin gets a card, and nothing changes until someone taps Approve. What an agent can change freely is its own memory and standing instructions.
 
@@ -15,7 +16,7 @@ Agents can change their own environment — but every change that touches the co
 | `memory/`, `instructions.prepend.md`, and workspace files | None — direct edit | Persists immediately; they're plain files on the host |
 | apt / npm packages | Admin card | Container config updated, image rebuilt, container restarted |
 | MCP servers | Admin card | Container config updated, container restarted (no rebuild) |
-| Its own source code, composed `CLAUDE.md`, `container.json` | Not possible | Mounted read-only |
+| Its own source code, composed project document, `container.json`, stamped `plugins/` | Not possible | Mounted read-only; runtime plugin writes go in writable `plugin-data/` |
 
 ## Free edits: the agent's own memory
 
@@ -45,7 +46,9 @@ On a [hardened-runtime](/guides/echo-hardened-runtime) install, this rebuild lay
 
 The agent calls [`add_mcp_server`](/reference/mcp-tools#add_mcp_server) with a `name` and exactly one of `command` (plus optional `args` and `env`) or a remote Streamable HTTP `url`. Remote URLs must be HTTPS — plain HTTP passes only for `localhost`, `127.0.0.1`, `[::1]`, and `host.docker.internal` — and a URL that carries credentials (userinfo, a fragment, or a credential-looking query parameter) is rejected with a pointer to OneCLI for authentication. The container validates the request and the host re-validates it, the same dual-layer check packages get. On approval, the host adds the server to the group's `mcp_servers` config and restarts the container — no image rebuild, since bun runs TypeScript directly and the new server is wired on the next start.
 
-Two things this path can't do: it doesn't accept the `instructions` field that [`mcp_servers` entries support](/reference/container-config#mcp_servers), and it doesn't handle credentials — agents are instructed to use the `"onecli-managed"` placeholder for any credential env vars and let the [OneCLI Agent Vault](/operate/credentials) inject real values in flight, never to ask you for keys.
+This path cannot replace a plugin-owned MCP server: the host rejects that request before approval and checks ownership again when applying an approved request. Change the plugin and re-stamp it instead. A working-directory (`cwd`) setting is also rejected here; it is supported only for plugin-shipped servers.
+
+The tool does not accept the `instructions` field that [`mcp_servers` entries support](/reference/container-config#mcp_servers), and it does not provision credentials. Agents are instructed to use the `"onecli-managed"` placeholder for credential env vars and let the [OneCLI Agent Vault](/operate/credentials) inject real values in flight, never to ask you for keys.
 
 ## The approval flow, from your seat
 

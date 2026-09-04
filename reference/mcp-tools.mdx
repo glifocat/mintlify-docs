@@ -1,11 +1,11 @@
 ---
-tag: "UPDATED"
 title: "Agent MCP tools"
 description: "Every MCP tool the agent can call inside its container — messaging, interactive cards, sub-agents, and self-modification."
 keywords: ["mcp tools", "send_message", "send_file", "ask_user_question", "create_agent", "install_packages", "add_mcp_server", "nanoclaw mcp server", "agent tools"]
+tag: "UPDATED"
 ---
 
-{/* verified-against: container/agent-runner/src/mcp-tools/{index,server,types,core,interactive,agents,self-mod}.ts, container/agent-runner/src/mcp-tools/{core,interactive,agents,self-mod,cli}.instructions.md, src/modules/agent-to-agent/create-agent.ts, src/group-init.ts @ 639577c3 */}
+{/* verified-against: container/agent-runner/src/mcp-tools/{index,server,types,core,interactive,agents,self-mod}.ts, container/agent-runner/src/mcp-tools/{core,interactive,agents,self-mod,cli}.instructions.md, src/modules/agent-to-agent/create-agent.ts, src/group-init.ts @ 639577c3; send_card link-action contract: container/agent-runner/src/mcp-tools/interactive.ts, container/agent-runner/src/mcp-tools/interactive.instructions.md @ b76fcb3d */}
 
 These are the tools the agent can call from inside its container. They're exposed by the built-in `nanoclaw` MCP server (`container/agent-runner/src/mcp-tools/`), so the agent sees them with the `mcp__nanoclaw__` prefix — e.g. `mcp__nanoclaw__send_message`. As an operator you never call them directly; you see their effects: messages arriving in chats, schedule changes, and approval cards.
 
@@ -76,10 +76,12 @@ Blocking — the agent's turn pauses while it polls for your answer. You see a q
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `card` | object | yes | Card structure: `title`, `description`, optional `children` and `actions` |
+| `card` | object | yes | Display card: optional `title`, `description`, text `children`, and top-level URL-link `actions` |
 | `fallbackText` | string | no | Plain-text fallback for platforms without card support |
 
-Non-blocking — renders the card and returns immediately, no response collected.
+Non-blocking — renders the card and returns immediately, with no response collected. Actions are **link buttons only**: each needs a non-empty `label` and an HTTP or HTTPS `url`. Invalid actions, including callback buttons, `#`, relative paths, `mailto:` and `tel:` links, are dropped; the tool result reports the dropped count. `style` can be `primary`, `danger`, or `default`; unrecognized styles render as `default`.
+
+`children` accepts strings or objects with a `text` field. Nested action blocks are unsupported. Use `ask_user_question` for choices that must return a value to the agent. `fallbackText` supplies a text rendering for channels that need one; it does not enable callback buttons.
 
 ## Agents
 

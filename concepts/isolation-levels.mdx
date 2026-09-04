@@ -2,22 +2,24 @@
 title: "Isolation levels"
 description: "A decision guide for how isolated your agents and conversations should be — from fully separate agent groups down to one shared conversation across channels."
 keywords: ["isolation", "session_mode", "shared", "per-thread", "agent-shared", "agent groups", "privacy", "workspace", "sessions", "multi-tenant"]
+tag: "UPDATED"
 ---
 
 {/* verified-against: src/session-manager.ts, src/router.ts, src/channels/channel-defaults.ts, src/container-runner.ts, .claude/skills/manage-channels/SKILL.md, src/cli/resources/wirings.ts @ 639577c3 */}
+{/* verified-against (scoped correction) — same-group history access, composed base instructions, wiring validation: src/cli/resources/{sessions,wirings}.ts, src/modules/cross-session-context/history.ts, src/container-runner.ts, src/channels/channel-defaults.ts @ b76fcb3d */}
 
 Every time you wire a chat to an agent, you answer one question: should this conversation share anything with the others? NanoClaw gives you four levels, built from two dials in the [entity model](/concepts/entity-model) — which agent group the wiring points at, and the wiring's `session_mode`. From most to least isolated they run: separate agent groups, then within one group `per-thread`, `shared`, and finally `agent-shared`. The walkthrough below starts at the group boundary — the strongest split — and then takes the three session modes.
 
 | Level | Conversation history | Files & memory | Container config & credentials |
 |---|---|---|---|
 | Separate agent groups | Separate | Separate | Separate |
-| One group, session per thread (`per-thread`) | Separate per thread | **Shared** | Shared |
-| One group, session per chat (`shared`) | Separate | **Shared** | Shared |
+| One group, session per thread (`per-thread`) | Separate continuations; retrievable within the group | **Shared** | Shared |
+| One group, session per chat (`shared`) | Separate continuations; retrievable within the group | **Shared** | Shared |
 | One conversation (`agent-shared`) | One for everything | Shared | Shared |
 
 ## Separate agent groups — nothing shared
 
-Each agent group is its own world: a workspace folder under `groups/<folder>/`, its own per-group standing instructions (`instructions.prepend.md`) and [durable memory](/concepts/agent-memory) (the `memory/` tree), its own composed `CLAUDE.md`, its own container config (packages, mounts, model, skills), and its own Agent Vault credential scope — the OneCLI agent identifier *is* the agent group id, so secrets granted to one group never reach another. Sessions of different groups share only the host and the read-only pieces every container gets: the shared base instructions (`container/CLAUDE.md`, mounted at `/app/CLAUDE.md`) plus the agent-runner source and skills.
+Each agent group is its own world: a workspace folder under `groups/<folder>/`, its own per-group standing instructions (`instructions.prepend.md`) and [durable memory](/concepts/agent-memory) (the `memory/` tree), its own composed `CLAUDE.md`, its own container config (packages, mounts, model, skills), and its own Agent Vault credential scope — the OneCLI agent identifier *is* the agent group id, so secrets granted to one group never reach another. Sessions of different groups share only the host and the read-only pieces every container gets: the shared base instructions (`container/CLAUDE.md`, inlined by the host into each composed project document) plus the agent-runner source and skills.
 
 Choose this when:
 
@@ -27,15 +29,15 @@ Choose this when:
 
 ## One agent group, a session per chat — `shared`
 
-`session_mode: 'shared'` gives each wired chat its own session: its own conversation history, its own session folder and databases, its own container while running. The agent in chat A cannot read what was said in chat B. Same brain, separate conversations — right for one assistant serving several chats that shouldn't see each other's context.
+`session_mode: 'shared'` gives each wired chat its own session: its own conversation history, its own session folder and databases, its own container while running. The provider normally resumes only that session's conversation, but the agent can explicitly retrieve other sessions' transcripts within its own group through `ncl sessions history`. Use this for separate conversation flows; use separate agent groups when the audiences must not access each other's context.
 
 <Warning>
-Conversations are isolated; the **filesystem is not**. Every session of an agent group mounts the same group folder read-write at `/workspace/agent` — working files, `instructions.prepend.md`, and the `memory/` tree included. A file the agent saves while talking in chat A is readable (and mentionable) while talking in chat B, and a memory note written in one conversation shapes all of them. If the people in one chat must never see artifacts from another, separate sessions are not enough — use separate agent groups.
+Separate sessions are **not a confidentiality boundary** within an agent group: both cross-session history retrieval and a shared filesystem are available. Every session of an agent group mounts the same group folder read-write at `/workspace/agent` — working files, `instructions.prepend.md`, and the `memory/` tree included. A file the agent saves while talking in chat A is readable (and mentionable) while talking in chat B, and a memory note written in one conversation shapes all of them. If the people in one chat must never see artifacts from another, separate sessions are not enough — use separate agent groups.
 </Warning>
 
 ## A session per thread — `per-thread`
 
-The same idea at finer grain: one session per `(chat, thread)`, so each Discord or Slack thread is its own conversation. You rarely set this by hand — on thread-capable adapters the router **forces** per-thread in group chats regardless of a `shared` wiring (only `agent-shared` or a per-wiring `threads = 0` overrides it), DM thread behavior follows the channel's declared DM default and any `threads` override, and thread-less adapters like WhatsApp or Telegram collapse `per-thread` back to `shared`. The full requested-versus-effective table is in the [entity model](/concepts/entity-model)'s sessions section. The shared-filesystem caveat above applies here identically.
+The same idea at finer grain: one session per `(chat, thread)`, so each Discord or Slack thread is its own conversation. You rarely set this by hand — on thread-capable adapters the router **forces** per-thread in group chats regardless of a `shared` wiring (only `agent-shared` or a per-wiring `threads = 0` overrides it), DM thread behavior follows the channel's declared DM default and any `threads` override, and thread-less adapters like WhatsApp or Telegram collapse `per-thread` back to `shared`. The full requested-versus-effective table is in the [entity model](/concepts/entity-model)'s sessions section. The history-access and shared-filesystem caveats above apply here identically. When creating or changing a `per-thread` wiring, the CLI rejects explicit `threads = 0` or an inherited threads-off policy on a declared adapter. Undeclared adapters retain legacy leniency when `threads` is unset. On a thread-capable channel whose context defaults to threads off, use `--threads true` alongside `--session-mode per-thread`.
 
 ## One conversation everywhere — `agent-shared`
 
@@ -82,7 +84,7 @@ Session and agent-group boundaries separate agents from each other, not from the
 
 - **The container boundary** is what stands between an agent and the host — see [container lifecycle](/concepts/container-lifecycle) for what's mounted where and why.
 - **Network egress and additional mounts** are per-group container config and open by default beyond the proxy — lock them down in [hardening](/operate/hardening).
-- **Shared base instructions** — every container, in every group, mounts the same read-only `container/CLAUDE.md` at `/app/CLAUDE.md`, alongside the shared agent-runner source and skills. Anything written there reaches all agents; per-group instructions belong in that group's `instructions.prepend.md`.
+- **Shared base instructions** — the host inlines the shared base into each provider's composed project document; Claude uses `container/CLAUDE.md`, while Codex uses `container/AGENTS.md`. Changes to a base reach groups using that provider on their next spawn. Per-group instructions belong in that group's `instructions.prepend.md`.
 
 ## Related pages
 

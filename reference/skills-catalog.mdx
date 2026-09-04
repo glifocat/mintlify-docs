@@ -2,14 +2,15 @@
 title: "Skills catalog"
 description: "Every skill that ships with NanoClaw — host-side workspace skills you invoke from your coding harness, and container skills mounted into every agent container."
 keywords: ["skills", "catalog", "reference", "add-channel", "providers", "tools", "container skills", "workspace skills", "slash commands"]
-tag: "UPDATED"
 ---
 
 {/* verified-against: main .claude/skills/ and container/skills/ listings + each skill's SKILL.md frontmatter @ 294ef2ae; channels .claude/skills/{add-slack,slack-a2a-rooms,slack-agent-flow,slack-multi-instance}/SKILL.md @ d69c9c5d; current main setup/channels/slack-auto-register.ts @ 001dfa02 */}
 
+{/* verified-against (scoped correction): .claude/skills/ listings, .claude/skills/{add-codex,add-opencode,add-ollama-provider,update-skills}/SKILL.md, setup/channels/{slack-auto-register,run-channel-skill}.ts @ b76fcb3d */}
+
 NanoClaw ships two kinds of skills:
 
-- **Host-side workspace skills** (`.claude/skills/`) — invoked from your coding harness in your NanoClaw checkout. They install channels, providers, and tools, or operate and maintain your install. 50 skills total: 20 channel installs, 3 provider installs, 12 tool installs, and 15 operational skills.
+- **Host-side workspace skills** (`.claude/skills/`) — invoked from your coding harness in your NanoClaw checkout. They install channels, providers, and tools, or operate and maintain your install. 52 skills total: 20 channel installs, 3 provider installs, 12 tool installs, 15 operational skills, and 2 Slack feature skills.
 - **Container skills** (`container/skills/`) — 5 skills mounted into every agent container at `/app/skills`. The agent loads them at runtime; you don't invoke them yourself.
 
 <Note>
@@ -47,7 +48,7 @@ Each skill wires up one messaging channel. See [Channels](/channels/overview) fo
 
 ### Slack feature skills
 
-These skills live on the `channels` branch. They are not included in the 50-skill trunk count above.
+`slack-a2a-rooms` and `slack-agent-flow` have their canonical home on `main` and are included in the count above. `slack-multi-instance` remains on the `channels` branch.
 
 | Skill | What it does |
 | --- | --- |
@@ -61,9 +62,9 @@ Each skill swaps the agent runtime for a different provider. See [Providers](/ex
 
 | Skill | What it does |
 | --- | --- |
-| `/add-codex` | Uses Codex (CLI + AppServer) as the full agent provider in place of the Claude Agent SDK — ChatGPT subscription or `OPENAI_API_KEY`, per-group via `agent_provider` |
-| `/add-ollama-provider` | Routes an agent group to a local Ollama model instead of the Anthropic API — env var overrides and a model setting, no provider code changes |
-| `/add-opencode` | Uses OpenCode as an agent provider (`AGENT_PROVIDER=opencode`) — OpenRouter, OpenAI, Google, DeepSeek, and more via OpenCode config |
+| `/add-codex` | Uses Codex (CLI + AppServer) as the full agent provider in place of the Claude Agent SDK — ChatGPT subscription or `OPENAI_API_KEY`, per-group via `ncl groups config update --provider codex` |
+| `/add-ollama-provider` | Legacy Ollama integration workflow; its config patches need reconciliation with current database-backed group configuration before use |
+| `/add-opencode` | Installs OpenCode as an agent provider, selected per group with `ncl groups config update --provider opencode` — OpenRouter, OpenAI, Google, DeepSeek, and more via OpenCode config |
 
 ## Tool installs
 
@@ -104,7 +105,7 @@ Setup, maintenance, migration, and day-to-day administration of your install.
 | `/migrate-nanoclaw` | Extracts your customizations from a fork, generates a replayable migration guide, and upgrades to upstream by reapplying them on a clean base |
 | `/setup` | Runs initial NanoClaw setup — install, configure, first-time setup |
 | `/update-nanoclaw` | Brings upstream updates into a customized install with preview, selective cherry-pick, and low token usage |
-| `/update-skills` | Re-applies your installed skills to pull their latest code from upstream |
+| `/update-skills` | Refreshes installed channel/provider payloads and dependency pins from upstream without repeating credential prompts or channel wiring |
 
 ## Container skills
 
