@@ -1,173 +1,217 @@
 ---
 title: "Getting started with a template"
-description: "Go from a fresh machine to a working prebuilt agent — an SDR, a competitor analyst, a data analyst, or a journalist — in about 15 minutes, start to finish."
-keywords: ["getting started", "template", "prebuilt agent", "nanoclaw.sh", "sales/sdr", "first agent", "setup wizard", "stamp a template"]
+description: "Choose a prebuilt assistant, connect it to a conversation, and give it its first task — with clear setup and success checks."
+keywords: ["getting started", "template", "prebuilt agent", "nanoclaw.sh", "first agent", "setup wizard"]
+tag: "UPDATED"
 ---
 
-{/* verified-against: nanoclaw.sh, setup/{auto,templates}.ts, src/templates/{create-agent,local-dir}.ts, src/cli/resources/{groups,tasks}.ts @ 20d61af; nanocoai/nanoclaw-templates @ 601071b */}
+{/* verified-against: nanoclaw.sh, setup/{auto,templates}.ts, setup/channels/{initial-setup,run-channel-skill}.ts, scripts/{init-first-agent,delete-cli-agent,chat}.ts, .claude/skills/init-first-agent/SKILL.md, src/templates/create-agent.ts, src/cli/resources/{groups,wirings,tasks}.ts, src/cli/format-tasks.ts, src/channels/cli.ts, src/mailbox/sqlite/tasks.ts @ b76fcb3d. Catalog examples: nanocoai/nanoclaw-templates index.json and lifestyle/family-assistant, product/competitor-analysis, sales/sdr instructions @ fe904545. */}
 
-{/* verified-against (scoped correction): setup/channels/initial-setup.ts @ b76fcb3d */}
+A **template** gives your assistant a starting set of instructions and tools for a particular job. You choose what you need help with, then tell the assistant about your own situation.
 
-A **template** is a prebuilt agent. Instead of describing what you want an assistant to do and shaping it over days, you pick one that already knows a job — outbound sales, competitor research, data analysis — and it arrives configured: standing instructions, tools, skills, and recurring routines.
+This guide creates a new assistant from a template and helps you reach it for a first conversation. Allow time for downloads and account sign-ins; the total varies with your computer and the template's requirements.
 
-This page is the whole path, from a machine with nothing installed to an agent messaging you. About **15 minutes**, most of it waiting on a download.
-
-<Note>
-Want to build an agent from scratch instead? The [quickstart](/quickstart) covers the same install without a template, and [your first agent](/guides/first-agent) builds one by hand.
-</Note>
+Already running NanoClaw? Use [Using a template](/templates/using-templates) to add one to your existing installation. For a general assistant without a template, use the [quickstart](/quickstart).
 
 ## Pick what you want first
 
-Choose the agent before you install anything — the installer asks you for it.
+Choose a starting point that matches your goal. These are examples from the [template library](https://github.com/nanocoai/nanoclaw-templates):
 
-- **[`sales/sdr`](https://github.com/nanocoai/nanoclaw-templates/tree/main/sales/sdr)** — researches prospects, enriches contacts, drafts outbound sequences, and keeps the CRM clean. Uses HubSpot and Exa.
-- **[`product/competitor-analysis`](https://github.com/nanocoai/nanoclaw-templates/tree/main/product/competitor-analysis)** — tracks competitors into structured docs, a news log, and a spreadsheet you can read.
-- **[`data/analyst`](https://github.com/nanocoai/nanoclaw-templates/tree/main/data/analyst)** — checks pipelines, writes queries, and verifies recurring reports still hold up.
-- **[`media/journalist`](https://github.com/nanocoai/nanoclaw-templates/tree/main/media/journalist)** — monitors a beat, evaluates pitches, finds sources, drafts stories, and preps interviews.
+<CardGroup cols={3}>
+  <Card title="Organize your household" icon="house" href="https://github.com/nanocoai/nanoclaw-templates/tree/main/lifestyle/family-assistant">
+    A family assistant for meal planning and household routines. Look for `lifestyle/family-assistant` in the library.
+  </Card>
+  <Card title="Follow competitors" icon="magnifying-glass" href="https://github.com/nanocoai/nanoclaw-templates/tree/main/product/competitor-analysis">
+    A starting point for competitor research. Look for `product/competitor-analysis`.
+  </Card>
+  <Card title="Support sales research" icon="users" href="https://github.com/nanocoai/nanoclaw-templates/tree/main/sales/sdr">
+    An assistant for prospect research and CRM work. Look for `sales/sdr`.
+  </Card>
+</CardGroup>
 
-Each template's own `README.md` says exactly what it does and which accounts it expects. Skim the one you picked — it's the best two minutes you can spend before installing.
+Open the template's page before choosing it. Read its description and account requirements. **Some templates need paid services or access to accounts you already use.** For example, the sales template uses HubSpot and Exa. Check that those requirements suit you before installing.
+
+The library also includes data-analysis and journalism templates. You can choose any listed template; the setup steps below are the same.
 
 ## Before you start
 
-- **macOS or Linux** (WSL works) with **4 GB+ RAM** — the installer warns below ~3.7 GB
-- **git**, to clone the repository
-- **A credential for your AI provider** — by default Claude (a Pro/Max subscription, an OAuth token, or an Anthropic API key); pick Codex instead and it's a ChatGPT subscription or an OpenAI API key
-- **A NanoClaw account sign-in**, if you take the recommended prebuilt sandbox image — a quick browser step during setup. Building the image locally instead needs no account
+- Use a **Mac or Linux computer with at least 4 GB of memory**, an internet connection, and permission to install software. On Windows, first follow [Microsoft's WSL setup guide](https://learn.microsoft.com/en-us/windows/wsl/install), then work inside the Linux app it installs.
+- Have your **AI account sign-in** ready. Setup offers Claude, including subscription sign-in or an Anthropic API key, and Codex with its own sign-in options. The [quickstart's account guidance](/quickstart#before-you-start) explains the choices.
+- Keep the computer on and connected when you want your assistant to respond.
 
-Everything else — Homebrew on macOS, Node 22, pnpm, Docker, the credential vault — the installer handles. Two caveats from its pre-flight checks: don't run as root on Linux, and Google Cloud VMs are known not to work.
+If you choose the prebuilt sandbox download, setup also asks you to sign in to **NanoClaw**. That is separate from your AI account. Choosing **Build it here** skips the download-account step.
 
-You do **not** need API keys for the template's tools yet. Those get connected later, on demand, and never live inside the template.
+On Linux, use a regular user account. If you're installing on a server, read the [installation requirements](/installation#requirements), including the Google Cloud caveat, first.
 
 ## The full flow
 
 <Steps>
+  <Step title="Open Terminal and check Git" id="open-terminal">
+    Terminal is the app where you enter the installation commands. On a Mac, press **Command + Space**, type **Terminal**, and press **Return**. On Linux, open **Terminal** from your applications. On Windows with WSL, open your Linux app, such as **Ubuntu**.
 
-<Step title="Clone and run the installer">
+    Git downloads NanoClaw. Check whether it's installed by entering:
 
-```bash
-git clone https://github.com/nanocoai/nanoclaw.git
-cd nanoclaw
-bash nanoclaw.sh
-```
+    ```bash
+    git --version
+    ```
 
-Pre-flight checks run, the basics install under one spinner, then the interactive wizard takes over. If a step fails it offers help inline and resumes from the break rather than starting over.
+    **You should see:** a line beginning with `git version`. If your Mac offers to install developer tools, follow that prompt and try again. If Git is missing, follow the [Git installation instructions](https://git-scm.com/install/) before continuing.
+  </Step>
 
-</Step>
+  <Step title="Start setup and choose your template" id="choose-template">
+    Run these commands **one line at a time** in Terminal. Press **Enter** after each line and wait for it to finish before running the next.
 
-<Step title="Choose your template">
+    ```bash
+    cd ~
+    git clone https://github.com/nanocoai/nanoclaw.git
+    cd nanoclaw
+    bash nanoclaw.sh
+    ```
 
-The wizard asks **"How should we create your first agent?"** early on — before the long download. Pick:
+    The first line opens your home folder. The next two download NanoClaw into `nanoclaw` and open that folder. The last line starts setup. If that folder already exists, use [the existing-install guidance](/templates/using-templates) instead of deleting it.
 
-> **From the NanoClaw template library**
+    Choose **Standard setup**. Use the arrow keys to move through options and **Enter** to select one.
 
-It clones the public catalog and lists what's in it by name, with the ref as a hint beside each row. Pick the one you decided on above, and setup copies it into your install.
+    At **How should we create your first agent?**, choose **From the NanoClaw template library**. Select the template you chose above. The short identifier beside its name helps you recognize it.
 
-The other two options are **Fresh agent** (no template — shape it by chatting) and **From local templates** (anything already in your `templates/` folder).
+    **You should see:** the library selection finish and setup continue. The assistant is created later in the process, after the AI account and timezone steps.
 
-</Step>
+    <Accordion title="Using a template already on your computer?">
+      Choose **From local templates** to select one in this installation's `templates/` folder. **Fresh agent** creates a general assistant without a template.
+    </Accordion>
+  </Step>
 
-<Step title="Let the rest of the wizard run">
+  <Step title="Finish the accounts and software setup" id="finish-software-setup">
+    At the sandbox choice, **Fetch the hardened image, built by Echo** downloads the prepared software and opens a NanoClaw sign-in. **Build it here** prepares the software locally instead. Choose the local build if you plan to use Codex; the prebuilt image supports Claude.
 
-Nothing here is template-specific, and the defaults are good:
+    {/* Visual provenance: reused images/echo/hardened-runtime/signin-04-success.png; original capture date and version unknown. Visually checked for caption alignment; not a new sign-in test. */}
+    <Frame caption="If you chose the download: this browser screen completes NanoClaw sign-in. Return to Terminal to continue.">
+      <img src="/images/echo/hardened-runtime/signin-04-success.png" alt="NanoClaw browser confirmation saying the device is connected and the page may be closed" />
+    </Frame>
 
-1. **Sandbox image** — the recommended default downloads a prebuilt hardened image. This is the slow step: a few minutes, or 3–10 if you choose to build locally instead.
-2. **Credential vault** — installs the vault that holds your API keys. Your agent never sees them directly.
-3. **Provider sign-in** — press Enter for Claude and sign in, or pick Codex.
-4. **Access rules** — starts empty. The sandbox only sees what you share later.
-5. **Background service** — NanoClaw starts under launchd or systemd.
-6. **Your name**, a **first contact** check, then **timezone**.
-7. **Channel** — choose Slack, Mattermost, Teams, Telegram, Discord, WhatsApp, Dial, Signal, iMessage, or another channel. Or skip and use the terminal.
+    Leave Terminal open while the download or local build finishes. Setup then installs **OneCLI**, the vault that stores account credentials.
 
-Your template is stamped into a working agent, and if you connected a channel it gets wired to it.
+    Choose your AI option and follow its sign-in prompts. For a Claude subscription, select **Claude**, then **Sign in with my Claude subscription**. This connects the AI account, not the NanoClaw download account. See [the illustrated sign-in walkthrough](/quickstart#prepare-workspace) if you need help recognizing the browser steps.
 
-</Step>
+    Let setup finish the access rules and background service. Enter your name when asked. It sends a test message to check the AI connection.
 
-<Step title="Say hi">
+    At **What next?**, choose **Continue with setup** for this walkthrough. The temporary test assistant is not your template assistant. Follow the timezone prompt if one appears.
 
-If you connected a channel, your agent messages you first — check your phone. Some templates introduce themselves and ask a few onboarding questions; answer them, they tune how the agent works for you.
+    **You should see:** a message beginning **Template agent** and ending **created**, with the new assistant's name. Keep that name handy for the connection step.
+  </Step>
 
-No channel? Chat from the terminal:
+  <Step title="Connect the assistant you created" id="connect-template-agent">
+    Choose how you want to reach this assistant. Setup calls the connection a **channel**.
 
-```bash
-pnpm run chat hi
-```
+    <Tabs>
+      <Tab title="Messaging app">
+        Select your app at the channel question and follow its prompts. Each app has its own account or bot requirements; the [channel guides](/channels/overview) cover those steps.
 
-To watch what's happening under the hood:
+        **Check the final instructions in Terminal.** If setup tells you to check the app for a welcome message, open that conversation and reply.
 
-```bash
-tail -f logs/nanoclaw.log
-```
+        If it says **one DM to go**, send the bot a direct message in that app first. Then follow setup's instruction to run **/init-first-agent** in your coding assistant and select the person to connect. When it asks which assistant to use, choose the **existing template assistant** whose name matches the earlier creation message. For example, in Claude Code, enter `claude` in Terminal, then enter `/init-first-agent` in Claude Code. This finishes the connection; see [Microsoft Teams](/channels/teams) for that flow.
 
-</Step>
+        **You should see:** a reply from the assistant in the conversation you connected. A finished download or successful AI test alone does not confirm this connection.
+      </Tab>
+      <Tab title="Terminal">
+        Choose **Skip for now** at the channel question and let setup finish. The template assistant still needs a terminal connection.
 
-<Step title="Connect accounts when the agent asks">
+        From the `nanoclaw` folder, list your assistants:
 
-Templates ship **no API keys**. The first time your agent calls a service it isn't connected to, it replies with a ready-to-open link for that service. Paste your key there and ask it to retry.
+        ```bash
+        ncl groups list
+        ```
 
-That's the whole flow — no setup up front, and the key lands in your vault rather than in the agent's reach. Details in [Credentials](/operate/credentials).
+        Find the entry whose `name` matches the template assistant named by setup. Copy its `id`. Replace `<group-id>` below with that value, including removing the angle brackets:
 
-<Warning>
-Some templates rely on paid services. The template's `README.md` says which, and which plan you need. You always use your own account.
-</Warning>
+        ```bash
+        ncl wirings create --channel-type cli --platform-id local --agent-group-id <group-id>
+        ```
 
-</Step>
+        This connects terminal messages to that assistant. For this new-install path, you chose **Continue with setup**, so you did not create a separate terminal assistant during the earlier test.
 
-<Step title="Turn on its routines">
+        **If you already created or connected another terminal assistant**, inspect `ncl wirings list` before adding a connection. More than one assistant can answer the same terminal message. Use the [CLI channel guide](/channels/cli) to check the existing connections.
 
-Many templates ship recurring work — a morning digest, a weekly review. These arrive **paused**, so nothing runs in the background until you say so:
+        Send your template assistant a message:
 
-```bash
-ncl tasks list --status paused
-ncl tasks resume <task-id>
-```
+        ```bash
+        pnpm run chat "Hi! What do you need from me to get started?"
+        ```
 
-See [Scheduled tasks](/guides/scheduled-tasks) for how they behave once live.
+        **You should see:** its reply printed in Terminal. The command sends one message; run it again with new text for another turn. If it does not reply, check the connection rather than creating another assistant.
+      </Tab>
+    </Tabs>
+  </Step>
 
-</Step>
+  <Step title="Give it a first task" id="first-task">
+    Start with something from the template's description. Tell the assistant enough about your situation to make its answer useful. For example, a family assistant needs to know who a meal plan is for; a competitor-research assistant needs the companies you want to follow.
 
+    You can begin with:
+
+    > What do you need from me to get started, and which accounts should I connect?
+
+    Answer its questions. If it needs another service, follow that service's connection instructions. If it provides an account-connection link, open the link to connect the account. See [Credentials](/operate/credentials) for help; do not paste keys into the conversation.
+
+    **You should see:** a response relevant to the job you selected, or a specific request for information or access needed to continue. A template supplies a starting point, not your private account details.
+  </Step>
+
+  <Step title="Review recurring work before turning it on" id="enable-routines">
+    Some templates include routines such as a morning briefing or weekly review. They start **paused**. You can leave them paused while you get to know the assistant.
+
+    To enable one, open Terminal in your `nanoclaw` folder. Run `ncl groups list` and copy the `id` for your template assistant if you do not already have it.
+
+    Replace `<group-id>` with that ID to list only this assistant's paused routines:
+
+    ```bash
+    ncl tasks list --group <group-id> --status paused
+    ```
+
+    If none are listed, there is no paused routine to enable. Otherwise, copy the full value under **SERIES** for the routine you want. Use it in place of `<series-id>` to inspect the task:
+
+    ```bash
+    ncl tasks get --id <series-id> --group <group-id>
+    ```
+
+    Check the task's instructions, schedule, and required account connections. When you want that recurring work to begin, enable it:
+
+    ```bash
+    ncl tasks resume --id <series-id> --group <group-id>
+    ```
+
+    **Check the result:** run the `get` command again. The task should now be **pending**, which means it is enabled for its schedule; it does not mean it has already run. See [Scheduled tasks](/guides/scheduled-tasks) for delivery and monitoring.
+  </Step>
 </Steps>
 
 ## You're set. What now?
 
+Give the assistant a small task and refine the result together. Keep its routines paused until their instructions and account connections are ready.
+
 <CardGroup cols={2}>
-<Card title="Ask it to do its job" icon="play">
-Give it a real task from the template's README — a prospect to research, a competitor to track. That's what it was built for.
-</Card>
-<Card title="Make it yours" icon="wand-magic-sparkles" href="/guides/customize-an-agent">
-Tell it to change how it works, in chat. It edits its own standing instructions and remembers.
-</Card>
-<Card title="Add a second agent" icon="users" href="/templates/using-templates">
-Stamp another template anytime with `ncl groups create --template <ref>`. Each gets its own sandbox and memory.
-</Card>
-<Card title="Keep it current" icon="rotate" href="/templates/updating">
-When a template improves, pull the new version into your running agent without rebuilding it.
-</Card>
+  <Card title="Make it yours" icon="wand-magic-sparkles" href="/guides/customize-an-agent">
+    Adjust the instructions and preferences that shape how your assistant works.
+  </Card>
+  <Card title="Update a template assistant" icon="rotate" href="/templates/updating">
+    Understand what an update replaces and what it preserves before applying one.
+  </Card>
 </CardGroup>
 
 ## If something went wrong
 
-| Symptom | What's happening |
+| What you see | What to do next |
 | --- | --- |
-| Agent replies `401` or `403` | Expected on first use — open the connect link it sends you |
-| A routine never fires | Template tasks start paused; resume it (above) |
-| The install broke partway | Re-run `bash nanoclaw.sh`; it resumes and remembers your template pick |
-| No template picker appeared | Installs that already have a channel-wired agent skip it — use [the CLI](/templates/using-templates) instead |
+| No welcome message | Follow setup's final connection instructions. Some apps need your first direct message before the connection can finish. |
+| No reply in Terminal | Check that the selected template assistant has a CLI connection in `ncl wirings list`; skipping the channel step does not add one. |
+| `ncl` or `pnpm` is not found after setup | Open a new Terminal window, run `cd ~/nanoclaw`, and retry. On Windows, reopen your Linux app. If that fails, use [Troubleshooting](/operate/troubleshooting). |
+| A service returns `401` or `403` | Check its account connection and permissions using [Credentials](/operate/credentials). These errors do not always mean the same thing. |
+| A routine never runs | Check its status and schedule. Template routines begin paused; follow [the routine steps](#enable-routines) above. |
+| Setup stops partway | Run `bash nanoclaw.sh` again from the same folder. If asked, choose **Keep it & continue setup**. |
+| You're asked to add or update a template | This is the existing-install flow. **No template changes** is the default; see [Using a template](/templates/using-templates) for create, connect, and update choices. |
 
-More in [Troubleshooting](/operate/troubleshooting), or ask in [Discord](https://discord.gg/VDdww8qS42).
+If you need help, ask in [Discord](https://discord.gg/VDdww8qS42) with the step name and error message. Leave out passwords, account keys, and sign-in codes.
 
 ## Related pages
 
-<CardGroup cols={2}>
-<Card title="Templates" icon="layer-group" href="/templates/overview">
-What a template is, what it carries, and what it deliberately leaves out.
-</Card>
-<Card title="Using a template" icon="terminal" href="/templates/using-templates">
-The full CLI path, ref resolution, and everything stamping creates.
-</Card>
-<Card title="Building a template" icon="pen-ruler" href="/templates/building">
-Make your own for your team, or for the catalog.
-</Card>
-<Card title="Quickstart" icon="bolt" href="/quickstart">
-The same install without a template.
-</Card>
-</CardGroup>
+- [Template overview](/templates/overview): what a template contains.
+- [Using a template](/templates/using-templates): add another assistant or work with an existing installation.
+- [Building a template](/templates/building): create a template of your own.
+- [Quickstart](/quickstart): set up a general assistant without a template.

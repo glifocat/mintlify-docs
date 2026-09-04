@@ -1,66 +1,76 @@
 ---
 title: "What is NanoClaw?"
-description: "A personal AI assistant you run on your own machine and text from Telegram, WhatsApp, Discord, Slack, or the terminal — every agent working inside its own sandbox."
+description: "An AI assistant you run on your own computer and message from the apps you use. Start with a conversation, then give it a job."
 icon: "house"
 sidebarTitle: "Introduction"
-keywords: ["nanoclaw", "personal ai assistant", "self-hosted", "multi-agent", "claude", "container isolation", "channels", "skills", "v2"]
+keywords: ["nanoclaw", "personal ai assistant", "self-hosted", "getting started", "channels", "templates"]
+tag: "UPDATED"
 ---
 
-{/* verified-against: src/index.ts, src/router.ts, src/channels/index.ts, src/container-runtime.ts, src/container-runner.ts, src/session-manager.ts, src/claude-md-compose.ts, src/modules/, container/agent-runner/src/providers/claude.ts, container/agent-runner/src/mcp-tools/agents.ts, container/agent-runner/src/mcp-tools/agents.instructions.md, .claude/skills/, .claude/skills/add-telegram/SKILL.md, repo-tokens/badge.svg, package.json @ 639577c3 */}
+{/* verified-against: setup/auto.ts, setup/channels/initial-setup.ts, src/container-runner.ts, src/project-doc-compose.ts, src/cli/resources/tasks.ts, container/agent-runner/src/providers/claude.ts, container/agent-runner/src/mcp-tools/agents.ts @ b76fcb3d; template examples: nanocoai/nanoclaw-templates index.json @ fe904545. Conversation below is an authored illustration, not a captured chat or test result. */}
 
-NanoClaw is a personal AI assistant you run on your own machine and reach from the messaging apps you already use — Telegram, WhatsApp, Discord, Slack, or just your terminal. Text it like you'd text a coworker. Each agent works inside its own locked-down sandbox, so it does real work without touching the rest of your computer.
+NanoClaw is an AI assistant you run on your own computer. You can talk to it in the terminal or connect a messaging app such as Telegram, WhatsApp, Discord, or Slack.
 
-It's self-hosted and yours — clone the repo, run one setup command, connect a chat app. Claude powers agents by default, with Codex, OpenCode, and Ollama as alternatives.
+Ask for help in ordinary language: plan a meal, research a topic, or remember a preference. You can start with a general assistant or choose a prebuilt one for a particular job.
 
-{/* TODO(ethan): hero screenshot — a phone chat (Telegram or WhatsApp) showing a short real exchange:
-   you ask the agent for something concrete (e.g. "remind me every Friday to send the invoice"), it confirms.
-   Capture from your live install, save to images/hero-chat.png, then embed here:
-   <img src="/images/hero-chat.png" alt="A Telegram chat where the user asks their NanoClaw agent to schedule a weekly reminder and the agent confirms it" />
-*/}
-
-<Info>
-  **New here? Four words that show up everywhere:**
-  - **Agent** — one AI identity with its own memory, workspace, and personality.
-  - **Channel** — a messaging app you reach an agent through (Telegram, WhatsApp, … or the terminal).
-  - **Sandbox** — the isolated Docker container an agent runs in; it only sees what you explicitly share.
-  - **Provider** — the AI model behind an agent (Claude by default; Codex, OpenCode, or Ollama optional).
-</Info>
+<Frame caption="Example conversation, shown as an illustration. Your assistant's replies will vary.">
+  <div className="not-prose w-full space-y-4 p-4 sm:p-6">
+    <div className="ml-auto max-w-sm rounded-2xl bg-teal-100 px-5 py-3 text-slate-900">
+      <p className="mb-1 text-sm font-semibold">You</p>
+      <p>Help me plan three dinners for this week. I'd like to keep the cooking simple.</p>
+    </div>
+    <div className="mr-auto max-w-sm rounded-2xl border border-gray-200 bg-white px-5 py-3 text-slate-900">
+      <p className="mb-1 text-sm font-semibold">Your assistant</p>
+      <p>Let's start with how many people you're cooking for. How many should the meals serve?</p>
+    </div>
+  </div>
+</Frame>
 
 ## What can it do?
 
-Everything below works on a fresh install, from a plain chat message — no configuration first:
+Start with a task that would make your day easier:
 
-- **Research** — agents can search the web and fetch pages out of the box. *"What changed in the new EU battery regulation?"*
-- **Reminders and recurring work** — *"remind me in 20 minutes"* or *"every weekday at 9, summarize my repo's new issues"*. Scheduled tasks fire back into the same chat and survive restarts.
-- **Real code and files** — the agent writes and runs code inside its sandbox, and its working files persist between conversations.
-- **Read what you send** — share a file or photo over a chat app and ask about it; attachments land in the sandbox for the agent to open.
-- **Remember you** — ask it to remember your name, your preferences, your projects. Each agent keeps its own persistent memory.
-- **Grow into a team** — your agent can spawn companion agents, each with its own sandbox and memory, and delegate work to them. See the [multi-agent swarm guide](/guides/multi-agent-swarm).
+- **Research a topic.** Ask for sources and a short summary. Claude agents have web search and page-reading tools available.
+- **Remember preferences.** Tell your assistant how you like answers or what you are working on. Each agent has its own [memory](/concepts/agent-memory).
+- **Handle recurring work.** Ask for a reminder or a regular update. Connect a messaging app to receive notifications on your phone; see [Scheduled tasks](/guides/scheduled-tasks).
+- **Work with files.** Give the assistant a task involving files it can access. Its working files live in a separate workspace; see [Customization](/guides/customize-an-agent) for sharing folders and setting instructions.
 
-The [quickstart](/quickstart#things-to-try-first) ends with a few example messages to try with your assistant.
+The tools and connections you choose affect what your assistant can do. Some tasks need access to another account or service. You can add more capabilities later, including [a team of assistants](/guides/multi-agent-swarm).
+
+## What does running it involve?
+
+NanoClaw runs on a computer you manage. This is what **self-hosted** means: you install it and keep that computer running when you want the assistant to respond.
+
+You'll need a supported Mac or Linux computer, an internet connection, and an AI account. Windows users first set up WSL, which lets Windows run Linux. The [quickstart](/quickstart#before-you-start) explains the requirements and walks through opening Terminal, installing the software, and signing in.
+
+Claude is the default AI option. Setup also offers Codex; the [provider guide](/extend/providers) covers other options. Your AI account is separate from NanoClaw. Cloud providers still process the AI requests you send them.
+
+## Choose where to begin
 
 <CardGroup cols={2}>
-  <Card title="Run it" icon="rocket" href="/quickstart">
-    Clone, install, and talk to your first agent.
+  <Card title="Meet your first assistant" icon="comments" href="/quickstart">
+    Follow the guided setup and get your first reply. Start here if you're new to NanoClaw.
   </Card>
-  <Card title="Coming from v1 or OpenClaw" icon="route" href="/migrate-from-v1">
-    What changed, what carries over, and the migration skills that do the work.
-  </Card>
-  <Card title="Make it yours" icon="wrench" href="/extend/overview">
-    Add channels, tools, skills, and alternative agent providers to your fork.
-  </Card>
-  <Card title="How it works" icon="diagram-project" href="/concepts/architecture">
-    The entity model, session databases, and the inbox/outbox pattern in depth.
+  <Card title="Start with a prebuilt assistant" icon="layer-group" href="/templates/getting-started">
+    Choose an assistant for a job such as household planning, competitor research, or sales support.
   </Card>
 </CardGroup>
 
+Coming from NanoClaw v1 or OpenClaw? Use the [migration guide](/migrate-from-v1) before starting a new installation.
+
 ## Under the hood, briefly
 
-One idea drives the whole system: every message — a chat, a webhook, a scheduled job, one agent delegating to another — is a row in a SQLite queue, and every reply leaves through another one. There's no separate scheduler, RPC layer, or job system to learn. Channels aren't bundled features — a skill like `/add-telegram` copies exactly the adapter you asked for into your install. And the whole codebase is ~226k tokens, small enough for a long-context coding agent to hold in context — which is also how you customize it: edit the code, not a config sprawl.
+Each assistant, called an **agent**, has a working folder and runs in a separate environment called a **sandbox**. Its access depends on the folders, tools, and services configured for it. A sandbox is one part of the [security model](/concepts/security), not a guarantee that every action is safe.
 
-The full picture — routing, sessions, the container lifecycle — lives in [Architecture](/concepts/architecture); the threat model in [Security](/concepts/security).
+<Accordion title="A few terms you'll see in the guides">
+  - **Agent:** an AI assistant with its own instructions and memory.
+  - **Channel:** a way to message an assistant, such as Telegram or the terminal.
+  - **Provider:** the AI service or runtime an agent uses.
+  - **Template:** a prebuilt starting point for an assistant, with instructions and tools for a particular job.
+</Accordion>
+
+For the technical details of how messages reach agents and how their workspaces run, see [Architecture](/concepts/architecture). To add tools or other integrations, see [Extensions](/extend/overview).
 
 ## Source and community
 
-- **Source**: [github.com/nanocoai/nanoclaw](https://github.com/nanocoai/nanoclaw) (MIT)
-- **Discord**: [community server](https://discord.gg/VDdww8qS42)
+NanoClaw is open source. Explore the [source repository](https://github.com/nanocoai/nanoclaw), or visit [Discord](https://discord.gg/VDdww8qS42) to ask for help and share what you're building.
