@@ -8,6 +8,24 @@ Add a dated `<Update>` entry near the top of Docs updates, or update the relevan
 
 For release notes, distinguish verified unreleased behavior from a numbered release. Check the actual product version before naming one. Source-verification rules in `CLAUDE.md` still apply.
 
+## Release presentation
+
+Use [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/) as the release-structure guide: dated, linkable versions in reverse chronological order, a clearly separate Unreleased section, and notable changes grouped as Added, Changed, Deprecated, Removed, Fixed, or Security where those categories apply. Do not create empty categories. Preserve actual upstream version numbers; do not imply Semantic Versioning guarantees that have not been verified.
+
+For the docs portal, add this reader-facing layer:
+
+1. **What changed:** a short outcome-focused headline and a few highlights.
+2. **Why it matters:** describe what readers can now do or which problem they will stop encountering. Explain technical terms when they are needed.
+3. **What to do:** keep affected audiences, breaking changes, costs, removals, and required update actions visible before any collapsed detail. Link the supported upgrade path. Do not use “no action needed” without evidence.
+4. **Visual explanation:** include a focused screenshot, before/after example, or labeled conceptual illustration when it teaches the change. Follow the style guide's provenance and accessibility rules; decorative imagery is optional and never a substitute for explanation.
+5. **Technical details:** preserve migration commands, compatibility limits, source links, and the full notable-change record in expandable notes. Group by the applicable Keep a Changelog categories; retaining historical wording during a layout-only pass is acceptable when explicitly recorded.
+
+Keep the release number, date, and existing anchors stable. Preserve older history and distinguish layout preservation from fresh source verification. Docs-only maintenance belongs in Docs updates, not the product highlights.
+
+Mintlify `Update` components omit components and HTML from automatically generated RSS content. When a release uses cards, illustrations, or collapsed notes, supply an explicit `rss` title and description with the main benefit, required action, and a pointer to full notes. Check both the page and feed output when changing release structure.
+
+The current Releases page demonstrates this pattern for Unreleased and v2.3.0. Earlier entries retain their detailed historical format; migrate them only with appropriate source review.
+
 ## Small-change exceptions
 
 Typos, formatting-only changes, and verification-stamp-only updates can omit a Docs updates entry. Explain the exception with one visible standalone line in the PR description, for example:

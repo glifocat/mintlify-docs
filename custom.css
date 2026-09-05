@@ -44,3 +44,13 @@
 .quickstart-walkthrough .setup-check { display: flex; gap: 0.8rem; margin: 1.5rem 0; padding: 0.8rem 1rem; border-left: 3px solid #5eead4; background: #10251f; color: #e5e7eb; font-size: 0.9375rem; line-height: 1.65; }
 .setup-check-icon { color: #5eead4; }
 .setup-check-label { font-size: 0.75rem; font-weight: 600; color: #99f6e4; margin-bottom: 0.2rem; }
+
+/* Conceptual release illustration: selectable text, numbered reading order. */
+.release-flow { margin: 1.5rem 0; border: 1px solid #33413f; border-radius: 14px; background: #101b19; color: #e5e7eb; overflow: hidden; }
+.release-flow-label { padding: 1rem 1.2rem; font-size: 0.8rem; color: #99f6e4; border-bottom: 1px solid #33413f; }
+.release-flow ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; margin: 0; padding: 1.2rem; gap: 1.2rem; }
+.release-flow li { display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.85rem; line-height: 1.5; }
+.release-flow-number { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: #23483f; color: #99f6e4; }
+.release-flow strong { font-size: 0.95rem; color: #f3f4f6; }
+.release-flow figcaption { padding: 1rem 1.2rem; border-top: 1px solid #33413f; color: #bac8c3; font-size: 0.8rem; line-height: 1.6; }
+@media (max-width: 640px) { .release-flow ol { grid-template-columns: 1fr; } }

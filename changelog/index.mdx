@@ -1,43 +1,102 @@
 ---
-title: "Releases"
-description: "NanoClaw release history, changelog, and version-by-version feature and fix notes."
+title: "What’s new in NanoClaw"
+sidebarTitle: "Releases"
+description: "See what changed, what it means for your assistant, and what to check before updating."
 icon: "tag"
 rss: true
 ---
 
+import { ReleaseRestart } from "/snippets/release-restart.jsx";
+
 {/* verified-against (current-main additions): src/config.ts, src/container-config.ts, src/host-sweep.ts, src/reconcile-session.ts, src/container-runner.ts, src/delivery.ts, src/modules/permissions/user-dm.ts, src/cli/resources/tasks.ts, container/agent-runner/src/mcp-tools/interactive.ts, setup/channels/slack-auto-register.ts @ b76fcb3d */}
 
-<Update label="Unreleased — current main" description="2026-09-05" tags={["Feature", "Fix"]}>
-  These changes are verified on upstream `main` at [`b76fcb3d`](https://github.com/nanocoai/nanoclaw/commit/b76fcb3db0236b36a4d50bed02e89eff472d0e67). They are not a new numbered release; the latest release listed below remains v2.3.0. For a guided installation and first conversation, follow the [quickstart](/quickstart), or [start with a template](/templates/getting-started). See [Docs updates](/changelog/docs-updates) for documentation changes.
+{/* Scoped verification, 2026-09-05: reader summaries and conceptual restart illustration checked against src/container-runner.ts, src/drivers/docker-driver.ts, scripts/update/transaction.ts, setup/channels/telegram-pre-step.ts, executable .claude/skills/migrate-slack-agents/SKILL.md, package.json, scripts/detect-driver-migration.ts @ b76fcb3d. Latest published release v2.3.0 verified through GitHub releases API. Older release text is preserved, not newly reverified. */}
 
-  Documentation maintenance now includes a repository readiness plan and a pull-request validation workflow; this is not a product release.
+<CardGroup cols={2}>
+  <Card title="Latest release · v2.3.0" icon="tag" href="#v2-3-0">
+    Released August 24, 2026. Explore the highlights and update checklist below.
+  </Card>
+  <Card title="Updating an existing assistant?" icon="arrows-rotate" href="/operate/upgrading">
+    Follow the guided update process and review any changes your installation needs.
+  </Card>
+</CardGroup>
 
-  - **Install-wide model defaults and Claude fast mode.** `NANOCLAW_DEFAULT_MODEL` supplies the model when a group has no override. `NANOCLAW_FAST_MODE` enables the Claude SDK's faster serving tier; it can increase cost. See [Configuration](/operate/configuration).
-  - **Durable host coordination.** Host leases and session claims fence spawning, adoption, and completion. Delivery failure counts survive host restarts. Runtime terminal events and mailbox writes enqueue reconciliation, with a periodic full resync as a recovery floor. See [Architecture](/concepts/architecture) and [Database schema](/reference/db-schema).
-  - **DM routing preserves the adapter instance.** Named bot instances resolve their own approval DM route instead of reusing another instance's cached route.
-  - **Slack companion skills move onto main.** `slack-a2a-rooms` and `slack-agent-flow` now have their canonical home in the checkout. Channel bridges can recover content carried only in a platform's raw message payload.
-  - **Task updates reject blank prompts.** Omit `--prompt` to retain the existing prompt. See [ncl reference](/reference/ncl-cli#tasks).
-  - **Card actions are explicitly link-only.** `send_card` reports dropped callback or invalid actions; use `ask_user_question` for interactive choices. See [MCP tools](/reference/mcp-tools).
+Looking for changes to these guides? Visit [Docs updates](/changelog/docs-updates).
+
+<Update label="Unreleased — current main" description="2026-09-05" tags={["Feature", "Fix"]} rss={{ title: "Unreleased — current main", description: "Development changes, not a new numbered release: model defaults, optional Claude fast mode (which can increase cost), more durable session coordination, and messaging fixes. See the release page for full technical notes." }}>
+  ## In development
+
+  These changes are in the development code and are **not a new numbered release**. The latest published release is **v2.3.0**.
+
+  <Card title="Choose how your assistant responds" icon="sliders" href="/operate/configuration" horizontal>
+    Set a default AI model across your installation. Claude also has an optional faster serving mode, which can increase cost.
+  </Card>
+
+  <Card title="More reliable conversations" icon="comments" horizontal>
+    Session coordination and message delivery recover more reliably across service restarts. Approval messages also keep the correct bot identity when you use multiple bot instances.
+  </Card>
+
+  <Accordion title="Technical notes and source — unreleased">
+    Verified against upstream [`b76fcb3d`](https://github.com/nanocoai/nanoclaw/commit/b76fcb3db0236b36a4d50bed02e89eff472d0e67). These notes describe development code, not a separate release.
+
+    - **Install-wide model defaults and Claude fast mode.** `NANOCLAW_DEFAULT_MODEL` supplies the model when a group has no override. `NANOCLAW_FAST_MODE` enables the Claude SDK's faster serving tier; it can increase cost. See [Configuration](/operate/configuration).
+    - **Durable host coordination.** Host leases and session claims fence spawning, adoption, and completion. Delivery failure counts survive host restarts. Runtime terminal events and mailbox writes enqueue reconciliation, with a periodic full resync as a recovery floor. See [Architecture](/concepts/architecture) and [Database schema](/reference/db-schema).
+    - **DM routing preserves the adapter instance.** Named bot instances resolve their own approval DM route instead of reusing another instance's cached route.
+    - **Slack companion skills move onto main.** `slack-a2a-rooms` and `slack-agent-flow` now have their canonical home in the checkout. Channel bridges can recover content carried only in a platform's raw message payload.
+    - **Task updates reject blank prompts.** Omit `--prompt` to retain the existing prompt. See [ncl reference](/reference/ncl-cli#tasks).
+    - **Card actions are explicitly link-only.** `send_card` reports dropped callback or invalid actions; use `ask_user_question` for interactive choices. See [MCP tools](/reference/mcp-tools).
+  </Accordion>
 </Update>
 
-<Update label="v2.3.0" description="2026-08-24" tags={["Breaking", "Feature", "Fix", "Skill"]}>
-  - **Breaking: the container runtime moves behind a session driver seam.** Each session is composed as a validated, admission-checked spec and realized by a selectable driver (`src/drivers/`; Docker ships built-in and stays the default). Three surfaces break. **(1)** Group folder names must now match the runtime label grammar: at most 63 characters of `[A-Za-z0-9_-]`, alphanumeric at both ends. Previously legal 64-character names, trailing `-`/`_`, and unvalidated legacy imports refuse to spawn. **(2)** Container names change from `nanoclaw-v2-<folder>-<timestamp>` to key-derived `ncl-…` names, and invocation changes from `docker run` to `create` + `start --attach`. The old human-readable name survives as the `nanoclaw-container-name` label, so name-based tooling, Docker allowlists, and audit rules should match by label instead (`docker ps --filter label=nanoclaw-session` or `--filter label=nanoclaw-group-folder=<folder>`). **(3)** Internal container helpers (`hostGatewayArgs`, `readonlyMountArgs`, `stopContainer`, `ensureContainerRuntimeRunning`, `cleanupOrphans`, `buildContainerArgs`) moved into the driver module, so customized installs importing them stop compiling. The `/use-native-credential-proxy` skill is retired: the spec's admission rules refuse credential values in container env on every lane. Credentials ride the OneCLI vault, and custom Anthropic endpoints use the `ANTHROPIC_BASE_URL` + placeholder-token pattern from setup. **Migration:** run `bun scripts/detect-driver-migration.ts`. It detects all three surfaces and prints one finding per line with a minimal fix instruction; nothing detected means nothing to do (#3308, #3429, #3442)
-  - **Breaking: central database access is asynchronous behind `DbDriver`.** SQLite remains the default and existing `data/v2.db` files are unchanged, but custom source and installed channel or provider extensions must await central reads and writes and adopt the retyped host seams. Composition and migrations are backend-ready: a one-slot driver registry keeps backend selection in `src/db/compose.ts`, and `pnpm run migrate` is the explicit schema-change path. **Migration:** follow upstream `docs/central-db-async-migration.md` to find affected calls, preserve transaction boundaries, verify, or roll back (#3334, #3335)
-  - **Breaking: agent mailbox access goes through storage-neutral host and runner registries.** The built-in SQLite implementation preserves existing session data and runtime behavior, but custom source may need to replace raw session-database access, await mailbox writes, and adopt the moved runner state and heartbeat helpers. Scheduled-task lifecycle semantics tightened in the same series: deleting an isolated task cascades its session state. **Migration:** follow upstream `docs/agent-mailbox-seam-migration.md` for the detect grep, old-to-new symbol map, verification, and rollback (#3349)
-  - **Breaking: the host runtime requires Node.js 22 or newer.** Node 20 is not supported by the upgraded `better-sqlite3` release used for current Node runtimes (`engines.node` is now `>=22`). **Migration:** run `bash setup/install-node.sh`, verify `node --version` reports v22 or newer, then rerun `/update-nanoclaw` (#3360, #3443)
-  - **Breaking (decision gate): a new Slack experience is offered to classic single-bot installs.** It brings per-agent provisioned Slack apps, agent spawning from Slack, and UX improvements. Classic Slack keeps working unchanged; the gate asks for a decision, not a forced migration. **Migration:** run `/migrate-slack-agents`. It detects classic state and either walks the upgrade or records the choice to stay on classic; both outcomes satisfy the update requirement (#3357, #3391, #3404)
-  - **Mid-turn streaming is the only content door out of a turn.** For providers that emit mid-turn text, closed `<message to="...">` blocks are delivered as they are emitted, with cross-segment assembly of blocks split across streaming segments. The final result never delivers content: a turn that delivered nothing but whose result still carries content gets a wrap nudge, and the retry streams through the same mid-turn door (#3284)
-  - **Host restarts adopt running sessions instead of restarting them.** A service restart no longer kills in-flight agent work; to apply image or runtime changes to a group, restart it deliberately with `ncl groups restart`. Containers spawned before this release cannot be adopted and are removed at first upgraded startup (#3308)
-  - **Adapters gain lifecycle hooks and richer declarations.** The additions: membership-change, session-created, post-delivery, and wizard hooks, an extend tool, a per-adapter `sessionMode` declaration, and a `decline_notify` unknown-sender policy that declines while telling the sender it did (#3292, #3293, #3294, #3295, #3296, #3297, #3304, #3361)
-  - **Session specs validate runtime isolation tiers.** The driver contract validates `runtimeTier` against its isolation capabilities at spawn. The shipped Docker driver supports `container`; trunk has no `runtime_tier` database column or CLI setting for selecting a VM (#3442)
-  - **Upgrades are transactional.** `/update-nanoclaw` applies an update as a transaction with recovery on interruption, closing the gaps that could previously strand a half-upgraded install (#3195)
-  - **Container gateway wiring is typed and admission-checked.** The gateway's per-session contribution (proxy env, trust anchors, credential-stub mounts) merges into the session spec before validation instead of riding raw Docker flags, and gateway selection becomes a registry (`NANOCLAW_GATEWAY_PROVIDER`, default `onecli`; installs that never set it behave as before). An unknown `NANOCLAW_RUNTIME_DRIVER` aborts startup, and drivers that cannot rebuild images in place deny `install_packages` and `--rebuild` at request time instead of failing later (#3308)
-  - **Non-root hosts get an explicit container identity.** Every non-root host now passes `--user <uid>:<gid>` and `HOME=/home/node`. `CONTAINER_MEMORY_LIMIT` is validated at spawn: invalid values refuse the spawn with a named error instead of a raw Docker error; blank and `0` still mean uncapped (#3308)
-  - **Telegram setup gets three improvements.** The pairing card correctly says the code is 6 digits. The approved group connection flow is documented in the skill. The wizard offers "add another Telegram bot" when one is already configured (#3431, #3352, #3480)
-  - **`/add-codex` pins `@openai/codex` 0.146.0.** The previous pin defaults to a model OpenAI retires from Codex on 2026-08-31 and rejects newer models. Existing codex installs are not re-pinned by re-running the skill: edit the `@openai/codex` entry in `container/cli-tools.json` to `0.146.0`, rebuild the agent image, and restart (#3299)
-  - **New installs use OneCLI gateway 1.41.0.** Existing 1.36.0 gateways remain compatible; see upstream `docs/onecli-upgrades.md` to upgrade. Registry sign-in verification now fails closed when a stored sign-in cannot be verified (#3277, #3339)
-  - An unrecognized `engage_mode` logs a warning instead of silently dropping the message (#3317)
+<Update label="v2.3.0" description="2026-08-24" tags={["Breaking", "Feature", "Fix", "Skill"]} rss={{ title: "v2.3.0 — Work survives service restarts", description: "Running sessions can reconnect after a service restart. Updates gain interruption recovery, and Telegram setup can add another bot. Before updating, review Node.js 22, runtime and custom-extension migrations, Slack setup choices, and existing Codex installations. Containers started before v2.3.0 cannot be adopted. See the release page for the complete migration notes." }}>
+  ## Your assistant can keep working through a restart
+
+  Restarting the NanoClaw service can reconnect it to running sessions instead of starting their work over.
+
+  {/* Code-based conceptual illustration, not a product screenshot or recorded restart. Source and limitations are recorded in the scoped verification comment and review. */}
+  <ReleaseRestart />
+
+  ### Also in this release
+
+  - **A recovery path if an update fails.** Updates save your local state before applying changes and can restore it if the updated service fails its health check.
+  - **Add another Telegram bot.** Setup offers that choice when you already have one configured.
+  - **Choose your Slack experience.** Existing single-bot installations can keep classic Slack or move to the newer per-agent experience.
+
+  ### Before you update
+
+  <Warning>
+    **This release includes changes that may require action.** Use the [guided update process](/operate/upgrading), and review the checks below before applying it. A service restart alone does not apply a new agent image or runtime configuration.
+  </Warning>
+
+  - **Check Node.js:** the computer running NanoClaw now needs version 22 or newer.
+  - **Check your runtime setup:** group names, container naming rules, and credential handling changed. The migration detector checks group names, old container-name tooling, and custom runtime imports; credential changes need their own review.
+  - **If you have custom code or extensions:** database and agent-mailbox interfaces changed; follow their migration notes.
+  - **If you use Slack:** the migration asks whether to upgrade the Slack experience or stay on classic. Both choices are supported.
+  - **If you use Codex:** existing installations need the newer Codex tool version applied separately; rerunning its installer does not update that pin.
+
+  <Accordion title="Full changes and migration instructions — v2.3.0">
+    - **Breaking: the container runtime moves behind a session driver seam.** Each session is composed as a validated, admission-checked spec and realized by a selectable driver (`src/drivers/`; Docker ships built-in and stays the default). Three surfaces break. **(1)** Group folder names must now match the runtime label grammar: at most 63 characters of `[A-Za-z0-9_-]`, alphanumeric at both ends. Previously legal 64-character names, trailing `-`/`_`, and unvalidated legacy imports refuse to spawn. **(2)** Container names change from `nanoclaw-v2-<folder>-<timestamp>` to key-derived `ncl-…` names, and invocation changes from `docker run` to `create` + `start --attach`. The old human-readable name survives as the `nanoclaw-container-name` label, so name-based tooling, Docker allowlists, and audit rules should match by label instead (`docker ps --filter label=nanoclaw-session` or `--filter label=nanoclaw-group-folder=<folder>`). **(3)** Internal container helpers (`hostGatewayArgs`, `readonlyMountArgs`, `stopContainer`, `ensureContainerRuntimeRunning`, `cleanupOrphans`, `buildContainerArgs`) moved into the driver module, so customized installs importing them stop compiling. The `/use-native-credential-proxy` skill is retired: the spec's admission rules refuse credential values in container env on every lane. Credentials ride the OneCLI vault, and custom Anthropic endpoints use the `ANTHROPIC_BASE_URL` + placeholder-token pattern from setup. **Migration:** run `bun scripts/detect-driver-migration.ts`. It detects all three surfaces and prints one finding per line with a minimal fix instruction; nothing detected means nothing to do (#3308, #3429, #3442)
+    - **Breaking: central database access is asynchronous behind `DbDriver`.** SQLite remains the default and existing `data/v2.db` files are unchanged, but custom source and installed channel or provider extensions must await central reads and writes and adopt the retyped host seams. Composition and migrations are backend-ready: a one-slot driver registry keeps backend selection in `src/db/compose.ts`, and `pnpm run migrate` is the explicit schema-change path. **Migration:** follow upstream `docs/central-db-async-migration.md` to find affected calls, preserve transaction boundaries, verify, or roll back (#3334, #3335)
+    - **Breaking: agent mailbox access goes through storage-neutral host and runner registries.** The built-in SQLite implementation preserves existing session data and runtime behavior, but custom source may need to replace raw session-database access, await mailbox writes, and adopt the moved runner state and heartbeat helpers. Scheduled-task lifecycle semantics tightened in the same series: deleting an isolated task cascades its session state. **Migration:** follow upstream `docs/agent-mailbox-seam-migration.md` for the detect grep, old-to-new symbol map, verification, and rollback (#3349)
+    - **Breaking: the host runtime requires Node.js 22 or newer.** Node 20 is not supported by the upgraded `better-sqlite3` release used for current Node runtimes (`engines.node` is now `>=22`). **Migration:** run `bash setup/install-node.sh`, verify `node --version` reports v22 or newer, then rerun `/update-nanoclaw` (#3360, #3443)
+    - **Breaking (decision gate): a new Slack experience is offered to classic single-bot installs.** It brings per-agent provisioned Slack apps, agent spawning from Slack, and UX improvements. Classic Slack keeps working unchanged; the gate asks for a decision, not a forced migration. **Migration:** run `/migrate-slack-agents`. It detects classic state and either walks the upgrade or records the choice to stay on classic; both outcomes satisfy the update requirement (#3357, #3391, #3404)
+    - **Mid-turn streaming is the only content door out of a turn.** For providers that emit mid-turn text, closed `<message to="...">` blocks are delivered as they are emitted, with cross-segment assembly of blocks split across streaming segments. The final result never delivers content: a turn that delivered nothing but whose result still carries content gets a wrap nudge, and the retry streams through the same mid-turn door (#3284)
+    - **Host restarts adopt running sessions instead of restarting them.** A service restart no longer kills in-flight agent work; to apply image or runtime changes to a group, restart it deliberately with `ncl groups restart`. Containers spawned before this release cannot be adopted and are removed at first upgraded startup (#3308)
+    - **Adapters gain lifecycle hooks and richer declarations.** The additions: membership-change, session-created, post-delivery, and wizard hooks, an extend tool, a per-adapter `sessionMode` declaration, and a `decline_notify` unknown-sender policy that declines while telling the sender it did (#3292, #3293, #3294, #3295, #3296, #3297, #3304, #3361)
+    - **Session specs validate runtime isolation tiers.** The driver contract validates `runtimeTier` against its isolation capabilities at spawn. The shipped Docker driver supports `container`; trunk has no `runtime_tier` database column or CLI setting for selecting a VM (#3442)
+    - **Upgrades are transactional.** `/update-nanoclaw` applies an update as a transaction with recovery on interruption, closing the gaps that could previously strand a half-upgraded install (#3195)
+    - **Container gateway wiring is typed and admission-checked.** The gateway's per-session contribution (proxy env, trust anchors, credential-stub mounts) merges into the session spec before validation instead of riding raw Docker flags, and gateway selection becomes a registry (`NANOCLAW_GATEWAY_PROVIDER`, default `onecli`; installs that never set it behave as before). An unknown `NANOCLAW_RUNTIME_DRIVER` aborts startup, and drivers that cannot rebuild images in place deny `install_packages` and `--rebuild` at request time instead of failing later (#3308)
+    - **Non-root hosts get an explicit container identity.** Every non-root host now passes `--user <uid>:<gid>` and `HOME=/home/node`. `CONTAINER_MEMORY_LIMIT` is validated at spawn: invalid values refuse the spawn with a named error instead of a raw Docker error; blank and `0` still mean uncapped (#3308)
+    - **Telegram setup gets three improvements.** The pairing card correctly says the code is 6 digits. The approved group connection flow is documented in the skill. The wizard offers "add another Telegram bot" when one is already configured (#3431, #3352, #3480)
+    - **`/add-codex` pins `@openai/codex` 0.146.0.** The previous pin defaults to a model OpenAI retires from Codex on 2026-08-31 and rejects newer models. Existing codex installs are not re-pinned by re-running the skill: edit the `@openai/codex` entry in `container/cli-tools.json` to `0.146.0`, rebuild the agent image, and restart (#3299)
+    - **New installs use OneCLI gateway 1.41.0.** Existing 1.36.0 gateways remain compatible; see upstream `docs/onecli-upgrades.md` to upgrade. Registry sign-in verification now fails closed when a stored sign-in cannot be verified (#3277, #3339)
+    - An unrecognized `engage_mode` logs a warning instead of silently dropping the message (#3317)
+  </Accordion>
 </Update>
+
+## Earlier releases
+
+The entries below retain their original detailed release notes. Check every intervening release when updating from an older version.
 
 <Update label="v2.2.0" description="2026-08-13" tags={["Breaking", "Feature", "Fix", "Skill"]}>
   - **Breaking: agent templates are Agent Plugins 1.0.0 directories** — `plugin.json` replaces `context/instructions.md` as the required manifest and discovery marker, MCP servers move from `.mcp.json` to a spec-shaped `mcp.json`, and persona, extra context files, and seeded tasks move under an `ai.nanoco.nanoclaw/` extension directory. Templates become portable to other plugin clients, and any conformant third-party plugin stamps as a NanoClaw agent. **Migration:** re-fetch templates from the registry — the pre-plugin layout now fails with a migration error; conversion steps for a local custom template are in [building a template](/templates/building#migrating-from-the-pre-plugin-layout) (#3220, #2909)
