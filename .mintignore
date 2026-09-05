@@ -8,6 +8,7 @@ drafts/
 
 # Internal files
 AGENTS.md
+CLAUDE.md
 .atlas-analysis.json
 
 # Non-docs markdown (plans, specs) — MDX in code blocks causes parsing errors
