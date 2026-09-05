@@ -1,0 +1,36 @@
+name: Docs checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install tested Mintlify CLI
+        run: npm install --global mint@4.2.874
+      - name: Validate site
+        run: mint validate
+      - name: Check internal links
+        if: ${{ !cancelled() }}
+        run: mint broken-links
+      - name: Check image and video alt attributes
+        if: ${{ !cancelled() }}
+        run: mint a11y --skip-contrast

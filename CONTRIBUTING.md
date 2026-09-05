@@ -10,6 +10,8 @@ For a substantial rewrite, use the [page review record](docs/editorial/review-te
 
 Agents can use the repository [docs-editor skill](.agents/skills/docs-editor/SKILL.md). For example, ask: “Use the docs-editor skill to audit `templates/getting-started.mdx` for a new user. Return findings and a visual plan without editing.” For implementation, explicitly request a rewrite and specify the audience or constraints that matter.
 
+For the wider rollout, use the [readiness plan](docs/editorial/readiness/README.md), including the page inventory, reader journeys, prioritized backlog, and visual capture briefs. [Contribution checks](docs/editorial/readiness/checks.md) describe the automated gates and their limits.
+
 ## Quick edits
 
 1. Open the page's source file on GitHub.
