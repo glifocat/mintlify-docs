@@ -30,6 +30,8 @@ If the change describes product behavior, verify it against the upstream NanoCla
 
 ## Validation and review
 
+Follow the [changelog policy](docs/editorial/changelog-policy.md): include reader-facing documentation changes in Docs updates, reserve Releases for product changes, and explain any allowed small-change exception in the PR description.
+
 - Run `mint validate` for content or configuration changes.
 - Run `mint broken-links` when changing links, anchors, navigation, or redirects.
 - Inspect affected pages with `mint dev` for visual or structural changes. Check a narrow screen, image readability, tabs, accordions, and other affected interactions.

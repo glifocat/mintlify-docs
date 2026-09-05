@@ -19,3 +19,10 @@
 - [ ] Visuals are readable, accessible, and accurately labeled; missing captures are disclosed
 - [ ] Updated navigation/redirects for added or moved public pages where applicable
 - [ ] Recorded review findings and remaining gaps; distinguished source review from installation and reader testing
+
+- [ ] Added or updated Docs updates for meaningful documentation changes; verified product changes use Releases
+- [ ] Changelog wording describes reader impact and does not imply an open PR is deployed
+
+<!-- For typo, formatting, or verification-only changes, add a visible standalone line following docs/editorial/changelog-policy.md:
+Docs changelog exception: typo — Explain why no reader-facing entry is needed.
+-->

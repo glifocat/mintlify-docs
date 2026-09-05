@@ -87,3 +87,8 @@ If you are updating an existing page instead of creating one, use `tag: "UPDATED
 - Match the existing tone and structure of other pages in the same directory
 - Use Mintlify components (Tabs, Accordions, CodeGroups) where appropriate
 - Verify every factual claim against code (`src/`, `setup/`, `container/`) — never against upstream markdown prose
+
+
+## Changelog and editorial handoff
+
+Follow `docs/editorial/style-guide.md` and `docs/editorial/changelog-policy.md`. For meaningful documentation changes, add a dated Docs updates entry in the same PR explaining reader impact and linking affected public pages. Reserve Releases for verified product changes; do not imply this PR is already deployed or invent a release. For typo, formatting-only, or verification-only changes, declare the policy's explicit exception and reason in the PR body. Review the final entry and run the repository checks before handoff.
