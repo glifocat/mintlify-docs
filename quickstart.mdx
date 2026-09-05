@@ -10,9 +10,13 @@ import { TerminalMenu, SetupCheck } from "/snippets/setup-visuals.jsx";
 
 {/* verified-against: setup sequence, exact prompt labels, fresh terminal agent creation, channel handoff, and final checks: setup/auto.ts, setup/channels/initial-setup.ts, setup/lib/bright-select.ts, scripts/chat.ts @ b76fcb3d; prerequisites and bootstrap: nanoclaw.sh, setup.sh @ b76fcb3d. Synthetic menu illustrations: setup/auto.ts, setup/providers/registry.ts, setup/lib/bright-select.ts @ b76fcb3d, inspected 2026-09-05; simplified presentation with exact questions/options, omitted hints/output, and the guide's choice highlighted (not necessarily the default). These are not installation captures. Existing NanoClaw browser screenshots are reused from the hardened-runtime guide; they are reference captures, not a recording of this verification. */}
 
+{/* Scoped verification, 2026-09-05: access-rule defaults/preservation in setup/auto.ts and setup/mounts.ts; channel preparation in executable .claude/skills/add-{telegram,whatsapp}/SKILL.md and setup/channels/slack-auto.ts @ b76fcb3d. Time allowance is editorial planning guidance, not a timed installation result. */}
+
 By the end of this guide, you'll have an AI assistant running on your computer and answering your messages. You can start talking to it here, then connect a messaging app when you're ready.
 
-You'll copy a few commands into **Terminal**, the app that lets you give your computer written instructions. We'll explain where to put them and what to expect. Allow extra time for downloads and signing in, especially on a new computer.
+You'll copy a few commands into **Terminal**, the app that lets you give your computer written instructions. We'll explain where to put them and what to expect.
+
+**Time to set aside:** Plan for 30–60 minutes to install NanoClaw, connect your AI account, and reach your first terminal conversation. This is a planning allowance; downloads, a new computer, or Windows preparation can take longer. Allow additional time for a messaging app, especially if you need workspace approval.
 
 <Frame caption="An example of your first conversation. Your assistant's wording will vary.">
   <div className="not-prose w-full space-y-4 p-4 sm:p-6">
@@ -134,7 +138,7 @@ NanoClaw installs the other software it needs. If you choose the recommended dow
   </Step>
 
   <Step title="Connect your AI account" id="connect-ai">
-    Setup first installs **OneCLI**, the vault that stores your AI sign-in securely.
+    Setup first installs **OneCLI**, the vault that stores your AI sign-in securely. Connecting your AI account lets your assistant use that service to answer you.
 
     For this walkthrough, choose **Claude**, then **Sign in with my Claude subscription**. Follow the browser prompts to connect your AI account. This is separate from the NanoClaw download account.
 
@@ -147,7 +151,9 @@ NanoClaw installs the other software it needs. If you choose the recommended dow
 
     <SetupCheck>For the Claude path, Terminal says <strong>Claude account connected.</strong> Return to Terminal if you're still in the browser.</SetupCheck>
 
-    Let setup finish the access rules and background service. These start with no extra folders shared and let NanoClaw run in the background. Enter the name you'd like your assistant to call you when asked.
+    When Terminal says **Setting your assistant's access rules…**, setup is configuring which extra folders on your computer can be shared with your assistant. On a fresh installation, that list starts empty. Your assistant still has its own workspace; you do not need to share personal folders to complete this guide. If you already have access rules, setup keeps them.
+
+    This step runs automatically. Wait for **Access rules set.** or **Access rules already set.**, then let NanoClaw start its background service so it can keep running after setup. Enter the name you'd like your assistant to call you when asked.
   </Step>
 
   <Step title="Have your first conversation" id="first-conversation">
@@ -176,7 +182,13 @@ NanoClaw installs the other software it needs. If you choose the recommended dow
     At the channel question, choose **Skip for now** to keep using the terminal assistant you just created. A channel is a way to message an assistant, such as Telegram or Slack.
 
     <Accordion title="Want to connect a messaging app now?">
-      Choose the app you use and follow its setup prompts. Each app has its own account or bot requirements. The [channel guides](/channels/overview) explain those screens.
+      Choose an app and have the following ready:
+
+      - **[Telegram](/channels/telegram):** A Telegram account. Setup walks you through creating a bot with @BotFather, pasting its token into Terminal, and sending a pairing code to your bot.
+      - **[Slack](/channels/slack):** A Slack workspace where you can install an app, or an administrator who can approve it. Setup offers to create the app for you, with a manual setup option if needed.
+      - **[WhatsApp](/channels/whatsapp):** Your phone with WhatsApp signed in. Open **Linked Devices** to link NanoClaw using a QR code or pairing code.
+
+      For other apps, see the [channel guides](/channels/overview).
 
       Follow the final instructions for that app: some require you to send the first message. A messaging app can connect to a different assistant from the one you met in Terminal.
     </Accordion>
