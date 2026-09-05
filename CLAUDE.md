@@ -165,9 +165,7 @@ Mintlify workflows generate automated PRs (`mintlify/*` branches) on upstream ch
 
 ## Changelogs
 
-Two changelogs to maintain — update both after any docs work session:
-- `changelog/index.mdx` — Product releases (newest version first, uses `<Update>` component)
-- `changelog/docs-updates.mdx` — Documentation site changes (newest entry first)
+Follow the [changelog policy](docs/editorial/changelog-policy.md): meaningful documentation changes update `changelog/docs-updates.mdx`; verified product changes update `changelog/index.mdx`. Both are newest first and use `<Update>` components. A docs-only change does not require a product-release entry.
 - **Upstream CHANGELOG is sparse** — often skips 10+ versions. Reconstruct by mapping commits between version bumps: `gh api 'repos/nanocoai/nanoclaw/commits?per_page=100' --jq '.[] | "\(.sha[0:7]) \(.commit.message | split("\n")[0])"'` and tracing features between "bump to X" commits.
 - **Pre-release CHANGELOG headers**: Upstream CHANGELOG may have headers for unreleased versions (package.json not yet bumped). Don't add changelog entries for versions that aren't in `package.json` yet.
 

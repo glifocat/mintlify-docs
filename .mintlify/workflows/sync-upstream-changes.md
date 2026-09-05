@@ -75,3 +75,8 @@ When changes don't map cleanly through verified-against comments (e.g., brand-ne
   tag: "UPDATED"
   ---
   ```
+
+
+## Changelog and editorial handoff
+
+Follow `docs/editorial/style-guide.md` and `docs/editorial/changelog-policy.md`. For meaningful documentation changes, add a dated Docs updates entry in the same PR explaining reader impact and linking affected public pages. Reserve Releases for verified product changes; do not imply this PR is already deployed or invent a release. For typo, formatting-only, or verification-only changes, declare the policy's explicit exception and reason in the PR body. Review the final entry and run the repository checks before handoff.

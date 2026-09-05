@@ -2,6 +2,7 @@ name: Docs checks
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
   push:
     branches: [main]
   workflow_dispatch:
@@ -34,3 +35,21 @@ jobs:
       - name: Check image and video alt attributes
         if: ${{ !cancelled() }}
         run: mint a11y --skip-contrast
+
+  changelog:
+    name: Docs changelog
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test changelog policy check
+        run: node --test scripts/check-docs-changelog.test.mjs
+      - name: Check this PR's Docs updates entry
+        run: node scripts/check-docs-changelog.mjs

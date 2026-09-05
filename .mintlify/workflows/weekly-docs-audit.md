@@ -68,3 +68,8 @@ Check all `.mdx` files for `tag` frontmatter fields and apply these rules in ord
 - For frontmatter issues: add missing fields
 - For stale tags: remove them
 - If everything is healthy, do not open a PR
+
+
+## Changelog and editorial handoff
+
+Follow `docs/editorial/style-guide.md` and `docs/editorial/changelog-policy.md`. For meaningful documentation changes, add a dated Docs updates entry in the same PR explaining reader impact and linking affected public pages. Reserve Releases for verified product changes; do not imply this PR is already deployed or invent a release. For typo, formatting-only, or verification-only changes, declare the policy's explicit exception and reason in the PR body. Review the final entry and run the repository checks before handoff.
