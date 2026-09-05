@@ -10,6 +10,8 @@ rss: true
 <Update label="Unreleased — current main" description="2026-09-05" tags={["Feature", "Fix"]}>
   These changes are verified on upstream `main` at [`b76fcb3d`](https://github.com/nanocoai/nanoclaw/commit/b76fcb3db0236b36a4d50bed02e89eff472d0e67). They are not a new numbered release; the latest release listed below remains v2.3.0. For a guided installation and first conversation, follow the [quickstart](/quickstart), or [start with a template](/templates/getting-started). See [Docs updates](/changelog/docs-updates) for documentation changes.
 
+  Documentation maintenance now includes a repository readiness plan and a pull-request validation workflow; this is not a product release.
+
   - **Install-wide model defaults and Claude fast mode.** `NANOCLAW_DEFAULT_MODEL` supplies the model when a group has no override. `NANOCLAW_FAST_MODE` enables the Claude SDK's faster serving tier; it can increase cost. See [Configuration](/operate/configuration).
   - **Durable host coordination.** Host leases and session claims fence spawning, adoption, and completion. Delivery failure counts survive host restarts. Runtime terminal events and mailbox writes enqueue reconciliation, with a periodic full resync as a recovery floor. See [Architecture](/concepts/architecture) and [Database schema](/reference/db-schema).
   - **DM routing preserves the adapter instance.** Named bot instances resolve their own approval DM route instead of reusing another instance's cached route.
