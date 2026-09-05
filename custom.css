@@ -1,0 +1,46 @@
+/* Scope walkthrough styles to the quickstart; other pages keep their theme. */
+.quickstart-walkthrough [data-component-part="step-title"] {
+  font-size: 1.25rem;
+  line-height: 1.5;
+  font-weight: 650;
+  color: #f3f4f6;
+}
+.quickstart-walkthrough .step-container { padding-bottom: 2rem; }
+.quickstart-walkthrough .setup-terminal {
+  margin: 1.25rem 0;
+  overflow: hidden;
+  border: 1px solid #33413f;
+  border-radius: 12px;
+  background: #101715;
+  color: #e5e7eb;
+}
+.setup-terminal-label {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid #33413f;
+  color: #bac8c3;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+}
+.setup-terminal-screens { padding: 1rem; }
+.setup-terminal-screen + .setup-terminal-screen {
+  border-top: 1px solid #33413f;
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+.setup-terminal-order { color: #bac8c3; font-size: 0.75rem; margin-bottom: 0.6rem; }
+.setup-terminal-question, .setup-terminal-options {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.setup-terminal-question { display: flex; gap: 0.7rem; color: #f3f4f6; }
+.setup-terminal-question > span:first-child { color: #5eead4; flex-shrink: 0; }
+.setup-terminal-options { list-style: none; padding: 0; margin: 0.8rem 0 0; }
+.setup-terminal-options li { display: flex; gap: 0.7rem; padding: 0.5rem 0.65rem; border-radius: 5px; }
+.setup-terminal-options li > span:first-child { flex-shrink: 0; }
+.setup-terminal-options .setup-terminal-selected { background: #173b32; color: #d1fae5; }
+.setup-terminal figcaption { padding: 0.75rem 1rem; border-top: 1px solid #33413f; font-size: 0.75rem; line-height: 1.5; color: #bac8c3; }
+.quickstart-walkthrough .setup-check { display: flex; gap: 0.8rem; margin: 1.5rem 0; padding: 0.8rem 1rem; border-left: 3px solid #5eead4; background: #10251f; color: #e5e7eb; font-size: 0.9375rem; line-height: 1.65; }
+.setup-check-icon { color: #5eead4; }
+.setup-check-label { font-size: 0.75rem; font-weight: 600; color: #99f6e4; margin-bottom: 0.2rem; }

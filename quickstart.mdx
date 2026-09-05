@@ -6,7 +6,9 @@ keywords: ["setup", "install", "getting started", "nanoclaw.sh", "setup wizard",
 tag: "UPDATED"
 ---
 
-{/* verified-against: setup sequence, exact prompt labels, fresh terminal agent creation, channel handoff, and final checks: setup/auto.ts, setup/channels/initial-setup.ts, setup/lib/bright-select.ts, scripts/chat.ts @ b76fcb3d; prerequisites and bootstrap: nanoclaw.sh, setup.sh @ b76fcb3d. Existing NanoClaw browser screenshots are reused from the hardened-runtime guide; they are reference captures, not a recording of this verification. */}
+import { TerminalMenu, SetupCheck } from "/snippets/setup-visuals.jsx";
+
+{/* verified-against: setup sequence, exact prompt labels, fresh terminal agent creation, channel handoff, and final checks: setup/auto.ts, setup/channels/initial-setup.ts, setup/lib/bright-select.ts, scripts/chat.ts @ b76fcb3d; prerequisites and bootstrap: nanoclaw.sh, setup.sh @ b76fcb3d. Synthetic menu illustrations: setup/auto.ts, setup/providers/registry.ts, setup/lib/bright-select.ts @ b76fcb3d, inspected 2026-09-05; simplified presentation with exact questions/options, omitted hints/output, and the guide's choice highlighted (not necessarily the default). These are not installation captures. Existing NanoClaw browser screenshots are reused from the hardened-runtime guide; they are reference captures, not a recording of this verification. */}
 
 By the end of this guide, you'll have an AI assistant running on your computer and answering your messages. You can start talking to it here, then connect a messaging app when you're ready.
 
@@ -53,6 +55,7 @@ NanoClaw installs the other software it needs. If you choose the recommended dow
 
 ## Set up your assistant
 
+<div className="quickstart-walkthrough">
 <Steps>
   <Step title="Open Terminal and check Git" id="open-terminal">
     <Tabs>
@@ -70,79 +73,79 @@ NanoClaw installs the other software it needs. If you choose the recommended dow
     git --version
     ```
 
-    **You should see:** a line beginning with `git version`. The number after it can vary.
+    <SetupCheck>A line beginning with <code>git version</code> appears. The number after it can vary.</SetupCheck>
 
     If your Mac offers to install developer tools, follow that prompt, then run the command again. If Git is missing, follow the [Git installation instructions](https://git-scm.com/install/) for your operating system before continuing.
   </Step>
 
   <Step title="Download NanoClaw and start setup" id="download-and-start">
-    Run each command below separately. Wait for one to finish before running the next.
-
-    Start in your home folder so you'll know where to find NanoClaw later:
+    These four commands open your home folder, download NanoClaw, open its folder, and start setup. Copy and run **one line at a time**, waiting for each command to finish:
 
     ```bash
     cd ~
-    ```
-
-    Download NanoClaw into a new folder called `nanoclaw`:
-
-    ```bash
     git clone https://github.com/nanocoai/nanoclaw.git
-    ```
-
-    Tell Terminal to work in that folder:
-
-    ```bash
     cd nanoclaw
-    ```
-
-    Start the installer:
-
-    ```bash
     bash nanoclaw.sh
     ```
 
     It checks your computer and installs supporting software. Follow any prompts it shows. On a new Mac, this can include installing Apple's developer tools and entering your computer password.
 
-    **You should see:** **How would you like to begin?** Choose **Standard setup**. Use the arrow keys to move through choices and **Enter** to select one.
+    Choose **Standard setup**, then **Fresh agent** when the next question appears. Use the arrow keys to move through choices and **Enter** to select one.
 
-    When asked **How should we create your first agent?**, choose **Fresh agent**. An agent is your AI assistant; you can give it a job and preferences by chatting with it.
+    <TerminalMenu screens={[
+      { question: "How would you like to begin?", options: ["Standard setup", "Advanced"], selected: 0 },
+      { question: "How should we create your first agent?", options: ["Fresh agent", "From the NanoClaw template library", "From local templates"], selected: 0 }
+    ]} />
+
+    An agent is your AI assistant. You can give it a job and preferences by chatting with it.
   </Step>
 
   <Step title="Prepare your assistant's workspace" id="prepare-workspace">
     Setup calls this workspace a **sandbox**. It keeps the assistant's working files separate from the rest of your computer.
 
-    At **Where should your assistant's sandbox image come from?**, choose **Fetch the hardened image, built by Echo**. This downloads the prepared software your assistant needs. If you plan to use Codex, choose **Build it here** instead, as described in [other AI accounts](#other-ai-accounts).
+    Choose **Fetch the hardened image, built by Echo** to download the prepared software.
 
-    <Accordion title="Prefer to skip the NanoClaw account?">
-      Choose **Build it here** instead. Your computer prepares the software locally. This can take several minutes; leave Terminal open until it finishes. Then continue to the AI sign-in step below.
-    </Accordion>
+    <TerminalMenu screens={[
+      { question: "Where should your assistant's sandbox image come from?", options: ["Fetch the hardened image, built by Echo", "Build it here"], selected: 0 }
+    ]} />
 
-    For the download option, follow the NanoClaw sign-in link that opens in your browser. If no browser opens, open the link shown in Terminal.
+    <span id="prefer-to-skip-the-nanoclaw-account" />
 
-    <Frame caption="In your browser: sign in to NanoClaw, or choose Sign up to create an account.">
-      <img src="/images/echo/hardened-runtime/signin-02-sign-in.png" alt="NanoClaw sign-in page with email, Google, and GitHub options and a Sign up link" style={{ maxHeight: '420px', width: 'auto', maxWidth: '100%', margin: '0 auto' }} />
-    </Frame>
+    **Using Codex or skipping the download account?** Choose **Build it here** instead. Wait for the local build to finish, then continue to the AI account step. This can take several minutes. See [other AI accounts](#other-ai-accounts).
 
-    If asked to confirm a code, check that it matches the code in your terminal. Confirm it, then return to Terminal.
+    For the download option, sign in to NanoClaw in the browser window that opens. You can create an account there. If no browser opens, open the link shown in Terminal.
 
-    <Frame caption="This screen finishes the NanoClaw sign-in. Return to Terminal to continue the installation.">
-      <img src="/images/echo/hardened-runtime/signin-04-success.png" alt="NanoClaw confirmation saying You are all set, your device is connected, and you may close the page" />
-    </Frame>
+    If asked to confirm a code, check that it matches the code in Terminal. Once you see the confirmation screen, return to Terminal.
 
-    **You should see:** the download begin in Terminal. Leave it open while the software downloads. The time depends on your connection.
+    <Tabs>
+      <Tab title="Sign-in screen">
+        <Frame caption="Real NanoClaw sign-in screen. Use an existing account or choose Sign up.">
+          <img src="/images/echo/hardened-runtime/signin-02-sign-in.png" alt="NanoClaw sign-in page with email, Google, and GitHub options and a Sign up link" style={{ maxHeight: '320px', width: 'auto', maxWidth: '100%', margin: '0 auto' }} />
+        </Frame>
+      </Tab>
+      <Tab title="Confirmation screen">
+        <Frame caption="Real NanoClaw confirmation screen. You can return to Terminal.">
+          <img src="/images/echo/hardened-runtime/signin-04-success.png" alt="NanoClaw confirmation saying You are all set, your device is connected, and you may close the page" />
+        </Frame>
+      </Tab>
+    </Tabs>
+
+    <SetupCheck>Keep Terminal open until the download or local build finishes and setup moves on to your AI account.</SetupCheck>
   </Step>
 
   <Step title="Connect your AI account" id="connect-ai">
     Setup first installs **OneCLI**, the vault that stores your AI sign-in securely.
 
-    At **Which agent runtime should power your assistant?**, choose **Claude**. Then choose **Sign in with my Claude subscription** and follow the browser prompts.
+    For this walkthrough, choose **Claude**, then **Sign in with my Claude subscription**. Follow the browser prompts to connect your AI account. This is separate from the NanoClaw download account.
 
-    Using Codex instead? Choose **Codex** and follow its sign-in prompts, as described in [other AI accounts](#other-ai-accounts).
+    If you chose the Codex path, select **Codex** instead and follow its sign-in prompts. See [other AI accounts](#other-ai-accounts).
 
-    This sign-in connects your AI account. It is separate from the NanoClaw sign-in for the download.
+    <TerminalMenu screens={[
+      { question: "Which agent runtime should power your assistant?", options: ["Claude", "Codex"], selected: 0 },
+      { question: "How would you like to connect to Claude?", options: ["Sign in with my Claude subscription", "Paste an OAuth token I already have", "Paste an Anthropic API key", "Skip — I'll connect later"], selected: 0 }
+    ]} />
 
-    **You should see:** **Claude account connected.** Return to Terminal if you're still in the browser.
+    <SetupCheck>For the Claude path, Terminal says <strong>Claude account connected.</strong> Return to Terminal if you're still in the browser.</SetupCheck>
 
     Let setup finish the access rules and background service. These start with no extra folders shared and let NanoClaw run in the background. Enter the name you'd like your assistant to call you when asked.
   </Step>
@@ -150,15 +153,21 @@ NanoClaw installs the other software it needs. If you choose the recommended dow
   <Step title="Have your first conversation" id="first-conversation">
     Setup sends a test message to check your assistant can reply. The first response may take a little time while it starts.
 
-    At **What next?**, use the arrow keys to choose **Pause here and chat with your agent from the terminal**. This creates the terminal assistant you'll use in this guide.
+    Choose **Pause here and chat with your agent from the terminal**. This creates the terminal assistant you'll use in this guide. Move down to that option with the arrow key, then press **Enter**.
+
+    <TerminalMenu screens={[
+      { question: "What next?", options: ["Continue with setup", "Pause here and chat with your agent from the terminal"], selected: 1 }
+    ]} />
 
     Type a message such as:
 
-    > Hi! Give me three ideas for a relaxing weekend at home.
+    ```text
+    Hi! Give me three ideas for a relaxing weekend at home.
+    ```
 
     Press **Enter** to send it.
 
-    **You should see:** your assistant's reply beneath your message. You can send another message at the next prompt.
+    <SetupCheck>Your assistant replies beneath your message. You can send another message at the next prompt.</SetupCheck>
 
     When you're ready to finish setup, leave the next message empty and press **Enter**. Follow the timezone prompt if one appears.
   </Step>
@@ -172,7 +181,7 @@ NanoClaw installs the other software it needs. If you choose the recommended dow
       Follow the final instructions for that app: some require you to send the first message. A messaging app can connect to a different assistant from the one you met in Terminal.
     </Accordion>
 
-    **You should see:** **Everything's connected.** If setup reports a problem instead, use its recovery instructions before continuing.
+    <SetupCheck>Terminal says <strong>Everything's connected.</strong> If setup reports a problem instead, follow its recovery instructions before continuing.</SetupCheck>
 
     To send another message later, run this from the same Terminal window, still in the `nanoclaw` folder:
 
@@ -185,6 +194,7 @@ NanoClaw installs the other software it needs. If you choose the recommended dow
     If you open a new Terminal window later, run `cd ~/nanoclaw` first. If Terminal cannot find `pnpm`, see [command not found](#command-not-found) below.
   </Step>
 </Steps>
+</div>
 
 ## Things to try first
 
